@@ -628,6 +628,36 @@ static void ipq9574_ppe_tdm_configuration(void)
 }
 
 /*
+ * ipq9574_ppe_queue_ac_enable
+ */
+static void ipq9574_ppe_queue_ac_enable(void)
+{
+	int i;
+
+	/* ucast queue */
+	for (i = 0; i < 256; i++) {
+		ipq9574_ppe_reg_write(IPQ9574_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10), 0x32120001);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x4, 0x0);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x8, 0x0);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0xc, 0x48000);
+	}
+
+	/* mcast queue */
+	for (i = 0; i < 44; i++) {
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10), 0x00fa0001);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x4, 0x0);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x8, 0x1200);
+	}
+}
+
+/*
  * ipq9574_ppe_c_sp_cfg_tbl_drr_id_set
  */
 static void ipq9574_ppe_c_sp_cfg_tbl_drr_id_set(int id)
@@ -847,6 +877,18 @@ void ipq9574_ppe_provision_init(void)
 		ipq9574_ppe_reg_write(0x409100 + ((i - 1) * 0x40), i);
 		ipq9574_ppe_reg_write(0x403100 + ((i - 1) * 0x40), 0x401000 | i);
 	}
+
+	/* ac enable for queues - disable queue tail drop */
+	ipq9574_ppe_queue_ac_enable();
+
+	/* enable queue counter */
+	ipq9574_ppe_reg_write(0x020044,0x4);
+
+	/* assign the ac group 0 with buffer number */
+	ipq9574_ppe_reg_write(0x84c000, 0x0);
+	ipq9574_ppe_reg_write(0x84c004, 0x7D00);
+	ipq9574_ppe_reg_write(0x84c008, 0x0);
+	ipq9574_ppe_reg_write(0x84c00c, 0x0);
 
 	/*
 	 * Port0 - Port7 learn enable and isolation port bitmap and TX_EN
