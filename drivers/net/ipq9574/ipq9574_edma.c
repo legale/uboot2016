@@ -450,11 +450,6 @@ static int ipq9574_eth_snd(struct eth_device *dev, void *packet, int length)
 	txdesc->tdes7 = 0;
 	skb = (uchar *)txdesc->tdes0;
 
-	/*
-	 * Set SC BYPASS
-	 */
-	txdesc->tdes1 |= IPQ9574_EDMA_TXDESC_SERVICE_CODE_SET(IPQ9574_EDMA_SC_BYPASS);
-
 	pr_debug("%s: txdesc->tdes0 (buffer addr) = 0x%x length = %d \
 			prod_idx = %d cons_idx = %d\n",
 			__func__, txdesc->tdes0, length,
