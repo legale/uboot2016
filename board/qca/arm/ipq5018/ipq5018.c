@@ -71,7 +71,7 @@ extern void ppe_uniphy_refclk_set(void);
 
 unsigned int qpic_frequency = 0, qpic_phase = 0;
 
-#ifdef CONFIG_QPIC_NAND
+#ifdef CONFIG_QPIC_SERIAL
 extern unsigned int qpic_training_offset;
 #endif
 
@@ -2126,11 +2126,15 @@ void fdt_fixup_qpic(void *blob)
 		return;
 	}
 
-#ifdef CONFIG_QPIC_NAND
-	ret = fdt_setprop_u32(blob, node_off, "qcom,training_offset", qpic_training_offset);
-	if (ret) {
-		printf("%s : Unable to set property 'qcom,training_offset'\n",__func__);
-		return;
+#ifdef CONFIG_QPIC_SERIAL
+	if (qpic_training_offset != 0xBAD0FF5E){
+		ret = fdt_setprop_u32(blob, node_off, "qcom,training_offset",
+				qpic_training_offset);
+		if (ret) {
+			printf("%s : Unable to set property 'qcom,training_offset'\n",
+					__func__);
+			return;
+		}
 	}
 #endif
 }
