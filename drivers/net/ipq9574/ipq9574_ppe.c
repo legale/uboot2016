@@ -672,6 +672,65 @@ static void ipq9574_ppe_queue_ac_enable(void)
 }
 
 /*
+ * ipq9574_ppe_enable_port_counter
+ */
+static void ipq9574_ppe_enable_port_counter(void)
+{
+	int i;
+	uint32_t reg = 0;
+
+	for (i = 0; i < 7; i++) {
+		/* MRU_MTU_CTRL_TBL.rx_cnt_en, MRU_MTU_CTRL_TBL.tx_cnt_en */
+		ipq9574_ppe_reg_read(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10), &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10), reg);
+		ipq9574_ppe_reg_read(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x4, &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x4, reg | 0x284303);
+		ipq9574_ppe_reg_read(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x8, &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x8, reg);
+		ipq9574_ppe_reg_read(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0xc, &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0xc, reg);
+
+		/* MC_MTU_CTRL_TBL.tx_cnt_en */
+		ipq9574_ppe_reg_read(IPQ9574_PPE_MC_MTU_CTRL_TBL_ADDR
+					+ (i * 0x4), &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_MC_MTU_CTRL_TBL_ADDR
+					+ (i * 0x4), reg | 0x10000);
+
+		/* PORT_EG_VLAN.tx_counting_en */
+		ipq9574_ppe_reg_read(IPQ9574_PPE_PORT_EG_VLAN_TBL_ADDR
+					+ (i * 0x4), &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_PORT_EG_VLAN_TBL_ADDR
+					+ (i * 0x4), reg | 0x100);
+
+		/* TL_PORT_VP_TBL.rx_cnt_en */
+		ipq9574_ppe_reg_read(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10), &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10), reg);
+		ipq9574_ppe_reg_read(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x4, &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x4, reg);
+		ipq9574_ppe_reg_read(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x8, &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x8, reg | 0x20000);
+		ipq9574_ppe_reg_read(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0xc, &reg);
+		ipq9574_ppe_reg_write(IPQ9574_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0xc, reg);
+	}
+}
+
+/*
  * ipq9574_ppe_c_sp_cfg_tbl_drr_id_set
  */
 static void ipq9574_ppe_c_sp_cfg_tbl_drr_id_set(int id)
@@ -903,6 +962,9 @@ void ipq9574_ppe_provision_init(void)
 	ipq9574_ppe_reg_write(0x84c004, 0x7D00);
 	ipq9574_ppe_reg_write(0x84c008, 0x0);
 	ipq9574_ppe_reg_write(0x84c00c, 0x0);
+
+	/* enable physical/virtual port TX/RX counters for all ports (0-6) */
+	ipq9574_ppe_enable_port_counter();
 
 	/*
 	 * Port0 - Port7 learn enable and isolation port bitmap and TX_EN
