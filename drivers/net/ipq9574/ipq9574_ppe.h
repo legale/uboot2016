@@ -70,6 +70,7 @@ enum {
 
 #define ADPT_ACL_HPPE_IPV4_DIP_RULE	4
 #define ADPT_ACL_HPPE_MAC_SA_RULE	1
+#define ADPT_ACL_HPPE_MAC_DA_RULE	0
 #define MAX_RULE			512
 
 struct ipo_rule_reg {

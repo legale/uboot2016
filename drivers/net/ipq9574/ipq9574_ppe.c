@@ -116,6 +116,13 @@ void ipq9574_ppe_acl_set(int rule_id, int rule_type, int field0, int field1, int
 			hw_reg.bf.pri = 0x2;
 			/* bypass fdb lean and fdb freash */
 			hw_act.bf.bypass_bitmap_0 = 0x1800;
+		} else if (rule_type == ADPT_ACL_HPPE_MAC_DA_RULE) {
+			/* dest mac AC rule */
+			hw_reg.bf.rule_field_0 = field1;
+			hw_reg.bf.rule_field_1 = field0;
+			hw_mask.bf.maskfield_1 = 0xffff;
+			hw_act.bf.fwd_cmd = 1;/* drop */
+			hw_reg.bf.pri = 0x2;
 		}
 		/* bind port1-port6 */
 		hw_reg.bf.src_0 = 0x0;
