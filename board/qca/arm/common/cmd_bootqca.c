@@ -897,7 +897,7 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	|| if atf is enable in env ,do_boot_signedimg is skip.
 	|| Note: This features currently support in ipq50XX.
 	*/
-	if (ret == 0 && buf == 1 && !getenv("atf")) {
+	if (ret == 0 && buf == 1 && !is_atf_enabled()) {
 		ret = do_boot_signedimg(cmdtp, flag, argc, argv);
 	} else if (ret == 0 || ret == -EOPNOTSUPP) {
 		ret = do_boot_unsignedimg(cmdtp, flag, argc, argv);

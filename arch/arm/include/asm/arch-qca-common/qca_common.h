@@ -114,6 +114,7 @@ int bring_sec_core_up(unsigned int cpuid, unsigned int entry, unsigned int arg);
 int is_secondary_core_off(unsigned int cpuid);
 int smem_read_cpu_count(void);
 int get_soc_hw_version(void);
+int is_atf_enabled(void);
 
 struct dumpinfo_t{
 	char name[16]; /* use only file name in 8.3 format */
