@@ -53,6 +53,12 @@ loff_t board_env_offset;
 loff_t board_env_range;
 loff_t board_env_size;
 
+static enum atf_status_t {
+        ATF_STATE_DISABLED,
+        ATF_STATE_ENABLED,
+        ATF_STATE_UNKNOWN,
+} atf_status = ATF_STATE_UNKNOWN;
+
 __weak
 int ipq_board_usb_init(void)
 {
@@ -307,6 +313,29 @@ void get_kernel_fs_part_details(void)
 	}
 
 	return;
+}
+
+int is_atf_enabled(void)
+{
+	int ret;
+	u32 val[2] = {0};
+
+        if (likely(atf_status != ATF_STATE_UNKNOWN))
+                return (atf_status == ATF_STATE_ENABLED);
+
+	/*
+	 * Understanding is this smc call will not be implemented in ATF in
+	 * future as well. If its implemented, Bit 7 should be made to 1.
+	 */
+	atf_status = ATF_STATE_DISABLED;
+	ret = is_scm_sec_auth_available(SCM_SVC_INFO, GET_SECURE_STATE_CMD);
+	if (ret > 0) {
+		ret = qca_scm_get_secure_state(&val, sizeof(val));
+		if ((ret == 0) && (val[0] & 0x80))
+			atf_status = ATF_STATE_ENABLED;
+	}
+
+	return (atf_status == ATF_STATE_ENABLED);
 }
 
 /*

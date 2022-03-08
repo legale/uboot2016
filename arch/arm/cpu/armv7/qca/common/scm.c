@@ -417,6 +417,26 @@ void __attribute__ ((noreturn)) execute_tzt(void *entry_addr)
 static uint8_t tz_buf[CONFIG_SYS_CACHELINE_SIZE]  __aligned(CONFIG_SYS_CACHELINE_SIZE);
 
 #ifndef CONFIG_QCA_DISABLE_SCM
+int qca_scm_get_secure_state(void *buf, size_t len)
+{
+	int ret;
+	if (is_scm_armv8())
+	{
+		struct qca_scm_desc desc = {0};
+		desc.arginfo = QCA_SCM_ARGS(0);
+
+		ret = scm_call_64(SCM_SVC_INFO, GET_SECURE_STATE_CMD, &desc);
+		memcpy(buf, &desc.ret, len);
+	}
+	else
+	{
+		ret = scm_call(SCM_SVC_INFO, GET_SECURE_STATE_CMD, NULL, 0,
+				buf, len);
+	}
+
+	return ret;
+}
+
 int qca_scm_call(u32 svc_id, u32 cmd_id, void *buf, size_t len)
 {
 	int ret = 0;
@@ -676,6 +696,10 @@ int qti_pas_and_auth_reset(u32 peripheral)
 #endif
 
 #else
+int qca_scm_get_secure_state(void *buf, size_t len)
+{
+	return 0;
+}
 int qca_scm_call(u32 svc_id, u32 cmd_id, void *buf, size_t len)
 {
 	return 0;

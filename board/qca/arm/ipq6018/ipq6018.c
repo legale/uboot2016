@@ -1266,7 +1266,7 @@ void reset_cpu(unsigned long a)
 {
 	reset_crashdump();
 
-	if(getenv("atf"))
+	if(is_atf_enabled())
 		atf_reset();
 	else
 		psci_sys_reset();

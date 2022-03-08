@@ -1067,8 +1067,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 	s = getenv("qce_fixed_key");
 	if (s)
 		fdt_fixup_set_qce_fixed_key(blob);
-	s = getenv("atf");
-	if (s) {
+	if (is_atf_enabled()) {
 		fdt_fixup_set_qca_cold_reboot_enable(blob);
 		fdt_fixup_wcss_rproc_for_atf(blob);
 	}

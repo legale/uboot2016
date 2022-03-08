@@ -34,6 +34,7 @@
 #define SCM_SVC_ID_SHIFT		0xA
 #define IS_CALL_AVAIL_CMD		0x1
 #define PART_INFO_CMD			0x22
+#define GET_SECURE_STATE_CMD		0x4
 
 #ifdef CONFIG_IPQ_BT_SUPPORT
 #define SCM_PAS_INIT_IMAGE_CMD		0x1
@@ -135,6 +136,7 @@ int qca_scm_part_info(void *cmd_buf, size_t cmd_len);
 s32 qca_scm_call_atomic_ver2_32(u32 svc, u32 cmd, u32 arg1, u32 arg2);
 int qca_scm_auth_kernel(void *cmd_buf, size_t cmd_len);
 int is_scm_sec_auth_available(u32 svc_id, u32 cmd_id);
+int qca_scm_get_secure_state(void *buf, size_t len);
 #ifdef CONFIG_IPQ_TZT
 int qca_scm(u32 svc_id, u32 cmd_id, u32 ownr_id, u32 *addr, u32 len);
 #endif
