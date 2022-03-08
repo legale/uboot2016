@@ -47,7 +47,7 @@ struct nand_onfi_para_page onfi_para;
 typedef unsigned long addr_t;
 
 static uint32_t hw_ver;
-unsigned int qpic_training_offset = 0;
+unsigned int qpic_training_offset = 0xBAD0FF5E;
 
 #ifdef CONFIG_QSPI_LAYOUT_SWITCH
 enum qpic_nand_layout {
