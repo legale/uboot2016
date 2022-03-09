@@ -178,15 +178,20 @@ static void ipq9574_vsi_setup(int vsi, uint8_t group_mask)
 }
 
 /*
- * ipq9574_gmac_port_enable()
+ * ipq9574_gmac_port_disable()
  */
-static void ipq9574_gmac_port_enable(int port)
+static void ipq9574_gmac_port_disable(int port)
 {
 	ipq9574_ppe_reg_write(IPQ9574_PPE_MAC_ENABLE + (0x200 * port), 0x70);
 	ipq9574_ppe_reg_write(IPQ9574_PPE_MAC_SPEED + (0x200 * port), 0x2);
 	ipq9574_ppe_reg_write(IPQ9574_PPE_MAC_MIB_CTL + (0x200 * port), 0x1);
 }
 
+/*
+ * ppe_port_bridge_txmac_set()
+ * TXMAC should be disabled for all ports by default
+ * TXMAC should be enabled for all ports that are link up alone
+ */
 void ppe_port_bridge_txmac_set(int port_id, int status)
 {
 	uint32_t reg_value = 0;
@@ -967,22 +972,26 @@ void ipq9574_ppe_provision_init(void)
 	ipq9574_ppe_enable_port_counter();
 
 	/*
-	 * Port0 - Port7 learn enable and isolation port bitmap and TX_EN
-	 * Here please pay attention on bit16 (TX_EN) is not set on port7
+	 * Port0 - TX_EN is set by default, Port1 - LRN_EN is set
+	 * Port0 -> CPU Port
+	 * Port1-6 -> Ethernet Ports
+	 * Port7 -> EIP197
 	 */
-	for (i = 0; i < 7; i++)
-		ipq9574_ppe_reg_write(IPQ9574_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+	for (i = 0; i < 8; i++) {
+		if (i == 0)
+			ipq9574_ppe_reg_write(IPQ9574_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
 			      IPQ9574_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
 			      IPQ9574_PPE_PORT_BRIDGE_CTRL_TXMAC_EN |
 			      IPQ9574_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
 			      IPQ9574_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
 			      IPQ9574_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
-
-	ipq9574_ppe_reg_write(IPQ9574_PPE_PORT_BRIDGE_CTRL_OFFSET + (7 * 4),
-		      IPQ9574_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
-		      IPQ9574_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
-		      IPQ9574_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
-		      IPQ9574_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
+		else
+			ipq9574_ppe_reg_write(IPQ9574_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+			      IPQ9574_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
+			      IPQ9574_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
+			      IPQ9574_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
+			      IPQ9574_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
+	}
 
 	/* Global learning */
 	ipq9574_ppe_reg_write(0x060038, 0xc0);
@@ -1003,9 +1012,9 @@ void ipq9574_ppe_provision_init(void)
 		ipq9574_ppe_reg_write(IPQ9574_PPE_STP_BASE + (0x4 * i), 0x3);
 
 	ipq9574_ppe_interface_mode_init();
-	/* Port 0-5 disable */
+	/* Port 1-6 disable */
 	for (i = 0; i < 6; i++) {
-		ipq9574_gmac_port_enable(i);
+		ipq9574_gmac_port_disable(i);
 		ppe_port_bridge_txmac_set(i + 1, 1);
 	}
 
