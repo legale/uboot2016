@@ -1873,6 +1873,8 @@ void get_phy_address(int offset)
 int ipq9574_edma_init(void *edma_board_cfg)
 {
 	struct eth_device *dev[IPQ9574_EDMA_DEV];
+	char octets[16];
+	int field0, field1;
 	struct ipq9574_edma_common_info *c_info[IPQ9574_EDMA_DEV];
 	struct ipq9574_edma_hw *hw[IPQ9574_EDMA_DEV];
 	uchar enet_addr[IPQ9574_EDMA_DEV * 6];
@@ -1975,6 +1977,17 @@ int ipq9574_edma_init(void *edma_board_cfg)
 			dev[i]->enetaddr[3],
 			dev[i]->enetaddr[4],
 			dev[i]->enetaddr[5]);
+
+		snprintf(octets, sizeof(octets), "%x%x",
+			dev[i]->enetaddr[0], dev[i]->enetaddr[1]);
+		field0 = simple_strtoul(octets, NULL, 16);
+		snprintf(octets, sizeof(octets), "%x%x%x%x",
+			dev[i]->enetaddr[2], dev[i]->enetaddr[3],
+			dev[i]->enetaddr[4], dev[i]->enetaddr[5]);
+		field1 = simple_strtoul(octets, NULL, 16);
+
+		/* Drop packets with DUT's mac addr */
+		ipq9574_ppe_acl_set(4, 0x1, field0, field1, 0xffffffff, 0x0, 0x1);
 
 		snprintf(dev[i]->name, sizeof(dev[i]->name), "eth%d", i);
 

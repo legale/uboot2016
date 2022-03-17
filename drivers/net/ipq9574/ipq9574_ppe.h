@@ -68,8 +68,9 @@ enum {
 	UDP_PKT,
 };
 
-#define ADPT_ACL_HPPE_IPV4_DIP_RULE 4
-#define MAX_RULE 512
+#define ADPT_ACL_HPPE_IPV4_DIP_RULE	4
+#define ADPT_ACL_HPPE_MAC_SA_RULE	1
+#define MAX_RULE			512
 
 struct ipo_rule_reg {
         uint32_t  rule_field_0:32;
@@ -106,8 +107,10 @@ union ipo_mask_reg_u {
 struct ipo_action {
         uint32_t  dest_info_change_en:1;
 	uint32_t  fwd_cmd:2;
-	uint32_t  _reserved0:29;
-	uint32_t  _reserved1:32;
+	uint32_t  _reserved0:15;
+	uint32_t bypass_bitmap_0:14;
+	uint32_t bypass_bitmap_1:18;
+	uint32_t  _reserved1:14;
 	uint32_t  _reserved2:32;
 	uint32_t  _reserved3:32;
 	uint32_t  _reserved4:32;
