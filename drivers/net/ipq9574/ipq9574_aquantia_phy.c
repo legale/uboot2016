@@ -568,31 +568,12 @@ static int program_ethphy_fw(unsigned int phy_addr, uint32_t load_addr, uint32_t
 static int do_load_fw(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned int phy_addr = AQU_PHY_ADDR;
-	int node, aquantia_port;
 
 	if (argc > 2)
 		return CMD_RET_USAGE;
 
 	if (argc == 2)
 		phy_addr = simple_strtoul(argv[1], NULL, 16);
-
-	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
-	if (node < 0) {
-		printf("Error: ess-switch not specified in dts");
-		return 0;
-	}
-
-	aquantia_port = fdtdec_get_uint(gd->fdt_blob, node, "aquantia_port", -1);
-	if (aquantia_port < 0) {
-		printf("Error: aquantia_port not specified in dts");
-		return 0;
-	}
-
-	aquantia_port = fdtdec_get_uint(gd->fdt_blob, node, "aquantia_gpio", -1);
-	if (aquantia_port < 0) {
-		printf("Error: aquantia_gpio not specified in dts");
-		return 0;
-	}
 
 	miiphy_init();
 	ipq9574_eth_initialize();
