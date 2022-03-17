@@ -153,7 +153,7 @@ static void ipq9574_ppe_ucast_queue_map_tbl_queue_id_set(int queue, int port)
  */
 static void ipq9574_vsi_setup(int vsi, uint8_t group_mask)
 {
-	uint32_t val = (group_mask << 24 | group_mask << 16 | 0x1
+	uint32_t val = (group_mask << 24 | group_mask << 16 | group_mask << 8
 							    | group_mask);
 
 	/* Set mask */
