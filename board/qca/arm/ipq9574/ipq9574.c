@@ -1498,8 +1498,6 @@ unsigned int get_dts_machid(unsigned int machid)
 			return MACH_TYPE_IPQ9574_AP_AL02_C4;
 		case MACH_TYPE_IPQ9574_AP_AL02_C6:
 			return MACH_TYPE_IPQ9574_AP_AL02_C1;
-		case MACH_TYPE_IPQ9574_AP_AL02_C8:
-			return MACH_TYPE_IPQ9574_AP_AL02_C2;
 		default:
 			return machid;
 	}
@@ -1520,9 +1518,6 @@ void ipq_uboot_fdt_fixup(void)
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C6:
 			config = "config@al02-c6";
-			break;
-		case MACH_TYPE_IPQ9574_AP_AL02_C8:
-			config = "config@al02-c8";
 			break;
 	}
 
