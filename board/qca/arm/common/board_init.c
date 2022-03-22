@@ -333,7 +333,8 @@ int is_atf_enabled(void)
 		ret = qca_scm_get_secure_state(&val, sizeof(val));
 		if ((ret == 0) && (val[0] & 0x80))
 			atf_status = ATF_STATE_ENABLED;
-	}
+	} else
+		atf_status = ATF_STATE_ENABLED;
 
 	return (atf_status == ATF_STATE_ENABLED);
 }
