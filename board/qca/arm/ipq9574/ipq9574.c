@@ -41,6 +41,7 @@ extern int ipq_spi_init(u16);
 
 unsigned int qpic_frequency = 0, qpic_phase = 0;
 extern unsigned int qpic_training_offset;
+static int aq_phy_initialised = 0;
 extern unsigned ipq_runtime_fs_feature_enabled;
 
 extern	int qca_scm_dpr(u32, u32, void *, size_t);
@@ -752,15 +753,18 @@ void aquantia_phy_reset_init(void)
 	unsigned int *aquantia_gpio_base;
 	uint32_t cfg;
 
-	aquantia_gpio_cnt = get_aquantia_gpio(aquantia_gpio);
-	if (aquantia_gpio_cnt >= 1) {
-		for (i = 0; i < aquantia_gpio_cnt; i++) {
-			if (aquantia_gpio[i] >= 0) {
-				aquantia_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(aquantia_gpio[i]);
-				cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
-				writel(cfg, aquantia_gpio_base);
+	if (!aq_phy_initialised) {
+		aquantia_gpio_cnt = get_aquantia_gpio(aquantia_gpio);
+		if (aquantia_gpio_cnt >= 1) {
+			for (i = 0; i < aquantia_gpio_cnt; i++) {
+				if (aquantia_gpio[i] >= 0) {
+					aquantia_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(aquantia_gpio[i]);
+					cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
+					writel(cfg, aquantia_gpio_base);
+				}
 			}
 		}
+		aq_phy_initialised = 1;
 	}
 }
 
