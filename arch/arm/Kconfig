@@ -461,6 +461,14 @@ config ARCH_IPQ5018
 	select SYS_GENERIC_BOARD
 	select QCA_COMMON
 
+config ARCH_DEVSOC
+	bool "QCA, DEVSOC"
+	select DM
+	select DM_SERIAL
+	select CPU_V7
+	select SYS_GENERIC_BOARD
+	select QCA_COMMON
+
 config ARCH_IPQ6018
 	bool "QCA, IPQ6018"
 	select DM
@@ -866,6 +874,7 @@ source "board/hisilicon/hikey/Kconfig"
 source "board/imx31_phycore/Kconfig"
 source "board/ipq40xx/Kconfig"
 source "board/ipq5018/Kconfig"
+source "board/devsoc/Kconfig"
 source "board/ipq6018/Kconfig"
 source "board/ipq806x/Kconfig"
 source "board/ipq9574/Kconfig"

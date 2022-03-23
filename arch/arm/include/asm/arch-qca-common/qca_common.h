@@ -21,6 +21,10 @@
 #include <asm/arch-ipq5018/clk.h>
 #endif
 
+#ifdef CONFIG_ARCH_DEVSOC
+#include <asm/arch-devsoc/clk.h>
+#endif
+
 #ifdef CONFIG_ARCH_IPQ6018
 #include <asm/arch-ipq6018/clk.h>
 #endif
@@ -36,7 +40,6 @@
 #ifdef CONFIG_ARCH_IPQ40xx
 #include <asm/arch-ipq40xx/clk.h>
 #endif
-
 
 #ifdef CONFIG_ARCH_IPQ806x
 #include <asm/arch-ipq806x/clk.h>
