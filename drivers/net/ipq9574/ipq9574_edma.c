@@ -1869,6 +1869,11 @@ int ipq9574_edma_init(void *edma_board_cfg)
 	int node, phy_addr, aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
 	int mode, phy_node = -1, res = -1;
 
+	/*
+	 * Init non cache buffer
+	 */
+	noncached_init();
+
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
 
 	if (node >= 0) {
