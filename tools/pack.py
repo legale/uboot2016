@@ -1055,6 +1055,10 @@ class Pack(object):
                 section_conf = "mibib_qcn9000"
             if section_conf == "mibib" and IF_QCN9224:
                 section_conf = "mibib_qcn9224"
+            if section_conf == "gpt" and IF_QCN9224:
+                section_conf = "gpt_qcn9224"
+            if section_conf == "gptbackup" and IF_QCN9224:
+                section_conf = "gptbackup_qcn9224"
             if section_conf == "qsee":
                 section_conf = "tz"
             elif section_conf == "appsbl":
@@ -1151,7 +1155,7 @@ class Pack(object):
         else:
             if IF_QCN9000:
                 srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition-qcn9000.xml"
-            elif IF_QCN9224:
+            elif IF_QCN9224 and flinfo.type != "emmc":
                 srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition-qcn9224.xml"
             else:
                 srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition.xml"
@@ -1160,9 +1164,15 @@ class Pack(object):
         if self.flash_type != "emmc" and flinfo.type != "emmc":
             parts = root_part.findall(".//partitions/partition")
         elif self.flash_type != "emmc" and flinfo.type == "emmc":
-            parts = root_part.findall(".//physical_partition[@ref='norplusemmc']/partition")
+            if IF_QCN9224:
+               parts = root_part.findall(".//physical_partition[@ref='norplusemmc_qcn9224']/partition")
+            else:
+               parts = root_part.findall(".//physical_partition[@ref='norplusemmc']/partition")
         else:
-            parts = root_part.findall(".//physical_partition[@ref='emmc']/partition")
+            if IF_QCN9224:
+               parts = root_part.findall(".//physical_partition[@ref='emmc_qcn9224']/partition")
+            else:
+               parts = root_part.findall(".//physical_partition[@ref='emmc']/partition")
         if flinfo.type == "emmc" and image_type == "all":
             parts_length = len(parts) + 2
         else:
@@ -1236,6 +1246,11 @@ class Pack(object):
                     part_info = root.find(".//data[@type='EMMC_PARAMETER']")
                 part_fname = part_info.find(".//partition_mbn")
                 filename = part_fname.text
+		if IF_QCN9224 and flinfo.type == "emmc":
+			if self.flash_type == "emmc":
+				filename = filename[:-5] + "2.bin"
+			elif self.flash_type == "norplusemmc":
+				filename = filename[:-5] + "3.bin"
                 partition = "0:GPT"
                 first = False
 
@@ -1246,6 +1261,11 @@ class Pack(object):
                     part_info = root.find(".//data[@type='EMMC_PARAMETER']")
                 part_fname = part_info.find(".//partition_mbn_backup")
                 filename = part_fname.text
+		if IF_QCN9224 and flinfo.type == "emmc":
+			if self.flash_type == "emmc":
+				filename = filename[:-5] + "2.bin"
+			elif self.flash_type == "norplusemmc":
+				filename = filename[:-5] + "3.bin"
                 partition = "0:GPTBACKUP"
 
             else:
@@ -1789,6 +1809,22 @@ class Pack(object):
                 except KeyError, e:
                     continue
 
+            if section_conf == "gpt" and QCN9224:
+		if self.flash_type == "emmc":
+			filename_qcn9224 = filename[:-5] + "2.bin"
+		elif self.flash_type == "norplusemmc":
+			filename_qcn9224 = filename[:-5] + "3.bin"
+		section_conf_qcn9224 = section_conf + "_qcn9224"
+		self.__gen_script_append_images(filename_qcn9224, soc_version, wifi_fw_type, images, flinfo, root, section_conf_qcn9224, partition)
+
+            if section_conf == "gptbackup" and QCN9224:
+		if self.flash_type == "emmc":
+			filename_qcn9224 = filename[:-5] + "2.bin"
+		elif self.flash_type == "norplusemmc":
+			filename_qcn9224 = filename[:-5] + "3.bin"
+		section_conf_qcn9224 = section_conf + "_qcn9224"
+		self.__gen_script_append_images(filename_qcn9224, soc_version, wifi_fw_type, images, flinfo, root, section_conf_qcn9224, partition)
+
             if flinfo.type != "emmc":
 
 		img = section.find('img_name')
@@ -2037,7 +2073,7 @@ class Pack(object):
                                    flinfo.chipsize, blocksize, chipsize, root_part)
                 self.partitions = mibib_qcn9224.get_parts()
 
-                script.append('if test "$machid" = "8050301"; then\n', fatal=False)
+                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701"; then\n', fatal=False)
                 ret = self.__gen_flash_script(script, flinfo, root, True)
                 if ret == 0:
                     return 0 #Issue in packing al+wkk single-image
@@ -2051,9 +2087,29 @@ class Pack(object):
             self.partitions = mibib.get_parts()
 
         else:
+            script = Flash_Script(flinfo)
+
+            # system-partition specific for ALDER+WAIKIKI
+            if QCN9224:
+		IF_QCN9224 = True
+		if self.flash_type == "emmc":
+			part_fname_qcn9224 = part_fname[:-5] + "2.bin"
+		elif self.flash_type == "norplusemmc":
+			part_fname_qcn9224 = part_fname[:-5] + "3.bin"
+		gpt = GPT(part_fname_qcn9224, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
+		self.partitions = gpt.get_parts()
+
+                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701"; then\n', fatal=False)
+		ret = self.__gen_flash_script(script, flinfo, root, True)
+		if ret == 0:
+			return 0 #Issue in packing al+wkk single-image
+
+		script.append('else', fatal=False)
+		self.partitions = {}
+		IF_QCN9224 = False
+
             gpt = GPT(part_fname, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
             self.partitions = gpt.get_parts()
-            script = Flash_Script(flinfo)
 
         ret = self.__gen_script(script_fp, script, images, flinfo, root)
 	if ret == 0:
@@ -2080,12 +2136,17 @@ class Pack(object):
         machid -- string, board machine ID in hex format
         images -- list of ImageInfo, append images used by the board here
         """
+        global QCN9224
 
         try:
             part_info = root.find(".//data[@type='" + self.flash_type.upper() + "_PARAMETER']")
             part_fname = part_info.find(".//partition_mbn")
             part_fname = part_fname.text
             part_fname = os.path.join(self.images_dname, part_fname)
+
+            if ARCH_NAME == "ipq9574":
+                QCN9224 = True
+
             if ftype == "norplusemmc":
                 part_info = root.find(".//data[@type='NORPLUSEMMC_PARAMETER']")
                 pagesize = int(part_info.find(".//page_size_flash").text)
@@ -2193,7 +2254,7 @@ class Pack(object):
 
             if ARCH_NAME == "ipq807x" and (ftype == "norplusnand" or ftype == "nand"):
                 QCN9000 = True
-            if ARCH_NAME == "ipq9574" and (ftype == "norplusnand" or ftype == "nand"):
+            if ARCH_NAME == "ipq9574" and (ftype in ["norplusnand", "nand", "norplusemmc", "norplusnand-4k", "nand-4k"]):
                 QCN9224 = True
 
             if ftype in ["tiny-nor", "norplusnand", "norplusnand-4k", "norplusemmc", "tiny-nor-debug"]:
