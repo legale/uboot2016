@@ -47,12 +47,6 @@
 #define CONFIG_ENV_SIZE_MAX			(256 << 10) /* 256 KB */
 
 /*
- * This config should remove once
- * flash support is added
- */
-#define CONFIG_ENV_IS_NOWHERE			1
-
-/*
  * Enable Flashwrite command
  */
 #define CONFIG_CMD_FLASHWRITE
@@ -233,6 +227,28 @@ extern loff_t board_env_size;
 * Cache flush and invalidation based on L1 cache, so the cache line
 * size is configured to 64 */
 #define CONFIG_SYS_CACHELINE_SIZE		64
+
+/*
+* SPI Flash Configs
+*/
+#define CONFIG_QCA_SPI
+#define CONFIG_SPI_FLASH
+#define CONFIG_CMD_SF
+#define CONFIG_SPI_FLASH_STMICRO
+#define CONFIG_SPI_FLASH_WINBOND
+#define CONFIG_SPI_FLASH_MACRONIX
+#define CONFIG_SPI_FLASH_GIGADEVICE
+#define CONFIG_SPI_FLASH_SPANSION
+#define CONFIG_SF_DEFAULT_BUS			0
+#define CONFIG_SF_DEFAULT_CS			0
+#define CONFIG_SF_DEFAULT_MODE			SPI_MODE_0
+#define CONFIG_SF_DEFAULT_SPEED			(48 * 1000 * 1000)
+#define CONFIG_SPI_FLASH_BAR			1
+#define CONFIG_SPI_FLASH_USE_4K_SECTORS
+#define CONFIG_IPQ_4B_ADDR_SWITCH_REQD
+
+#define CONFIG_QUP_SPI_USE_DMA			1
+#define CONFIG_QCA_BAM				1
 
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
