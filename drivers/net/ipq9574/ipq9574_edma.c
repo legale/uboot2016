@@ -775,68 +775,6 @@ static int ipq9574_edma_setup_ring_resources(struct ipq9574_edma_hw *ehw)
 	return 0;
 }
 
-/*
- * ipq9574_edma_free_desc()
- *	Free EDMA desc memory
- */
-static void ipq9574_edma_free_desc(struct ipq9574_edma_common_info *c_info)
-{
-	struct ipq9574_edma_hw *ehw = &c_info->hw;
-	struct ipq9574_edma_txcmpl_ring *txcmpl_ring;
-	struct ipq9574_edma_txdesc_ring *txdesc_ring;
-	struct ipq9574_edma_rxfill_ring *rxfill_ring;
-	struct ipq9574_edma_rxdesc_ring *rxdesc_ring;
-	struct ipq9574_edma_txdesc_desc *txdesc_desc;
-	struct ipq9574_edma_rxfill_desc *rxfill_desc;
-	int i;
-
-	for (i = 0; i < ehw->rxfill_rings; i++) {
-		rxfill_ring = &ehw->rxfill_ring[i];
-		if (rxfill_ring->desc) {
-			rxfill_desc = IPQ9574_EDMA_RXFILL_DESC(rxfill_ring, 0);
-			if (rxfill_desc->rdes0)
-				ipq9574_free_mem((void *)rxfill_desc->rdes0);
-			ipq9574_free_mem(rxfill_ring->desc);
-		}
-	}
-
-	for (i = 0; i < ehw->rxdesc_rings; i++) {
-		rxdesc_ring = &ehw->rxdesc_ring[i];
-		if (rxdesc_ring->desc)
-			ipq9574_free_mem(rxdesc_ring->desc);
-	}
-
-	for (i = 0; i < ehw->txcmpl_rings; i++) {
-		txcmpl_ring = &ehw->txcmpl_ring[i];
-		if (txcmpl_ring->desc) {
-			ipq9574_free_mem(txcmpl_ring->desc);
-		}
-	}
-
-	for (i = 0; i < ehw->txdesc_rings; i++) {
-		txdesc_ring = &ehw->txdesc_ring[i];
-		if (txdesc_ring->desc) {
-			txdesc_desc = IPQ9574_EDMA_TXDESC_DESC(txdesc_ring, 0);
-			if (txdesc_desc->tdes0)
-				ipq9574_free_mem((void *)txdesc_desc->tdes0);
-			ipq9574_free_mem(txdesc_ring->desc);
-		}
-	}
-}
-
-/*
- * ipq9574_edma_free_rings()
- *	Free EDMA software rings
- */
-static void ipq9574_edma_free_rings(struct ipq9574_edma_common_info *c_info)
-{
-	struct ipq9574_edma_hw *ehw = &c_info->hw;
-	ipq9574_free_mem(ehw->rxfill_ring);
-	ipq9574_free_mem(ehw->rxdesc_ring);
-	ipq9574_free_mem(ehw->txdesc_ring);
-	ipq9574_free_mem(ehw->txcmpl_ring);
-}
-
 static void ipq9574_edma_disable_rings(struct ipq9574_edma_hw *edma_hw)
 {
 	int i, desc_index;
@@ -2080,8 +2018,6 @@ init_failed:
 			ipq9574_free_mem(dev[i]);
 		}
 		if (c_info[i]) {
-			ipq9574_edma_free_desc(c_info[i]);
-			ipq9574_edma_free_rings(c_info[i]);
 			ipq9574_free_mem(c_info[i]);
 		}
 		if (ipq9574_edma_dev[i]) {
