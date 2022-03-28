@@ -1865,7 +1865,9 @@ int ipq9574_edma_init(void *edma_board_cfg)
 	ipq9574_edma_board_cfg_t ledma_cfg, *edma_cfg;
 	int phy_id;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
+#ifdef CONFIG_IPQ9574_QCA8075_PHY
 	static int sw_init_done = 0;
+#endif
 	int node, phy_addr, aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
 	int mode, phy_node = -1, res = -1;
 
@@ -2006,6 +2008,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 			pr_debug("phy_id is: 0x%x, phy_addr = 0x%x, phy_chip_id1 = 0x%x, phy_chip_id2 = 0x%x, phy_chip_id = 0x%x\n",
 				 phy_id, phy_addr, phy_chip_id1, phy_chip_id2, phy_chip_id);
 			switch(phy_chip_id) {
+#ifdef CONFIG_IPQ9574_QCA8075_PHY
 				case QCA8075_PHY_V1_0_5P:
 				case QCA8075_PHY_V1_1_5P:
 				case QCA8075_PHY_V1_1_2P:
@@ -2022,6 +2025,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 					else if (mode == EPORT_WRAPPER_QSGMII)
 						ipq9574_qca8075_phy_interface_set_mode(phy_addr, 0x4);
 					break;
+#endif
 #ifdef CONFIG_QCA8033_PHY
 				case QCA8033_PHY:
 					ipq_qca8033_phy_init(&ipq9574_edma_dev[i]->ops[phy_id], phy_addr);
