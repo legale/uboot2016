@@ -191,7 +191,7 @@ static __u32 get_fatent_value(fsdata *mydata, __u32 entry)
 		/* Write back the fatbuf to the disk */
 		if (mydata->fatbufnum != -1) {
 			if (flush_fat_buffer(mydata) < 0)
-				return -1;
+				return ret;
 		}
 
 		if (disk_read(startblock, getsize, bufptr) < 0) {
