@@ -18,7 +18,7 @@
 / {
 	model ="QCA, DEVSOC-EMULATION";
 	compatible = "qca,devsoc", "qca,devsoc-emulation";
-	machid = <0xF050000>;
+	machid = <0xF040000>;
 	config_name = "config@emulation";
 
 	aliases {
