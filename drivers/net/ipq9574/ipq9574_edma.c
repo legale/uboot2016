@@ -775,68 +775,6 @@ static int ipq9574_edma_setup_ring_resources(struct ipq9574_edma_hw *ehw)
 	return 0;
 }
 
-/*
- * ipq9574_edma_free_desc()
- *	Free EDMA desc memory
- */
-static void ipq9574_edma_free_desc(struct ipq9574_edma_common_info *c_info)
-{
-	struct ipq9574_edma_hw *ehw = &c_info->hw;
-	struct ipq9574_edma_txcmpl_ring *txcmpl_ring;
-	struct ipq9574_edma_txdesc_ring *txdesc_ring;
-	struct ipq9574_edma_rxfill_ring *rxfill_ring;
-	struct ipq9574_edma_rxdesc_ring *rxdesc_ring;
-	struct ipq9574_edma_txdesc_desc *txdesc_desc;
-	struct ipq9574_edma_rxfill_desc *rxfill_desc;
-	int i;
-
-	for (i = 0; i < ehw->rxfill_rings; i++) {
-		rxfill_ring = &ehw->rxfill_ring[i];
-		if (rxfill_ring->desc) {
-			rxfill_desc = IPQ9574_EDMA_RXFILL_DESC(rxfill_ring, 0);
-			if (rxfill_desc->rdes0)
-				ipq9574_free_mem((void *)rxfill_desc->rdes0);
-			ipq9574_free_mem(rxfill_ring->desc);
-		}
-	}
-
-	for (i = 0; i < ehw->rxdesc_rings; i++) {
-		rxdesc_ring = &ehw->rxdesc_ring[i];
-		if (rxdesc_ring->desc)
-			ipq9574_free_mem(rxdesc_ring->desc);
-	}
-
-	for (i = 0; i < ehw->txcmpl_rings; i++) {
-		txcmpl_ring = &ehw->txcmpl_ring[i];
-		if (txcmpl_ring->desc) {
-			ipq9574_free_mem(txcmpl_ring->desc);
-		}
-	}
-
-	for (i = 0; i < ehw->txdesc_rings; i++) {
-		txdesc_ring = &ehw->txdesc_ring[i];
-		if (txdesc_ring->desc) {
-			txdesc_desc = IPQ9574_EDMA_TXDESC_DESC(txdesc_ring, 0);
-			if (txdesc_desc->tdes0)
-				ipq9574_free_mem((void *)txdesc_desc->tdes0);
-			ipq9574_free_mem(txdesc_ring->desc);
-		}
-	}
-}
-
-/*
- * ipq9574_edma_free_rings()
- *	Free EDMA software rings
- */
-static void ipq9574_edma_free_rings(struct ipq9574_edma_common_info *c_info)
-{
-	struct ipq9574_edma_hw *ehw = &c_info->hw;
-	ipq9574_free_mem(ehw->rxfill_ring);
-	ipq9574_free_mem(ehw->rxdesc_ring);
-	ipq9574_free_mem(ehw->txdesc_ring);
-	ipq9574_free_mem(ehw->txcmpl_ring);
-}
-
 static void ipq9574_edma_disable_rings(struct ipq9574_edma_hw *edma_hw)
 {
 	int i, desc_index;
@@ -1865,7 +1803,9 @@ int ipq9574_edma_init(void *edma_board_cfg)
 	ipq9574_edma_board_cfg_t ledma_cfg, *edma_cfg;
 	int phy_id;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
+#ifdef CONFIG_IPQ9574_QCA8075_PHY
 	static int sw_init_done = 0;
+#endif
 	int node, phy_addr, aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
 	int mode, phy_node = -1, res = -1;
 
@@ -2006,6 +1946,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 			pr_debug("phy_id is: 0x%x, phy_addr = 0x%x, phy_chip_id1 = 0x%x, phy_chip_id2 = 0x%x, phy_chip_id = 0x%x\n",
 				 phy_id, phy_addr, phy_chip_id1, phy_chip_id2, phy_chip_id);
 			switch(phy_chip_id) {
+#ifdef CONFIG_IPQ9574_QCA8075_PHY
 				case QCA8075_PHY_V1_0_5P:
 				case QCA8075_PHY_V1_1_5P:
 				case QCA8075_PHY_V1_1_2P:
@@ -2022,6 +1963,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 					else if (mode == EPORT_WRAPPER_QSGMII)
 						ipq9574_qca8075_phy_interface_set_mode(phy_addr, 0x4);
 					break;
+#endif
 #ifdef CONFIG_QCA8033_PHY
 				case QCA8033_PHY:
 					ipq_qca8033_phy_init(&ipq9574_edma_dev[i]->ops[phy_id], phy_addr);
@@ -2076,8 +2018,6 @@ init_failed:
 			ipq9574_free_mem(dev[i]);
 		}
 		if (c_info[i]) {
-			ipq9574_edma_free_desc(c_info[i]);
-			ipq9574_edma_free_rings(c_info[i]);
 			ipq9574_free_mem(c_info[i]);
 		}
 		if (ipq9574_edma_dev[i]) {

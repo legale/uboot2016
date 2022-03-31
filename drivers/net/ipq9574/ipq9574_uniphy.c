@@ -201,7 +201,9 @@ static void ppe_uniphy_psgmii_mode_set(uint32_t uniphy_index)
 	}
 	mdelay(100);
 	ppe_uniphy_calibration(uniphy_index);
+#ifdef CONFIG_IPQ9574_QCA8075_PHY
 	ipq9574_qca8075_phy_serdes_reset(0x10);
+#endif
 }
 
 static void ppe_uniphy_qsgmii_mode_set(uint32_t uniphy_index)
