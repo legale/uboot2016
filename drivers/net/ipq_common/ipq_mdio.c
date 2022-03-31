@@ -29,14 +29,11 @@ static int ipq_mdio_wait_busy(void)
 	int i;
 	u32 busy;
 	for (i = 0; i < IPQ_MDIO_RETRY; i++) {
-		udelay(IPQ_MDIO_DELAY);
 		busy = readl(IPQ_MDIO_BASE +
 			MDIO_CTRL_4_REG) &
 			MDIO_CTRL_4_ACCESS_BUSY;
-
 		if (!busy)
 			return 0;
-		udelay(IPQ_MDIO_DELAY);
 	}
 	printf("%s: MDIO operation timed out\n",
 			__func__);
@@ -46,9 +43,6 @@ static int ipq_mdio_wait_busy(void)
 int ipq_mdio_write(int mii_id, int regnum, u16 value)
 {
 	u32 cmd;
-	if (ipq_mdio_wait_busy())
-		return -ETIMEDOUT;
-
 
 	if (regnum & MII_ADDR_C45) {
 		unsigned int mmd = (regnum >> 16) & 0x1F;
@@ -100,8 +94,6 @@ int ipq_mdio_write(int mii_id, int regnum, u16 value)
 int ipq_mdio_read(int mii_id, int regnum, ushort *data)
 {
 	u32 val,cmd;
-	if (ipq_mdio_wait_busy())
-		return -ETIMEDOUT;
 
 	if (regnum & MII_ADDR_C45) {
 
