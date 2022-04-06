@@ -656,15 +656,15 @@ static int do_boot_signedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const a
 
 	ret = qca_scm_auth_kernel(&kernel_img_info,
 			sizeof(kernel_img_info));
+	if (ret) {
+		printf("Kernel image authentication failed \n");
+		BUG();
+	}
 #ifndef CONFIG_IPQ_ELF_AUTH
 	memset((void *)mbn_ptr->signature_ptr, 0,(mbn_ptr->signature_size + mbn_ptr->cert_chain_size));
 #else
 	memset((void *)kernel_img_info.kernel_load_addr,  0, img_info.img_offset);
 #endif
-	if (ret) {
-		printf("Kernel image authentication failed \n");
-		BUG();
-	}
 #ifdef CONFIG_IPQ_ROOTFS_AUTH
 #ifdef CONFIG_IPQ_ELF_AUTH
 	if (authenticate_rootfs_elf(img_info.img_load_addr +
