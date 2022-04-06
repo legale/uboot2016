@@ -22,6 +22,9 @@ DECLARE_GLOBAL_DATA_PTR;
 enum tz_crypto_service_aes_cmd_t {
 	TZ_CRYPTO_SERVICE_AES_ENC_ID = 0x7,
 	TZ_CRYPTO_SERVICE_AES_DEC_ID = 0x8,
+#ifdef CONFIG_IPQ9574
+	TZ_CRYPTO_SERVICE_AES_DERIVE_KEY_ID = 0x9,
+#endif
 };
 
 enum tz_crypto_service_aes_type_t {
@@ -37,6 +40,7 @@ enum tz_crypto_service_aes_mode_t {
 	TZ_CRYPTO_SERVICE_AES_MODE_MAX,
 };
 
+#ifndef CONFIG_IPQ9574
 struct crypto_aes_req_data_t {
 	uint64_t type;
 	uint64_t mode;
@@ -47,6 +51,135 @@ struct crypto_aes_req_data_t {
         uint64_t resp_buf;
         uint64_t resp_len;
 };
+#else
+#define MAX_CONTEXT_BUFFER_LEN		64
+#define DEFAULT_POLICY_DESTINATION	0
+#define DEFAULT_KEY_TYPE		2
+struct crypto_aes_operation_policy {
+	uint32_t operations;
+	uint32_t algorithm;
+};
+
+struct crypto_aes_hwkey_policy  {
+	struct crypto_aes_operation_policy op_policy;
+	uint32_t kdf_depth;
+	uint32_t permissions;
+	uint32_t key_type;
+	uint32_t destination;
+};
+
+struct crypto_aes_hwkey_bindings {
+	uint32_t bindings;
+	uint32_t context_len;
+	uint8_t context[MAX_CONTEXT_BUFFER_LEN];
+};
+
+struct crypto_aes_derive_key_cmd_t {
+	struct crypto_aes_hwkey_policy policy;
+	struct crypto_aes_hwkey_bindings hw_key_bindings;
+	uint32_t source;
+	uint64_t mixing_key;
+	uint64_t key;
+};
+
+struct crypto_aes_req_data_t {
+	uint64_t key_handle;
+	uint64_t type;
+	uint64_t mode;
+	uint64_t req_buf;
+	uint64_t req_len;
+	uint64_t ivdata;
+	uint64_t iv_len;
+	uint64_t resp_buf;
+	uint64_t resp_len;
+};
+
+unsigned char toBinary(char c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+
+	return (c - 'a') + 10;
+}
+
+/**
+ * do_derive_aes_256_key() - Handle the "derive_key" command-line command
+ * @cmdtp:	Command data struct pointer
+ * @flag:	Command flag
+ * @argc:	Command-line argument count
+ * @argv:	Array of command-line arguments
+ *
+ * Returns zero on success, CMD_RET_USAGE in case of misuse and negative
+ * on error.
+ */
+static int do_derive_aes_256_key(cmd_tbl_t *cmdtp, int flag,
+				 int argc, char *const argv[])
+{
+	struct crypto_aes_derive_key_cmd_t *req_ptr = NULL;
+	int ret = CMD_RET_USAGE;
+	uintptr_t *key_handle = NULL;
+	char *context_buf = NULL;
+	int context_len = 0;
+	int i = 0, j = 0;
+	unsigned char temp;
+
+	if (argc != 5)
+		return ret;
+
+	context_buf = argv[3];
+	context_len = simple_strtoul(argv[4], NULL, 16);
+	if (context_len > 64) {
+		printf("Error: context length should be less than 64\n");
+		return ret;
+	}
+	req_ptr = (struct crypto_aes_derive_key_cmd_t *)memalign(ARCH_DMA_MINALIGN,
+					sizeof(struct crypto_aes_derive_key_cmd_t));
+	if (!req_ptr) {
+		printf("Error allocating memory for key handle request buf");
+		return -ENOMEM;
+	}
+
+	req_ptr->policy.key_type = DEFAULT_KEY_TYPE;
+	req_ptr->policy.destination = DEFAULT_POLICY_DESTINATION;
+	req_ptr->source = simple_strtoul(argv[1], NULL, 16);
+	req_ptr->hw_key_bindings.bindings = simple_strtoul(argv[2], NULL, 16);;
+	key_handle = (uintptr_t *)memalign(ARCH_DMA_MINALIGN,
+					sizeof(uint64_t));
+	req_ptr->key = (uintptr_t) key_handle;
+	req_ptr->mixing_key = 0;
+	req_ptr->hw_key_bindings.context_len = context_len;
+
+	while(context_buf[i] != '\0' && i < context_len*2) {
+		temp = toBinary(context_buf[i]) << 4;
+		temp += toBinary(context_buf[i+1]);
+		req_ptr->hw_key_bindings.context[j] = temp;
+		j++;
+		i += 2;
+	}
+	ret = qca_scm_crypto(TZ_CRYPTO_SERVICE_AES_DERIVE_KEY_ID, (void *)req_ptr,
+					sizeof(struct crypto_aes_derive_key_cmd_t));
+	if (ret)
+		printf("Scm call failed with error code: %d\n", ret);
+	else {
+		printf("Key handle is %u\n", (unsigned int)*key_handle);
+	}
+
+	if (key_handle)
+		free(key_handle);
+	if (req_ptr)
+		free(req_ptr);
+
+	return ret;
+}
+
+/***************************************************/
+U_BOOT_CMD(
+	derive_aes_256_key, 5, 1, do_derive_aes_256_key,
+	"Derive AES 256 key before encrypt/decrypt in TME-L based systems",
+	"Key Derivation: derive_aes_256_key <source_data> <bindings_data>"
+	"<context_data address> <context data len>"
+);
+#endif
 
 /**
  * do_aes_256() - Handle the "aes" command-line command
@@ -66,8 +199,13 @@ static int do_aes_256(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	int cmd_id = -1;
 	int ret = CMD_RET_USAGE;
 
+#ifndef CONFIG_IPQ9574
 	if (argc != 10)
 		return ret;
+#else
+	if (argc != 11)
+		return ret;
+#endif
 
 	if (!strncmp(argv[1], "enc", 3))
 		cmd_id = TZ_CRYPTO_SERVICE_AES_ENC_ID;
@@ -79,13 +217,13 @@ static int do_aes_256(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	type = simple_strtoul(argv[2], NULL, 16);
 	if (type >= TZ_CRYPTO_SERVICE_AES_TYPE_MAX) {
 		printf("unkown type specified, use 0x1 - SHK, 0x2 - PHK\n");
-		goto err;
+		return ret;
 	}
 
 	mode = simple_strtoul(argv[3], NULL, 16);
         if (mode >= TZ_CRYPTO_SERVICE_AES_MODE_MAX) {
                 printf("unkown mode specified, use 0x0 - ECB, 0x1 - CBC\n");
-                goto err;
+                return ret;
         }
 
 	src_addr = simple_strtoull(argv[4], NULL, 16);
@@ -93,21 +231,21 @@ static int do_aes_256(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	if (req_len <= 0 || (req_len % 16) != 0) {
 		printf("Invalid request buffer length, length "
 			"should be multiple of AES block size (16)\n");
-		goto err;
+		return ret;
 	}
 
 	ivdata = simple_strtoull(argv[6], NULL, 16);
 	iv_len = simple_strtoul(argv[7], NULL, 16);
 	if (iv_len != 16) {
 		printf("Error: iv length should be equal to AES block size (16)\n");
-		goto err;
+		return ret;
 	}
 
 	dst_addr = simple_strtoull(argv[8], NULL, 16);
 	resp_len =  simple_strtoul(argv[9], NULL, 16);
 	if (resp_len < req_len) {
 		printf("Error: response buffer cannot be less then request buffer\n");
-		goto err;
+		return ret;
 	}
 
 	req_ptr = (struct crypto_aes_req_data_t *)memalign(ARCH_DMA_MINALIGN,
@@ -117,6 +255,9 @@ static int do_aes_256(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		return -ENOMEM;
 	}
 
+#ifdef CONFIG_IPQ9574
+	req_ptr->key_handle = simple_strtoul(argv[10], NULL, 16);
+#endif
 	req_ptr->type = type;
 	req_ptr->mode = mode;
 	req_ptr->req_buf = (uint64_t)src_addr;
@@ -127,30 +268,30 @@ static int do_aes_256(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	req_ptr->resp_len = resp_len;
 	ret = qca_scm_crypto(cmd_id, (void *)req_ptr,
 					sizeof(struct crypto_aes_req_data_t));
-
-	if (req_ptr)
-		free(req_ptr);
-
-	if (ret) {
+	if (ret)
 		printf("Scm call failed with error code: %d\n", ret);
-		return ret;
-	}
-	return 0;
+	else
+		printf("Encryption/Decryption successful\n");
 
-err:
 	if (req_ptr)
 		free(req_ptr);
-	return CMD_RET_USAGE;
+	return ret;
 }
 
 /***************************************************/
 U_BOOT_CMD(
-	aes_256, 10, 1, do_aes_256,
+	aes_256, 11, 1, do_aes_256,
 	"AES 256 CBC/ECB encryption/decryption",
-	"Encryption: echo enc <type> <mode> <plain data address> <plain data len>"
+	"Encryption: aes_256 enc <type> <mode> <plain data address> <plain data len>"
 	"<iv data address> <iv len> <response buf address> <response buf len>"
+#ifdef CONFIG_IPQ9574
+	"<key_handle>"
+#endif
 	"Decryption: echo dec <type> <mode> <Encrypted buf address> <encrypted"
 	"buf len> <iv data address> <iv len> <response buf address> <response buf len>"
+#ifdef CONFIG_IPQ9574
+	"<key_handle>"
+#endif
 );
 #endif
 
