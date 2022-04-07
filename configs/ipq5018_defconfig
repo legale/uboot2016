@@ -303,6 +303,10 @@ CONFIG_USB_XHCI_IPQ=y
 #
 
 #
+# Ethernet PHY
+#
+CONFIG_QCA8033_PHY=y
+
 # Library routines
 
 #
