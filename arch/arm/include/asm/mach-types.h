@@ -1163,6 +1163,7 @@ extern unsigned int __machine_arch_type;
 #define MACH_TYPE_IPQ9574_AP_AL02_C4	0x8050301
 #define MACH_TYPE_IPQ9574_AP_AL02_C5	0x8050401
 #define MACH_TYPE_IPQ9574_AP_AL02_C6 	0x8050501
+#define MACH_TYPE_IPQ9574_AP_AL02_C9 	0x8050801
 
 #ifdef CONFIG_ARCH_EBSA110
 # ifdef machine_arch_type
