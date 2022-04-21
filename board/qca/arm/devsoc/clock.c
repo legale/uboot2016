@@ -80,3 +80,11 @@ int uart_clock_config(struct ipq_serial_platdata *plat)
 	writel(cbcr_val, GCC_BLSP1_UART_APPS_CBCR(plat->port_id));
 	return 0;
 }
+
+#ifdef CONFIG_QPIC_NAND
+void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
+				int req_clk_src_type)
+{
+	return;
+}
+#endif

@@ -24,6 +24,10 @@
 #include <asm/arch-qca-common/scm.h>
 #include <asm/arch-qca-common/iomap.h>
 #include <devsoc.h>
+#ifdef CONFIG_QPIC_NAND
+#include <asm/arch-qca-common/qpic_nand.h>
+#include <nand.h>
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -34,6 +38,12 @@ const char *del_node[] = {"uboot",
 			  "sbl",
 			  NULL};
 const add_node_t add_fdt_node[] = {{}};
+
+unsigned int qpic_frequency = 0, qpic_phase = 0;
+
+#ifdef CONFIG_QPIC_SERIAL
+extern unsigned int qpic_training_offset;
+#endif
 
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
@@ -103,15 +113,30 @@ void reset_cpu(unsigned long a)
 	while(1);
 }
 
-
 void board_nand_init(void)
 {
+#ifdef CONFIG_QPIC_SERIAL
+	/* check for nand node in dts
+	 * if nand node in dts is disabled then
+	 * simply return from here without
+	 * initializing
+	 */
+	int node;
+	node = fdt_path_offset(gd->fdt_blob, "/nand-controller");
+	if (!fdtdec_get_is_enabled(gd->fdt_blob, node)) {
+		printf("QPIC: disabled, skipping initialization\n");
+	} else {
+		qpic_nand_init(NULL);
+	}
+#endif
 #ifdef CONFIG_QCA_SPI
 	int gpio_node;
 	gpio_node = fdt_path_offset(gd->fdt_blob, "/spi/spi_gpio");
 	if (gpio_node >= 0) {
 		qca_gpio_init(gpio_node);
+#ifdef CONFIG_MTD_DEVICE
 		ipq_spi_init(CONFIG_IPQ_SPI_NOR_INFO_IDX);
+#endif
 	}
 #endif
 }

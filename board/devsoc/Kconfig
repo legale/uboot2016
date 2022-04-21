@@ -12,4 +12,9 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
        default "devsoc"
 
+config NAND_FLASH
+	bool "Enable NAND Framework"
+
+config QPIC_SERIAL
+	bool "Enable QPIC serial NAND"
 endif

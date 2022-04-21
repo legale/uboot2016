@@ -25,24 +25,21 @@ extern const char *rsvd_node;
 extern const char *del_node[];
 extern const add_node_t add_fdt_node[];
 
-/*
- * weak function
- */
-
-__weak void aquantia_phy_reset_init_done(void) {}
-__weak void aquantia_phy_reset_init(void) {}
-__weak void qgic_init(void) {}
-__weak void handle_noc_err(void) {}
-__weak void board_pcie_clock_init(int id) {}
-__weak void ubi_power_collapse(void) {}
-
-
 #define KERNEL_AUTH_CMD				0x13
 #define SCM_CMD_SEC_AUTH			0x15
 
 #define BLSP1_UART0_BASE			0x078AF000
 #define UART_PORT_ID(reg)			((reg - BLSP1_UART0_BASE) / 0x1000)
 
+/*
+ * weak function
+ */
+__weak void aquantia_phy_reset_init_done(void) {}
+__weak void aquantia_phy_reset_init(void) {}
+__weak void qgic_init(void) {}
+__weak void handle_noc_err(void) {}
+__weak void board_pcie_clock_init(int id) {}
+__weak void ubi_power_collapse(void) {}
 
 /*
  * SMEM
@@ -154,5 +151,7 @@ void ipq_fdt_fixup_socinfo(void *blob);
 int smem_ram_ptable_init(struct smem_ram_ptable *smem_ram_ptable);
 int smem_ram_ptable_init_v2(
 		struct usable_ram_partition_table *usable_ram_partition_table);
+void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
+		int req_clk_src_type);
 
 #endif /* _DEVSOC_CDP_H_ */

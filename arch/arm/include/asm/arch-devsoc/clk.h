@@ -59,6 +59,32 @@
 #define ROOT_EN         			0x2
 #define CLK_ENABLE      			0x1
 
+/*
+ * Qpic SPI Nand clock
+ */
+
+#define GCC_QPIC_IO_MACRO_CMD_RCGR		0x1832004
+#define GCC_QPIC_IO_MACRO_CFG_RCGR		0x1832008
+#define GCC_QPIC_IO_MACRO_CBCR			0x183200C
+#define GCC_QPIC_AHB_CBCR_ADDR			0x1832010
+#define GCC_QPIC_CBCR_ADDR			0x1832014
+#define GCC_QPIC_SREGR				0x1832018
+#define GCC_QPIC_SLEEP_CBCR			0x183201C
+
+#define IO_MACRO_CLK_320_MHZ			320000000
+#define IO_MACRO_CLK_266_MHZ			266000000
+#define IO_MACRO_CLK_228_MHZ			228000000
+#define IO_MACRO_CLK_200_MHZ			200000000
+#define IO_MACRO_CLK_100_MHZ			100000000
+#define IO_MACRO_CLK_24MHZ			24000000
+
+#define QPIC_IO_MACRO_CLK       		0
+#define QPIC_CORE_CLK           		1
+#define XO_CLK_SRC				2
+#define GPLL0_CLK_SRC				3
+#define FB_CLK_BIT				(1 << 4)
+#define UPDATE_EN				0x1
+
 int uart_clock_config(struct ipq_serial_platdata *plat);
 
 #endif /*IPQ9574_CLK_H*/

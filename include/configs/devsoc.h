@@ -137,20 +137,6 @@ extern loff_t board_env_size;
 #define CONFIG_ENV_RANGE			board_env_range
 #define CONFIG_SYS_MALLOC_LEN			(CONFIG_ENV_SIZE_MAX + (500 << 10))
 
-/*
- * NAND Flash Configs
-*/
-
-/* CONFIG_QPIC_NAND: QPIC NAND in BAM mode
- * CONFIG_IPQ_NAND: QPIC NAND in FIFO/block mode.
- * BAM is enabled by default.
- */
-#define CONFIG_CMD_MTDPARTS
-#define CONFIG_SYS_NAND_SELF_INIT
-
-
-#define CONFIG_CMD_NAND
-
 #define CONFIG_IPQ_NO_MACS			1
 
 /*
@@ -249,6 +235,38 @@ extern loff_t board_env_size;
 
 #define CONFIG_QUP_SPI_USE_DMA			1
 #define CONFIG_QCA_BAM				1
+
+/*
+ * NAND Flash Configs
+ */
+
+/* CONFIG_QPIC_NAND: QPIC NAND in BAM mode
+ * CONFIG_IPQ_NAND: QPIC NAND in FIFO/block mode.
+ * BAM is enabled by default.
+ */
+#define CONFIG_CMD_MTDPARTS
+#define CONFIG_SYS_NAND_SELF_INIT
+
+#ifdef CONFIG_NAND_FLASH
+#define CONFIG_CMD_NAND
+#define CONFIG_ENV_IS_IN_NAND			1
+#define CONFIG_QPIC_NAND
+#define CONFIG_SYS_NAND_ONFI_DETECTION
+#define CONFIG_CMD_NAND_YAFFS
+#define CONFIG_MTD_DEVICE
+#define CONFIG_MTD_PARTITIONS
+#endif
+
+#ifdef CONFIG_QPIC_SERIAL
+#ifdef QSPI_SERIAL_DEBUG /* QSPI DEBUG */
+#define qspi_debug(fmt,args...)	printf (fmt ,##args)
+#else
+#define qspi_debug(fmt,args...)
+#endif /* QSPI DEBUG */
+#define CONFIG_PAGE_SCOPE_MULTI_PAGE_READ
+#define CONFIG_QSPI_SERIAL_TRAINING
+#define CONFIG_QSPI_LAYOUT_SWITCH
+#endif
 
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9

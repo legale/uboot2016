@@ -226,12 +226,12 @@ CONFIG_MMC_FLASH=y
 #
 # Generic NAND options
 #
-# CONFIG_NAND_FLASH is not set
+CONFIG_NAND_FLASH=y
 
 #
 # Serial NAND
 #
-# CONFIG_QPIC_SERIAL is not set
+CONFIG_QPIC_SERIAL=y
 
 #
 # SPI Flash Support
