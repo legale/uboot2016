@@ -15,6 +15,7 @@
 
 #include "skeleton.dtsi"
 #include <dt-bindings/qcom/gpio-devsoc.h>
+#include <dt-bindings/qcom/eth-devsoc.h>
 
 / {
 	serial@78AF000 {

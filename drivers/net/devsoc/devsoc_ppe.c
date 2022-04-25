@@ -1,0 +1,885 @@
+/*
+ **************************************************************************
+ * Copyright (c) 2016-2019, 2021, The Linux Foundation. All rights reserved.
+ *
+ * Copyright (c) 2022, Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ **************************************************************************
+*/
+
+#include <common.h>
+#include <asm/global_data.h>
+#include "devsoc_ppe.h"
+#ifndef CONFIG_DEVSOC_RUMI
+#include "devsoc_uniphy.h"
+#endif
+#include <fdtdec.h>
+#include "ipq_phy.h"
+
+DECLARE_GLOBAL_DATA_PTR;
+#ifdef DEBUG
+#define pr_debug(fmt, args...) printf(fmt, ##args);
+#else
+#define pr_debug(fmt, args...)
+#endif
+
+#define pr_info(fmt, args...) printf(fmt, ##args);
+
+extern int is_uniphy_enabled(int uniphy_index);
+extern void uniphy_port5_clock_source_set(void);
+
+/*
+ * devsoc_ppe_reg_read()
+ */
+static inline void devsoc_ppe_reg_read(u32 reg, u32 *val)
+{
+	*val = readl((void *)(DEVSOC_PPE_BASE_ADDR + reg));
+}
+
+/*
+ * devsoc_ppe_reg_write()
+ */
+static inline void devsoc_ppe_reg_write(u32 reg, u32 val)
+{
+	writel(val, (void *)(DEVSOC_PPE_BASE_ADDR + reg));
+}
+
+void ppe_ipo_rule_reg_set(union ipo_rule_reg_u *hw_reg, int rule_id)
+{
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		devsoc_ppe_reg_write(IPO_CSR_BASE_ADDR + IPO_RULE_REG_ADDRESS +
+			(rule_id * IPO_RULE_REG_INC) + (i * 4), hw_reg->val[i]);
+	}
+}
+
+void ppe_ipo_mask_reg_set(union ipo_mask_reg_u *hw_mask, int rule_id)
+{
+	int i;
+
+	for (i = 0; i < 2; i++) {
+		devsoc_ppe_reg_write((IPO_CSR_BASE_ADDR + IPO_MASK_REG_ADDRESS +
+			(rule_id * IPO_MASK_REG_INC) + (i * 4)), hw_mask->val[i]);
+	}
+}
+
+void ppe_ipo_action_set(union ipo_action_u *hw_act, int rule_id)
+{
+	int i;
+
+	for (i = 0; i < 5; i++) {
+		devsoc_ppe_reg_write((IPE_L2_BASE_ADDR + IPO_ACTION_ADDRESS +
+			(rule_id * IPO_ACTION_INC) + (i * 4)), hw_act->val[i]);
+	}
+}
+
+void devsoc_ppe_acl_set(int rule_id, int rule_type, int field0, int field1, int mask, int permit, int deny)
+{
+	union ipo_rule_reg_u hw_reg = {0};
+	union ipo_mask_reg_u hw_mask = {0};
+	union ipo_action_u hw_act = {0};
+
+	memset(&hw_reg, 0, sizeof(hw_reg));
+	memset(&hw_mask, 0, sizeof(hw_mask));
+	memset(&hw_act, 0, sizeof(hw_act));
+
+	if (rule_id < MAX_RULE) {
+		hw_act.bf.dest_info_change_en = 1;
+		hw_mask.bf.maskfield_0 = mask;
+		hw_reg.bf.rule_type = rule_type;
+		if (rule_type == ADPT_ACL_HPPE_IPV4_DIP_RULE) {
+			hw_reg.bf.rule_field_0 = field1;
+			hw_reg.bf.rule_field_1 = field0<<17;
+			hw_mask.bf.maskfield_1 = 7<<17;
+			if (permit == 0x0) {
+				hw_act.bf.fwd_cmd = 0;/* forward */
+				hw_reg.bf.pri = 0x1;
+			}
+			if (deny == 0x1) {
+				hw_act.bf.fwd_cmd = 1;/* drop */
+				hw_reg.bf.pri = 0x0;
+			}
+		} else if (rule_type == ADPT_ACL_HPPE_MAC_SA_RULE) {
+			/* src mac AC rule */
+			hw_reg.bf.rule_field_0 = field1;
+			hw_reg.bf.rule_field_1 = field0;
+			hw_mask.bf.maskfield_1 = 0xffff;
+			hw_act.bf.fwd_cmd = 1;/* drop */
+			hw_reg.bf.pri = 0x2;
+			/* bypass fdb lean and fdb freash */
+			hw_act.bf.bypass_bitmap_0 = 0x1800;
+		} else if (rule_type == ADPT_ACL_HPPE_MAC_DA_RULE) {
+			/* dest mac AC rule */
+			hw_reg.bf.rule_field_0 = field1;
+			hw_reg.bf.rule_field_1 = field0;
+			hw_mask.bf.maskfield_1 = 0xffff;
+			hw_act.bf.fwd_cmd = 1;/* drop */
+			hw_reg.bf.pri = 0x2;
+		}
+		/* bind port1-port6 */
+		hw_reg.bf.src_0 = 0x0;
+		hw_reg.bf.src_1 = 0x3F;
+		ppe_ipo_rule_reg_set(&hw_reg, rule_id);
+		ppe_ipo_mask_reg_set(&hw_mask, rule_id);
+		ppe_ipo_action_set(&hw_act, rule_id);
+	}
+}
+
+/*
+ * devsoc_ppe_vp_port_tbl_set()
+ */
+static void devsoc_ppe_vp_port_tbl_set(int port, int vsi)
+{
+	u32 addr = DEVSOC_PPE_L3_VP_PORT_TBL_ADDR +
+		 (port * DEVSOC_PPE_L3_VP_PORT_TBL_INC);
+	devsoc_ppe_reg_write(addr, 0x0);
+	devsoc_ppe_reg_write(addr + 0x4 , 1 << 9 | vsi << 10);
+	devsoc_ppe_reg_write(addr + 0x8, 0x0);
+	devsoc_ppe_reg_write(addr + 0xc, 0x0);
+}
+
+/*
+ * devsoc_ppe_ucast_queue_map_tbl_queue_id_set()
+ */
+static void devsoc_ppe_ucast_queue_map_tbl_queue_id_set(int queue, int port)
+{
+	uint32_t val;
+
+	devsoc_ppe_reg_read(DEVSOC_PPE_QM_UQM_TBL +
+		 (port * DEVSOC_PPE_UCAST_QUEUE_MAP_TBL_INC), &val);
+
+	val |= queue << 4;
+
+	devsoc_ppe_reg_write(DEVSOC_PPE_QM_UQM_TBL +
+		 (port * DEVSOC_PPE_UCAST_QUEUE_MAP_TBL_INC), val);
+}
+
+/*
+ * devsoc_vsi_setup()
+ */
+static void devsoc_vsi_setup(int vsi, uint8_t group_mask)
+{
+	uint32_t val = (group_mask << 24 | group_mask << 16 | group_mask << 8
+							    | group_mask);
+
+	/* Set mask */
+	devsoc_ppe_reg_write(0x063800 + (vsi * 0x10), val);
+
+	/*  new addr lrn en | station move lrn en */
+	devsoc_ppe_reg_write(0x063804 + (vsi * 0x10), 0x9);
+}
+
+/*
+ * devsoc_gmac_port_disable()
+ */
+static void devsoc_gmac_port_disable(int port)
+{
+	devsoc_ppe_reg_write(DEVSOC_PPE_MAC_ENABLE + (0x200 * port), 0x70);
+	devsoc_ppe_reg_write(DEVSOC_PPE_MAC_SPEED + (0x200 * port), 0x2);
+	devsoc_ppe_reg_write(DEVSOC_PPE_MAC_MIB_CTL + (0x200 * port), 0x1);
+}
+
+/*
+ * ppe_port_bridge_txmac_set()
+ * TXMAC should be disabled for all ports by default
+ * TXMAC should be enabled for all ports that are link up alone
+ */
+void ppe_port_bridge_txmac_set(int port_id, int status)
+{
+	uint32_t reg_value = 0;
+
+	devsoc_ppe_reg_read(IPE_L2_BASE_ADDR + PORT_BRIDGE_CTRL_ADDRESS +
+		 (port_id * PORT_BRIDGE_CTRL_INC), &reg_value);
+	if (status == 0)
+		reg_value |= TX_MAC_EN;
+	else
+		reg_value &= ~TX_MAC_EN;
+
+	devsoc_ppe_reg_write(IPE_L2_BASE_ADDR + PORT_BRIDGE_CTRL_ADDRESS +
+		 (port_id * PORT_BRIDGE_CTRL_INC), reg_value);
+
+}
+
+#ifndef CONFIG_DEVSOC_RUMI
+/*
+ * devsoc_port_mac_clock_reset()
+ */
+void devsoc_port_mac_clock_reset(int port)
+{
+	int reg_val, reg_val1;
+
+	reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+	reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+	switch(port) {
+		case 0:
+			/* Assert */
+			reg_val |= GCC_PPE_PORT1_MAC_ARES;
+			reg_val1 |= GCC_PORT1_ARES;
+			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+			mdelay(150);
+			/* De-Assert */
+			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+			reg_val &= ~GCC_PPE_PORT1_MAC_ARES;
+			reg_val1 &= ~GCC_PORT1_ARES;
+			break;
+		case 1:
+			/* Assert */
+			reg_val |= GCC_PPE_PORT2_MAC_ARES;
+			reg_val1 |= GCC_PORT2_ARES;
+			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+			mdelay(150);
+			/* De-Assert */
+			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+			reg_val &= ~GCC_PPE_PORT2_MAC_ARES;
+			reg_val1 &= ~GCC_PORT2_ARES;
+			break;
+		case 2:
+			/* Assert */
+			reg_val |= GCC_PPE_PORT3_MAC_ARES;
+			reg_val1 |= GCC_PORT3_ARES;
+			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+			mdelay(150);
+			/* De-Assert */
+			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+			reg_val &= ~GCC_PPE_PORT3_MAC_ARES;
+			reg_val1 &= ~GCC_PORT3_ARES;
+			break;
+		case 3:
+			/* Assert */
+			reg_val |= GCC_PPE_PORT4_MAC_ARES;
+			reg_val1 |= GCC_PORT4_ARES;
+			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+			mdelay(150);
+			/* De-Assert */
+			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+			reg_val &= ~GCC_PPE_PORT4_MAC_ARES;
+			reg_val1 &= ~GCC_PORT4_ARES;
+			break;
+		case 4:
+			/* Assert */
+			reg_val |= GCC_PPE_PORT5_MAC_ARES;
+			reg_val1 |= GCC_PORT5_ARES;
+			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+			mdelay(150);
+			/* De-Assert */
+			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+			reg_val &= ~GCC_PPE_PORT5_MAC_ARES;
+			reg_val1 &= ~GCC_PORT5_ARES;
+			break;
+		case 5:
+			/* Assert */
+			reg_val |= GCC_PPE_PORT6_MAC_ARES;
+			reg_val1 |= GCC_PORT6_ARES;
+			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+			mdelay(150);
+			/* De-Assert */
+			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
+			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
+			reg_val &= ~GCC_PPE_PORT6_MAC_ARES;
+			reg_val1 &= ~GCC_PORT6_ARES;
+			break;
+		default:
+			break;
+	}
+	writel(reg_val, NSS_CC_PPE_RESET_ADDR);
+	writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
+	mdelay(150);
+}
+
+void devsoc_speed_clock_set(int port_id, int clk[4])
+{
+	int i;
+	int reg_val[6];
+
+	for (i = 0; i < 6; i++)
+	{
+		reg_val[i] = readl(NSS_CC_PORT1_RX_CMD_RCGR + (i * 0x4) + (port_id * 0x18));
+	}
+	reg_val[0] &= ~0x1;
+	reg_val[1] &= ~0x71f;
+	reg_val[2] &= ~0x1ff;
+	reg_val[3] &= ~0x1;
+	reg_val[4] &= ~0x71f;
+	reg_val[5] &= ~0x1ff;
+
+	reg_val[1] |= clk[0];
+	reg_val[2] |= clk[1];
+	reg_val[4] |= clk[2];
+	reg_val[5] |= clk[3];
+
+	/* Port Rx direction speed clock cfg */
+	writel(reg_val[1], NSS_CC_PORT1_RX_CMD_RCGR + 0x4 + (port_id * 0x18));
+	writel(reg_val[2], NSS_CC_PORT1_RX_CMD_RCGR + 0x8 + (port_id * 0x18));
+	writel(reg_val[0] | 0x1 , NSS_CC_PORT1_RX_CMD_RCGR + (port_id * 0x18));
+	/* Port Tx direction speed clock cfg */
+	writel(reg_val[4], NSS_CC_PORT1_RX_CMD_RCGR + 0x10 + (port_id * 0x18));
+	writel(reg_val[5], NSS_CC_PORT1_RX_CMD_RCGR + 0x14 + (port_id * 0x18));
+	writel(reg_val[3] | 0x1, NSS_CC_PORT1_RX_CMD_RCGR + 0xc + (port_id * 0x18));
+}
+
+int phy_status_get_from_ppe(int port_id)
+{
+	uint32_t reg_field = 0;
+
+	devsoc_ppe_reg_read(PORT_PHY_STATUS_ADDRESS, &reg_field);
+	if (port_id == (PORT5 - PPE_UNIPHY_INSTANCE1))
+		reg_field >>= PORT_PHY_STATUS_PORT5_1_OFFSET;
+	else
+		reg_field >>= PORT_PHY_STATUS_PORT6_OFFSET;
+
+	return ((reg_field >> 7) & 0x1) ? 0 : 1;
+}
+
+void ppe_xgmac_10g_r_speed_set(uint32_t port)
+{
+	uint32_t reg_value = 0;
+
+	pr_debug("DEBUGGING 10g_r_speed_set......... PORTID = %d\n", port);
+	devsoc_ppe_reg_read(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), &reg_value);
+
+	reg_value |=JD;
+	devsoc_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
+
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x -> Value = %u\n",
+	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+	      reg_value);
+}
+
+void devsoc_10g_r_speed_set(int port, int status)
+{
+	ppe_xgmac_10g_r_speed_set(port);
+	ppe_port_bridge_txmac_set(port + 1, status);
+	ppe_port_txmac_status_set(port);
+	ppe_port_rxmac_status_set(port);
+	ppe_mac_packet_filter_set(port);
+}
+#endif
+
+void ppe_xgmac_speed_set(uint32_t port, int speed)
+{
+	uint32_t reg_value = 0;
+
+	pr_debug("\nDEBUGGING xgmac_speed_set......... PORTID = %d\n", port);
+	devsoc_ppe_reg_read(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), &reg_value);
+
+	switch(speed) {
+	case 0:
+	case 1:
+	case 2:
+		reg_value &=~USS;
+		reg_value |=SS(XGMAC_SPEED_SELECT_1000M);
+		break;
+	case 3:
+		reg_value |=USS;
+		reg_value |=SS(XGMAC_SPEED_SELECT_10000M);
+		break;
+	case 4:
+		reg_value |=USS;
+		reg_value |=SS(XGMAC_SPEED_SELECT_2500M);
+		break;
+	case 5:
+		reg_value |=USS;
+		reg_value |=SS(XGMAC_SPEED_SELECT_5000M);
+		break;
+	}
+	reg_value |=JD;
+	devsoc_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x -> Value = %u\n",
+	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+	      reg_value);
+
+}
+
+void ppe_port_txmac_status_set(uint32_t port)
+{
+	uint32_t reg_value = 0;
+
+	pr_debug("DEBUGGING txmac_status_set......... PORTID = %d\n", port);
+	devsoc_ppe_reg_read(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), &reg_value);
+
+	reg_value |=TE;
+	devsoc_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
+
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x -> Value = %u\n",
+	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+	      reg_value);
+}
+
+void ppe_port_rxmac_status_set(uint32_t port)
+{
+	uint32_t reg_value = 0;
+
+	pr_debug("DEBUGGING rxmac_status_set......... PORTID = %d\n", port);
+	devsoc_ppe_reg_read(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			MAC_RX_CONFIGURATION_ADDRESS +
+			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION), &reg_value);
+
+	reg_value |= 0x5ee00c0;
+	reg_value |=RE;
+	reg_value |=ACS;
+	reg_value |=CST;
+	devsoc_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			MAC_RX_CONFIGURATION_ADDRESS +
+			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION), reg_value);
+
+	pr_debug("NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION Address = 0x%x -> Value = %u\n",
+	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + MAC_RX_CONFIGURATION_ADDRESS +
+	      (port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION),
+	      reg_value);
+}
+
+void ppe_mac_packet_filter_set(uint32_t port)
+{
+	pr_debug("DEBUGGING mac_packet_filter_set......... PORTID = %d\n", port);
+	devsoc_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			MAC_PACKET_FILTER_ADDRESS +
+			(port * MAC_PACKET_FILTER_INC), 0x81);
+	pr_debug("NSS_SWITCH_XGMAC_MAC_PACKET_FILTER Address = 0x%x -> Value = %u\n",
+	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + MAC_PACKET_FILTER_ADDRESS +
+	      (port * MAC_PACKET_FILTER_ADDRESS),
+	      0x81);
+}
+
+void devsoc_uxsgmii_speed_set(int port, int speed, int duplex,
+				int status)
+{
+#ifndef CONFIG_DEVSOC_RUMI
+	uint32_t uniphy_index;
+
+	/* Setting the speed only for PORT5 and PORT6 */
+	if (port == (PORT5 - PPE_UNIPHY_INSTANCE1))
+		uniphy_index = PPE_UNIPHY_INSTANCE1;
+	else if (port == (PORT6 - PPE_UNIPHY_INSTANCE1))
+		uniphy_index = PPE_UNIPHY_INSTANCE2;
+	else
+		uniphy_index = PPE_UNIPHY_INSTANCE0;
+
+	ppe_uniphy_usxgmii_autoneg_completed(uniphy_index);
+	ppe_uniphy_usxgmii_speed_set(uniphy_index, speed);
+#endif
+	ppe_xgmac_speed_set(port, speed);
+#ifndef CONFIG_DEVSOC_RUMI
+	ppe_uniphy_usxgmii_duplex_set(uniphy_index, duplex);
+	ppe_uniphy_usxgmii_port_reset(uniphy_index);
+#endif
+	ppe_port_bridge_txmac_set(port + 1, status);
+	ppe_port_txmac_status_set(port);
+	ppe_port_rxmac_status_set(port);
+	ppe_mac_packet_filter_set(port);
+}
+
+void devsoc_pqsgmii_speed_set(int port, int speed, int status)
+{
+	ppe_port_bridge_txmac_set(port + 1, status);
+	devsoc_ppe_reg_write(DEVSOC_PPE_MAC_SPEED + (0x200 * port), speed);
+	devsoc_ppe_reg_write(DEVSOC_PPE_MAC_ENABLE + (0x200 * port), 0x73);
+	devsoc_ppe_reg_write(DEVSOC_PPE_MAC_MIB_CTL + (0x200 * port), 0x1);
+}
+
+/*
+ * devsoc_ppe_flow_port_map_tbl_port_num_set()
+ */
+static void devsoc_ppe_flow_port_map_tbl_port_num_set(int queue, int port)
+{
+	devsoc_ppe_reg_write(DEVSOC_PPE_L0_FLOW_PORT_MAP_TBL +
+			queue * DEVSOC_PPE_L0_FLOW_PORT_MAP_TBL_INC, port);
+	devsoc_ppe_reg_write(DEVSOC_PPE_L1_FLOW_PORT_MAP_TBL +
+			port * DEVSOC_PPE_L1_FLOW_PORT_MAP_TBL_INC, port);
+}
+
+/*
+ * devsoc_ppe_flow_map_tbl_set()
+ */
+static void devsoc_ppe_flow_map_tbl_set(int queue, int port)
+{
+	uint32_t val = port | 0x401000; /* c_drr_wt = 1, e_drr_wt = 1 */
+	devsoc_ppe_reg_write(DEVSOC_PPE_L0_FLOW_MAP_TBL + queue * DEVSOC_PPE_L0_FLOW_MAP_TBL_INC,
+									val);
+
+	val = port | 0x100400; /* c_drr_wt = 1, e_drr_wt = 1 */
+	devsoc_ppe_reg_write(DEVSOC_PPE_L1_FLOW_MAP_TBL + port * DEVSOC_PPE_L1_FLOW_MAP_TBL_INC,
+									val);
+}
+
+/*
+ * devsoc_ppe_tdm_configuration
+ */
+static void devsoc_ppe_tdm_configuration(void)
+{
+	devsoc_ppe_reg_write(0xc000, 0x20);
+	devsoc_ppe_reg_write(0xc010, 0x32);
+	devsoc_ppe_reg_write(0xc020, 0x21);
+	devsoc_ppe_reg_write(0xc030, 0x30);
+	devsoc_ppe_reg_write(0xc040, 0x22);
+	devsoc_ppe_reg_write(0xc050, 0x31);
+	devsoc_ppe_reg_write(0xb000, 0x80000006);
+
+	devsoc_ppe_reg_write(0x47a000, 0xfa10);
+	devsoc_ppe_reg_write(0x47a010, 0xfc21);
+	devsoc_ppe_reg_write(0x47a020, 0xf902);
+	devsoc_ppe_reg_write(0x400000, 0x3);
+}
+
+/*
+ * devsoc_ppe_queue_ac_enable
+ */
+static void devsoc_ppe_queue_ac_enable(void)
+{
+	int i;
+
+	/* ucast queue */
+	for (i = 0; i < 256; i++) {
+		devsoc_ppe_reg_write(DEVSOC_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10), 0x32120001);
+		devsoc_ppe_reg_write(DEVSOC_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x4, 0x0);
+		devsoc_ppe_reg_write(DEVSOC_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x8, 0x0);
+		devsoc_ppe_reg_write(DEVSOC_PPE_UCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0xc, 0x48000);
+	}
+
+	/* mcast queue */
+	for (i = 0; i < 44; i++) {
+		devsoc_ppe_reg_write(DEVSOC_PPE_MCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10), 0x00fa0001);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x4, 0x0);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MCAST_QUEUE_AC_EN_BASE_ADDR
+					+ (i * 0x10) + 0x8, 0x1200);
+	}
+}
+
+/*
+ * devsoc_ppe_enable_port_counter
+ */
+static void devsoc_ppe_enable_port_counter(void)
+{
+	int i;
+	uint32_t reg = 0;
+
+	for (i = 0; i < 7; i++) {
+		/* MRU_MTU_CTRL_TBL.rx_cnt_en, MRU_MTU_CTRL_TBL.tx_cnt_en */
+		devsoc_ppe_reg_read(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10), &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10), reg);
+		devsoc_ppe_reg_read(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x4, &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x4, reg | 0x284303);
+		devsoc_ppe_reg_read(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x8, &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0x8, reg);
+		devsoc_ppe_reg_read(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0xc, &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MRU_MTU_CTRL_TBL_ADDR
+					+ (i * 0x10) + 0xc, reg);
+
+		/* MC_MTU_CTRL_TBL.tx_cnt_en */
+		devsoc_ppe_reg_read(DEVSOC_PPE_MC_MTU_CTRL_TBL_ADDR
+					+ (i * 0x4), &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_MC_MTU_CTRL_TBL_ADDR
+					+ (i * 0x4), reg | 0x10000);
+
+		/* PORT_EG_VLAN.tx_counting_en */
+		devsoc_ppe_reg_read(DEVSOC_PPE_PORT_EG_VLAN_TBL_ADDR
+					+ (i * 0x4), &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_PORT_EG_VLAN_TBL_ADDR
+					+ (i * 0x4), reg | 0x100);
+
+		/* TL_PORT_VP_TBL.rx_cnt_en */
+		devsoc_ppe_reg_read(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10), &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10), reg);
+		devsoc_ppe_reg_read(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x4, &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x4, reg);
+		devsoc_ppe_reg_read(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x8, &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0x8, reg | 0x20000);
+		devsoc_ppe_reg_read(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0xc, &reg);
+		devsoc_ppe_reg_write(DEVSOC_PPE_TL_PORT_VP_TBL_ADDR
+					+ (i * 0x10) + 0xc, reg);
+	}
+}
+
+/*
+ * devsoc_ppe_c_sp_cfg_tbl_drr_id_set
+ */
+static void devsoc_ppe_c_sp_cfg_tbl_drr_id_set(int id)
+{
+	devsoc_ppe_reg_write(DEVSOC_PPE_L0_C_SP_CFG_TBL + (id * 0x80), id * 2);
+	devsoc_ppe_reg_write(DEVSOC_PPE_L1_C_SP_CFG_TBL + (id * 0x80), id * 2);
+}
+
+/*
+ * devsoc_ppe_e_sp_cfg_tbl_drr_id_set
+ */
+static void devsoc_ppe_e_sp_cfg_tbl_drr_id_set(int id)
+{
+	devsoc_ppe_reg_write(DEVSOC_PPE_L0_E_SP_CFG_TBL + (id * 0x80), id * 2 + 1);
+	devsoc_ppe_reg_write(DEVSOC_PPE_L1_E_SP_CFG_TBL + (id * 0x80), id * 2 + 1);
+}
+
+static void ppe_port_mux_set(int port_id, int port_type, int mode)
+{
+	uint32_t mux_mac_type = 0;
+	union port_mux_ctrl_u port_mux_ctrl;
+
+	pr_debug("\nport id is: %d, port type is %d, mode is %d",
+		port_id, port_type, mode);
+
+	if (port_type == PORT_GMAC_TYPE)
+		mux_mac_type = DEVSOC_PORT_MUX_MAC_TYPE;
+	else if (port_type == PORT_XGMAC_TYPE)
+		mux_mac_type = DEVSOC_PORT_MUX_XMAC_TYPE;
+	else
+		printf("\nAttention!!!..Port type configured wrongly..port_id = %d, mode = %d, port_type = %d",
+		       port_id, mode, port_type);
+
+	port_mux_ctrl.val = 0;
+	devsoc_ppe_reg_read(DEVSOC_PORT_MUX_CTRL, &(port_mux_ctrl.val));
+	pr_debug("\nBEFORE UPDATE: Port MUX CTRL value is %u", port_mux_ctrl.val);
+
+
+	switch (port_id) {
+		case PORT1:
+			port_mux_ctrl.bf.port1_mac_sel = mux_mac_type;
+			port_mux_ctrl.bf.port1_pcs_sel = 0;
+			break;
+		case PORT2:
+			port_mux_ctrl.bf.port2_mac_sel = mux_mac_type;
+			port_mux_ctrl.bf.port2_pcs_sel = 0;
+			break;
+		default:
+			break;
+	}
+
+	devsoc_ppe_reg_write(DEVSOC_PORT_MUX_CTRL, port_mux_ctrl.val);
+	pr_debug("\nAFTER UPDATE: Port MUX CTRL value is %u", port_mux_ctrl.val);
+}
+
+void ppe_port_mux_mac_type_set(int port_id, int mode)
+{
+	uint32_t port_type;
+
+	switch(mode)
+	{
+		case EPORT_WRAPPER_PSGMII:
+		case EPORT_WRAPPER_SGMII0_RGMII4:
+		case EPORT_WRAPPER_SGMII_PLUS:
+		case EPORT_WRAPPER_SGMII_FIBER:
+			port_type = PORT_GMAC_TYPE;
+			break;
+		case EPORT_WRAPPER_USXGMII:
+		case EPORT_WRAPPER_10GBASE_R:
+			port_type = PORT_XGMAC_TYPE;
+			break;
+		default:
+			printf("\nError during port_type set: mode is %d, port_id is: %d",
+			       mode, port_id);
+			return;
+	}
+	ppe_port_mux_set(port_id, port_type, mode);
+}
+
+void devsoc_ppe_interface_mode_init(void)
+{
+	uint32_t mode0, mode1;
+	int node;
+	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
+	if (node < 0) {
+		printf("\nError: ess-switch not specified in dts");
+		return;
+	}
+
+	mode0 = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode0", -1);
+	if (mode0 < 0) {
+		printf("\nError: switch_mac_mode0 not specified in dts");
+		return;
+	}
+
+	mode1 = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode1", -1);
+	if (mode1 < 0) {
+		printf("\nError: switch_mac_mode1 not specified in dts");
+		return;
+	}
+
+#ifndef CONFIG_DEVSOC_RUMI
+	ppe_uniphy_mode_set(PPE_UNIPHY_INSTANCE0, mode0);
+	ppe_uniphy_mode_set(PPE_UNIPHY_INSTANCE1, mode1);
+#endif
+
+	/*
+	 * Port1 and Port2 can be used as GMAC or XGMAC.
+	 */
+	ppe_port_mux_mac_type_set(PORT1, mode0);
+	ppe_port_mux_mac_type_set(PORT2, mode0);
+}
+
+/*
+ * devsoc_ppe_provision_init()
+ */
+void devsoc_ppe_provision_init(void)
+{
+	int i;
+	uint32_t queue;
+
+	/* tdm/sched configuration */
+	devsoc_ppe_tdm_configuration();
+
+#ifdef CONFIG_DEVSOC_BRIDGED_MODE
+	/* Add CPU port 0 to VSI 2 */
+	devsoc_ppe_vp_port_tbl_set(0, 2);
+
+	/* Add port 1 - 4 to VSI 2 */
+	devsoc_ppe_vp_port_tbl_set(1, 2);
+	devsoc_ppe_vp_port_tbl_set(2, 2);
+	devsoc_ppe_vp_port_tbl_set(3, 2);
+	devsoc_ppe_vp_port_tbl_set(4, 2);
+	devsoc_ppe_vp_port_tbl_set(5, 2);
+	devsoc_ppe_vp_port_tbl_set(6, 2);
+
+#else
+	devsoc_ppe_vp_port_tbl_set(1, 2);
+	devsoc_ppe_vp_port_tbl_set(2, 3);
+	devsoc_ppe_vp_port_tbl_set(3, 4);
+	devsoc_ppe_vp_port_tbl_set(4, 5);
+	devsoc_ppe_vp_port_tbl_set(5, 6);
+	devsoc_ppe_vp_port_tbl_set(6, 7);
+#endif
+
+	/* Unicast priority map */
+	devsoc_ppe_reg_write(DEVSOC_PPE_QM_UPM_TBL, 0);
+
+	/* Port0 - 7 unicast queue settings */
+	for (i = 0; i < 8; i++) {
+		if (i == 0)
+			queue = 0;
+		else
+			queue = ((i * 0x10) + 0x70);
+
+		devsoc_ppe_ucast_queue_map_tbl_queue_id_set(queue, i);
+		devsoc_ppe_flow_port_map_tbl_port_num_set(queue, i);
+		devsoc_ppe_flow_map_tbl_set(queue, i);
+		devsoc_ppe_c_sp_cfg_tbl_drr_id_set(i);
+		devsoc_ppe_e_sp_cfg_tbl_drr_id_set(i);
+	}
+
+	/* Port0 multicast queue */
+	devsoc_ppe_reg_write(0x409000, 0x00000000);
+	devsoc_ppe_reg_write(0x403000, 0x00401000);
+
+	/* Port1 - 7 multicast queue */
+	for (i = 1; i < 8; i++) {
+		devsoc_ppe_reg_write(0x409100 + ((i - 1) * 0x40), i);
+		devsoc_ppe_reg_write(0x403100 + ((i - 1) * 0x40), 0x401000 | i);
+	}
+
+	/* ac enable for queues - disable queue tail drop */
+	devsoc_ppe_queue_ac_enable();
+
+	/* enable queue counter */
+	devsoc_ppe_reg_write(0x020044,0x4);
+
+	/* assign the ac group 0 with buffer number */
+	devsoc_ppe_reg_write(0x84c000, 0x0);
+	devsoc_ppe_reg_write(0x84c004, 0x7D00);
+	devsoc_ppe_reg_write(0x84c008, 0x0);
+	devsoc_ppe_reg_write(0x84c00c, 0x0);
+
+	/* enable physical/virtual port TX/RX counters for all ports (0-6) */
+	devsoc_ppe_enable_port_counter();
+
+	/*
+	 * Port0 - TX_EN is set by default, Port1 - LRN_EN is set
+	 * Port0 -> CPU Port
+	 * Port1-6 -> Ethernet Ports
+	 * Port7 -> EIP197
+	 */
+	for (i = 0; i < 8; i++) {
+		if (i == 0)
+			devsoc_ppe_reg_write(DEVSOC_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_TXMAC_EN |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
+		else if (i == 7)
+			devsoc_ppe_reg_write(DEVSOC_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
+		else
+			devsoc_ppe_reg_write(DEVSOC_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
+			      DEVSOC_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP);
+	}
+
+	/* Global learning */
+	devsoc_ppe_reg_write(0x060038, 0xc0);
+
+#ifdef CONFIG_DEVSOC_BRIDGED_MODE
+	devsoc_vsi_setup(2, 0x7f);
+#else
+	devsoc_vsi_setup(2, 0x03);
+	devsoc_vsi_setup(3, 0x05);
+	devsoc_vsi_setup(4, 0x09);
+	devsoc_vsi_setup(5, 0x11);
+	devsoc_vsi_setup(6, 0x21);
+	devsoc_vsi_setup(7, 0x41);
+#endif
+
+	/* Port 0-7 STP */
+	for (i = 0; i < 8; i++)
+		devsoc_ppe_reg_write(DEVSOC_PPE_STP_BASE + (0x4 * i), 0x3);
+
+	devsoc_ppe_interface_mode_init();
+	/* Port 1-2 disable */
+	for (i = 0; i < 2; i++) {
+		devsoc_gmac_port_disable(i);
+		ppe_port_bridge_txmac_set(i + 1, 1);
+	}
+
+	/* Allowing DHCP packets */
+	devsoc_ppe_acl_set(0, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 67, 0xffff, 0, 0);
+	devsoc_ppe_acl_set(1, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 68, 0xffff, 0, 0);
+	/* Dropping all the UDP packets */
+	devsoc_ppe_acl_set(2, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 0, 0, 0, 1);
+}

@@ -169,4 +169,9 @@
 	xhci@8a00000 {
 		qcom,emulation = <1>;
 	};
+
+	ess-switch {
+		switch_mac_mode0 = <PORT_WRAPPER_USXGMII>;
+		switch_mac_mode1 = <PORT_WRAPPER_USXGMII>;
+	};
 };
