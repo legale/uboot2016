@@ -24,7 +24,6 @@
 #undef	CONFIG_QCA_DISABLE_SCM
 #define CONFIG_SPI_FLASH_CYPRESS
 #define CONFIG_SYS_NO_FLASH
-#define CONFIG_SYS_CACHELINE_SIZE		64
 #define CONFIG_IPQ_NO_RELOC
 
 #define CONFIG_SYS_VSNPRINTF
@@ -213,6 +212,7 @@ extern loff_t board_env_size;
 * Cache flush and invalidation based on L1 cache, so the cache line
 * size is configured to 64 */
 #define CONFIG_SYS_CACHELINE_SIZE		64
+#define CONFIG_CMD_CACHE
 
 /*
 * SPI Flash Configs
