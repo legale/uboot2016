@@ -232,7 +232,7 @@ int board_init(void)
 #endif
 	disable_audio_clks();
 	/*
-	 * Needed by ipq806x to avoid TX FIFO curruption during
+	 * Needed by ipq806x & ipq9574 to avoid TX FIFO curruption during
 	 * serial init after relocation
 	 */
 	uart_wait_tx_empty();

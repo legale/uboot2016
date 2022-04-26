@@ -1600,3 +1600,8 @@ int do_dpr(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 U_BOOT_CMD(dpr_execute, 2, 0, do_dpr,
 		"Debug Policy Request processing\n",
 		"dpr_execute [address] - Processing dpr\n");
+
+void uart_wait_tx_empty(void)
+{
+        ipq_serial_wait_tx_empty();
+}
