@@ -19,6 +19,7 @@
 #define APPSBL_VERSION_FILE    "appsbl_version"
 #define RPM_VERSION_FILE       "rpm_version"
 #define DEVCFG_VERSION_FILE	"devcfg_version"
+#define APDP_VERSION_FILE	"apdp_version"
 #define VERSION_FILE_BASENAME  "/sys/devices/system/qfprom/qfprom0/"
 #define AUTHENTICATE_FILE	"/sys/devices/system/qfprom/qfprom0/authenticate"
 #define SEC_AUTHENTICATE_FILE  "/sys/sec_upgrade/sec_auth"
@@ -29,6 +30,7 @@
 #define MAX_APPSBL_VERSION	14
 #define MAX_RPM_VERSION	8
 #define MAX_DEVCFG_VERSION	11
+#define MAX_APDP_VERSION	8
 #define HASH_P_FLAG		0x02200000
 #define TMP_FILE_DIR		"/tmp/"
 #define CERT_SIZE		2048
@@ -127,6 +129,15 @@ struct image_section sections[] = {
 		.version_file		= DEVCFG_VERSION_FILE,
 		.is_present		= NOT_PRESENT,
 		.img_code		= "0x5"
+	},
+	{
+		.section_type           = APDP_TYPE,
+		.type                   = "apdp",
+		.max_version            = MAX_APDP_VERSION,
+		.file                   = TMP_FILE_DIR,
+		.version_file           = APDP_VERSION_FILE,
+		.is_present             = NOT_PRESENT,
+		.img_code               = "0x200"
 	},
 };
 
