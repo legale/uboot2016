@@ -27,7 +27,6 @@
 DECLARE_GLOBAL_DATA_PTR;
 static int src_clk_freq;
 static int i2c_base_addr;
-static int i2c_hw_initialized;
 static int i2c_board_initialized;
 static int io_mode;
 static int clk_en;
@@ -36,6 +35,7 @@ static int qup_i2c_start_seq;
 
 struct i2c_qup_bus {
 	int *i2c_base_addr;
+	int i2c_hw_initialized;
 };
 
 /*
@@ -113,12 +113,19 @@ void config_i2c_mode(void)
 void config_i2c_gpio(void)
 {
 	int i2c_node, gpio_node;
+	int i;
+	char alias[6];
 
-	i2c_node = fdt_path_offset(gd->fdt_blob, "i2c0");
-	if (i2c_node >= 0) {
-		gpio_node = fdt_subnode_offset(gd->fdt_blob, i2c_node, "i2c_gpio");
-		if (gpio_node >= 0)
-			qca_gpio_init(gpio_node);
+	for (i = 0; i < CONFIG_IPQ_MAX_BLSP_QUPS; i++) {
+		memset(alias, 0, 6);
+		snprintf(alias, 5, "i2c%d", i);
+
+		i2c_node = fdt_path_offset(gd->fdt_blob, alias);
+		if (i2c_node >= 0) {
+			gpio_node = fdt_subnode_offset(gd->fdt_blob, i2c_node, "i2c_gpio");
+			if (gpio_node >= 0)
+				qca_gpio_init(gpio_node);
+		}
 	}
 }
 
@@ -126,7 +133,7 @@ void i2c_qca_board_init(struct i2c_qup_bus *i2c_bus)
 {
 	config_i2c_gpio();
 	i2c_clock_config();
-	i2c_hw_initialized = 0;
+	i2c_bus->i2c_hw_initialized = 0;
 	i2c_board_initialized = 1;
 }
 
@@ -180,8 +187,6 @@ static int i2c_hw_init(int qup_version)
 	ret = config_i2c_state(QUP_STATE_RESET);
 	if (ret)
 		return ret;
-
-	i2c_hw_initialized = 1;
 
 	return SUCCESS;
 }
@@ -351,8 +356,10 @@ int i2c_read_data(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int alen, 
 		i2c_qca_board_init(i2c_bus);
 	}
 
-	if (!i2c_hw_initialized) {
-		i2c_hw_init(qup_v2);
+	if (!i2c_bus->i2c_hw_initialized) {
+		ret = i2c_hw_init(qup_v2);
+		if (ret == SUCCESS)
+			i2c_bus->i2c_hw_initialized = 1;
 	}
 
 	writel(0x3C, i2c_base_addr + QUP_ERROR_FLAGS_OFFSET);
@@ -459,8 +466,10 @@ int i2c_read_data_qup_v1(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int
 		i2c_qca_board_init(i2c_bus);
 	}
 
-	if (!i2c_hw_initialized) {
-		i2c_hw_init(qup_v1);
+	if (!i2c_bus->i2c_hw_initialized) {
+		ret = i2c_hw_init(qup_v1);
+		if (ret == SUCCESS)
+			i2c_bus->i2c_hw_initialized = 1;
 	}
 
 	writel(0x3C, i2c_base_addr + QUP_ERROR_FLAGS_OFFSET);
@@ -580,8 +589,10 @@ int  i2c_write_data_qup_v1(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr,
 		i2c_qca_board_init(i2c_bus);
 	}
 
-	if(!i2c_hw_initialized) {
-		i2c_hw_init(qup_v1);
+	if(!i2c_bus->i2c_hw_initialized) {
+		ret = i2c_hw_init(qup_v1);
+		if (ret == SUCCESS)
+			i2c_bus->i2c_hw_initialized = 1;
 	}
 
 	/* Set to RUN state */
@@ -653,8 +664,10 @@ int i2c_write_data(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int alen,
 		i2c_qca_board_init(i2c_bus);
 	}
 
-	if (!i2c_hw_initialized) {
-		i2c_hw_init(qup_v2);
+	if (!i2c_bus->i2c_hw_initialized) {
+		ret = i2c_hw_init(qup_v2);
+		if (ret == SUCCESS)
+			i2c_bus->i2c_hw_initialized = 1;
 	}
 
 	writel(0x3C, i2c_base_addr + QUP_ERROR_FLAGS_OFFSET);
