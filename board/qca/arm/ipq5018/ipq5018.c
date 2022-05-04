@@ -2274,3 +2274,13 @@ void sdi_disable(void)
 {
 	qca_scm_sdi();
 }
+
+void fdt_fixup_for_atf(void *blob)
+{
+	if (fdt_path_offset(blob, "/soc/dma@704000") >= 0) {
+		parse_fdt_fixup("/soc/dma@704000%qcom,controlled-remotely%0",
+				blob);
+		parse_fdt_fixup("/soc/dma@704000%qti,config-pipe-trust-reg%2",
+				blob);
+	}
+}

@@ -859,7 +859,7 @@ __weak void fdt_fixup_set_qca_cold_reboot_enable(void *blob)
 	return;
 }
 
-__weak void fdt_fixup_wcss_rproc_for_atf(void *blob)
+__weak void fdt_fixup_for_atf(void *blob)
 {
 	return;
 }
@@ -1069,7 +1069,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 		fdt_fixup_set_qce_fixed_key(blob);
 	if (is_atf_enabled()) {
 		fdt_fixup_set_qca_cold_reboot_enable(blob);
-		fdt_fixup_wcss_rproc_for_atf(blob);
+		fdt_fixup_for_atf(blob);
 	}
 	s = getenv("bt_debug");
 	if (s) {

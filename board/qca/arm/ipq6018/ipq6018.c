@@ -1444,7 +1444,7 @@ void fdt_fixup_set_qca_cold_reboot_enable(void *blob)
 	parse_fdt_fixup("/soc/qca,scm_restart_reason%qca,coldreboot-enabled%1", blob);
 }
 
-void fdt_fixup_wcss_rproc_for_atf(void *blob)
+void fdt_fixup_for_atf(void *blob)
 {
 	if (fdt_path_offset(blob, "/soc/remoteproc@cd00000") >= 0)
 		parse_fdt_fixup("/soc/remoteproc@cd00000%qcom,nosecure%1", blob);
