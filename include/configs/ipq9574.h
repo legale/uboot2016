@@ -150,8 +150,8 @@ extern loff_t board_env_size;
 #define HAVE_BLOCK_DEVICE
 #define CONFIG_DOS_PARTITION
 
-#define CONFIG_IPQ9574_I2C 1
-#ifdef CONFIG_IPQ9574_I2C
+#define CONFIG_IPQ_I2C 1
+#ifdef CONFIG_IPQ_I2C
 #define CONFIG_SYS_I2C_QUP
 #define CONFIG_CMD_I2C
 #define CONFIG_DM_I2C

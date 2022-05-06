@@ -12,8 +12,8 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
        default "ipq5018"
 
-config IPQ5018_I2C
-	bool "Enable i2c support for ipq5018"
+config IPQ_I2C
+	bool "Enable i2c support on IPQ platform"
 
 config USB_XHCI_IPQ
 	bool "Enable usb support for ipq5018"

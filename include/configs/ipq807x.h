@@ -22,6 +22,7 @@
  * Support for IPQ807X RUMI
  */
 #define CONFIG_IPQ_RUMI
+#define CONFIG_IPQ807x
 
 /*
  * Disabled for actual chip.
@@ -75,7 +76,7 @@
           text_base  --> |------------|
 */
 
-#ifdef CONFIG_IPQ807x_I2C
+#ifdef CONFIG_IPQ_I2C
 #define CONFIG_SYS_I2C_QUP
 #define CONFIG_CMD_I2C
 #define CONFIG_DM_I2C

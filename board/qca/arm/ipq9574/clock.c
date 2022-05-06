@@ -20,41 +20,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifdef CONFIG_IPQ9574_I2C
-void i2c_clock_config()
-{
-	int cfg, i2c_id;
-	int i2c_node;
-	const u32 *i2c_base;
-	int i;
-	char alias[6];
-
-	for (i = 0; i < CONFIG_IPQ_MAX_BLSP_QUPS; i++) {
-		memset(alias, 0, 6);
-		snprintf(alias, 5, "i2c%d", i);
-
-		i2c_node = fdt_path_offset(gd->fdt_blob, alias);
-		if (i2c_node >= 0) {
-			i2c_base = fdt_getprop(gd->fdt_blob, i2c_node, "reg", NULL);
-			if (i2c_base) {
-				i2c_id = I2C_PORT_ID(fdt32_to_cpu(i2c_base[0]));
-				/* Configure qup1_i2c_apps_clk_src */
-				cfg = (GCC_BLSP1_QUP1_I2C_APPS_CFG_RCGR_SRC_SEL |
-						GCC_BLSP1_QUP1_I2C_APPS_CFG_RCGR_SRC_DIV);
-				writel(cfg, GCC_BLSP1_QUP_I2C_APPS_CFG_RCGR(i2c_id));
-
-				writel(CMD_UPDATE, GCC_BLSP1_QUP_I2C_APPS_CMD_RCGR(i2c_id));
-				mdelay(100);
-				writel(ROOT_EN, GCC_BLSP1_QUP_I2C_APPS_CMD_RCGR(i2c_id));
-
-				/* Configure CBCR */
-				writel(CLK_ENABLE, GCC_BLSP1_QUP_I2C_APPS_CBCR(i2c_id));
-			}
-		}
-	}
-}
-#endif
-
 static void uart_configure_mux(u8 id)
 {
 	unsigned long cfg_rcgr;

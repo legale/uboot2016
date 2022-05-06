@@ -6,6 +6,7 @@ obj-$(CONFIG_IPQ_TZT) += cmd_tzt.o
 obj-$(CONFIG_SMP_CMD_SUPPORT) += cmd_runmulticore.o
 obj-y += fdt_info.o
 obj-y += board_init.o
+obj-y += clk.o
 ifndef CONFIG_ENV_IS_NOWHERE
 obj-y += env.o
 endif

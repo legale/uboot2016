@@ -14,9 +14,4 @@
 #ifndef IPQ807X_CLK_H
 #define IPQ807X_CLK_H
 
-/* I2C clocks configuration */
-#ifdef CONFIG_IPQ807x_I2C
-void i2c_clock_config(void);
-#endif
-
 #endif /*IPQ807X_CLK_H*/

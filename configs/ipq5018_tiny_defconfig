@@ -179,7 +179,7 @@ CONFIG_SIMPLE_BUS=y
 #
 # CONFIG_DM_I2C_COMPAT is not set
 # CONFIG_CROS_EC_KEYB is not set
-# CONFIG_IPQ5018_I2C is not set
+# CONFIG_IPQ_I2C is not set
 
 #
 # LED Support

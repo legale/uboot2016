@@ -219,7 +219,7 @@ extern loff_t board_env_size;
 /*
 * I2C Enable
 */
-#ifdef CONFIG_IPQ5018_I2C
+#ifdef CONFIG_IPQ_I2C
 #define CONFIG_SYS_I2C_QUP
 #define CONFIG_CMD_I2C
 #define CONFIG_DM_I2C
