@@ -268,6 +268,16 @@ extern loff_t board_env_size;
 #define CONFIG_QSPI_LAYOUT_SWITCH
 #endif
 
+/*
+ * UBI write command
+ */
+#ifdef CONFIG_UBI_WRITE
+#define CONFIG_CMD_UBI
+#define CONFIG_RBTREE
+#define IPQ_UBI_VOL_WRITE_SUPPORT
+#endif
+
+
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
 #undef CONFIG_BOOTM_RTEMS
