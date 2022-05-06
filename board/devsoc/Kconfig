@@ -17,4 +17,7 @@ config NAND_FLASH
 
 config QPIC_SERIAL
 	bool "Enable QPIC serial NAND"
+
+config UBI_WRITE
+	bool "Enable ubi utilities"
 endif
