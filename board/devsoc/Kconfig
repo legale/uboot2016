@@ -20,4 +20,8 @@ config QPIC_SERIAL
 
 config UBI_WRITE
 	bool "Enable ubi utilities"
+
+config MMC_FLASH
+	bool "Enable MMC flash support"
+
 endif

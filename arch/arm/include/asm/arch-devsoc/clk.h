@@ -85,6 +85,24 @@
 #define FB_CLK_BIT				(1 << 4)
 #define UPDATE_EN				0x1
 
+/*
+ * GCC-SDCC Registers
+ */
+
+#define GCC_SDCC1_BCR				0x01833000
+#define GCC_SDCC1_APPS_CMD_RCGR			0x01833004
+#define GCC_SDCC1_APPS_CFG_RCGR			0x01833008
+#define GCC_SDCC1_APPS_M			0x0183300C
+#define GCC_SDCC1_APPS_N			0x01833010
+#define GCC_SDCC1_APPS_D			0x01833014
+#define GCC_SDCC1_APPS_CBCR			0x01833034
+#define GCC_SDCC1_AHB_CBCR			0x0183301C
+
+#ifdef CONFIG_QCA_MMC
+void emmc_clock_init(void);
+void emmc_clock_reset(void);
+#endif
+
 int uart_clock_config(struct ipq_serial_platdata *plat);
 
 #endif /*IPQ9574_CLK_H*/

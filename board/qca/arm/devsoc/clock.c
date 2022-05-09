@@ -88,3 +88,42 @@ void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
 	return;
 }
 #endif
+
+#ifdef CONFIG_QCA_MMC
+void emmc_clock_init(void)
+{
+#ifdef QCA_CLOCK_ENABLE
+	/* Enable root clock generator */
+	writel(readl(GCC_SDCC1_APPS_CBCR)|0x1, GCC_SDCC1_APPS_CBCR);
+	/* Add 10us delay for CLK_OFF to get cleared */
+	udelay(10);
+	writel(readl(GCC_SDCC1_AHB_CBCR)|0x1, GCC_SDCC1_AHB_CBCR);
+	/* PLL0 - 192Mhz */
+	writel(0x20B, GCC_SDCC1_APPS_CFG_RCGR);
+	/* Delay for clock operation complete */
+	udelay(10);
+	writel(0x1, GCC_SDCC1_APPS_M);
+	/* check this M, N D value while debugging
+	 * because as per clock tool the actual M, N, D
+	 * values are M=1, N=FA, D=F9
+	 */
+	writel(0xFC, GCC_SDCC1_APPS_N);
+	writel(0xFD, GCC_SDCC1_APPS_D);
+	/* Delay for clock operation complete */
+	udelay(10);
+	/* Update APPS_CMD_RCGR to reflect source selection */
+	writel(readl(GCC_SDCC1_APPS_CMD_RCGR)|0x1, GCC_SDCC1_APPS_CMD_RCGR);
+	/* Add 10us delay for clock update to complete */
+	udelay(10);
+#else
+	return;
+#endif
+}
+
+void emmc_clock_reset(void)
+{
+	writel(0x1, GCC_SDCC1_BCR);
+	udelay(10);
+	writel(0x0, GCC_SDCC1_BCR);
+}
+#endif

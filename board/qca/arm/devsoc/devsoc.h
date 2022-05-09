@@ -31,6 +31,9 @@ extern const add_node_t add_fdt_node[];
 #define BLSP1_UART0_BASE			0x078AF000
 #define UART_PORT_ID(reg)			((reg - BLSP1_UART0_BASE) / 0x1000)
 
+#define MSM_SDC1_BASE				0x7800000
+#define MSM_SDC1_SDHCI_BASE			0x7804000
+
 /*
  * weak function
  */
