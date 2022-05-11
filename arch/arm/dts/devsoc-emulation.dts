@@ -98,4 +98,70 @@
 			};
 		};
 	};
+
+	pci0: pci@20000000 {
+		status = "ok";
+		perst_gpio = <42>;
+		lane = <1>;
+		pci_gpio {
+			pci_rst {
+				gpio = <42>;
+				func = <0>;
+				pull = <GPIO_PULL_UP>;
+				oe = <GPIO_OD_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+			pci_clk {
+				gpio = <37>;
+				func = <0>;
+				pull = <GPIO_NO_PULL>;
+				oe = <GPIO_OD_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	pci1: pci@18000000 {
+		status = "ok";
+		perst_gpio = <41>;
+		lane = <2>;
+		pci_gpio {
+			pci_rst {
+				gpio = <41>;
+				func = <0>;
+				pull = <GPIO_PULL_UP>;
+				oe = <GPIO_OD_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+			pci_clk {
+				gpio = <46>;
+				func = <0>;
+				pull = <GPIO_NO_PULL>;
+				oe = <GPIO_OD_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	pci2: pci@10000000 {
+		status = "ok";
+		perst_gpio = <40>;
+		lane = <1>;
+		pci_gpio {
+			pci_rst {
+				gpio = <40>;
+				func = <0>;
+				pull = <GPIO_PULL_DOWN>;
+				oe = <GPIO_OD_ENABLE>;
+				drvstr = <GPIO_2MA>;
+			};
+			pci_clk {
+				gpio = <43>;
+				func = <0>;
+				pull = <GPIO_NO_PULL>;
+				oe = <GPIO_OD_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
 };

@@ -102,7 +102,10 @@
 void emmc_clock_init(void);
 void emmc_clock_reset(void);
 #endif
-
+#ifdef CONFIG_PCI_IPQ
+void pcie_v2_clock_init(int pcie_id);
+void pcie_v2_clock_deinit(int pcie_id);
+#endif
 int uart_clock_config(struct ipq_serial_platdata *plat);
 
 #endif /*IPQ9574_CLK_H*/

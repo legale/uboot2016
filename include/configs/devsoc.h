@@ -302,6 +302,15 @@ extern loff_t board_env_size;
 #define CONFIG_IPQ_FDT_FIXUP
 #define CONFIG_FDT_FIXUP_PARTITIONS
 #define CONFIG_OF_BOARD_SETUP
+/*
+ * PCIE Enable
+ */
+#define PCI_MAX_DEVICES				3
+#ifdef CONFIG_PCI_IPQ
+#define CONFIG_PCI
+#define CONFIG_CMD_PCI
+#define CONFIG_PCI_SCAN_SHOW
+#endif
 
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9

@@ -201,6 +201,94 @@ int board_mmc_init(bd_t *bis)
 	return 0;
 }
 #endif
+#ifdef CONFIG_PCI_IPQ
+void board_pci_init(int id)
+{
+	int node, gpio_node, ret, lane;
+	char name[16];
+	struct fdt_resource pci_rst;
+
+	snprintf(name, sizeof(name), "pci%d", id);
+	node = fdt_path_offset(gd->fdt_blob, name);
+	if (node < 0) {
+		printf("Could not find PCI%d in device tree\n", id);
+		return;
+	}
+
+	gpio_node = fdt_subnode_offset(gd->fdt_blob, node, "pci_gpio");
+	if (gpio_node >= 0)
+		qca_gpio_init(gpio_node);
+
+	lane = fdtdec_get_int(gd->fdt_blob, node, "lane", 1);
+
+	/*
+	 * setting dual port mode if PCIE1 & PCIE2 come up with 1 lane.
+	 */
+	if ((id == 1) || (id ==2)) {
+		if (lane == 1)
+			writel(TWO_PORT_MODE,
+				(void *)TCSR_MODE_CTRL_2PORT_2LANE);
+		else
+			writel(TWO_LANE_MODE,
+				(void *)TCSR_MODE_CTRL_2PORT_2LANE);
+		mdelay(10);
+	}
+
+	ret = fdt_get_named_resource(gd->fdt_blob, node, "reg",
+				"reg-names", "pci_rst", &pci_rst);
+	if (ret == 0) {
+		set_mdelay_clearbits_le32(pci_rst.start, 0x1, 10);
+		set_mdelay_clearbits_le32(pci_rst.end + 1, 0x1, 10);
+	}
+
+	pcie_v2_clock_init(id);
+
+	return;
+}
+
+void board_pci_deinit()
+{
+	int node, gpio_node, i, err, is_x2;
+	char name[16];
+	struct fdt_resource parf;
+	struct fdt_resource pci_phy;
+
+	for (i = 0; i < PCI_MAX_DEVICES; i++) {
+		snprintf(name, sizeof(name), "pci%d", i);
+		node = fdt_path_offset(gd->fdt_blob, name);
+		if (node < 0) {
+			printf("Could not find PCI%d in device tree\n", i);
+			continue;
+		}
+		err = fdt_get_named_resource(gd->fdt_blob, node, "reg",
+				"reg-names", "parf", &parf);
+
+		writel(0x0, parf.start + 0x358);
+		writel(0x1, parf.start + 0x40);
+
+		err = fdt_get_named_resource(gd->fdt_blob, node, "reg",
+				"reg-names", "pci_phy", &pci_phy);
+		if (err < 0)
+			continue;
+
+		if ((i == 0) || (i == 1))
+			is_x2 = 0;
+		else
+			is_x2 = 1;
+
+		writel(0x1, pci_phy.start + (0x800 + (0x800 * is_x2)));
+		writel(0x0, pci_phy.start + (0x804 + (0x800 * is_x2)));
+
+		gpio_node = fdt_subnode_offset(gd->fdt_blob, node, "pci_gpio");
+		if (gpio_node >= 0)
+			qca_gpio_deinit(gpio_node);
+
+		pcie_v2_clock_deinit(i);
+	}
+
+	return;
+}
+#endif
 
 __weak int ipq_get_tz_version(char *version_name, int buf_size)
 {

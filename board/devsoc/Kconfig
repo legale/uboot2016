@@ -24,4 +24,7 @@ config UBI_WRITE
 config MMC_FLASH
 	bool "Enable MMC flash support"
 
+config PCI_IPQ
+	bool "Enable pci support"
+
 endif

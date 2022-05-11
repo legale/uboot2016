@@ -968,6 +968,7 @@ static const struct udevice_id pcie_ver_ids[] = {
 	{ .compatible = "qcom,ipq807x-pcie", .data = PCIE_V2 },
 	{ .compatible = "qcom,ipq6018-pcie", .data = PCIE_V2 },
 	{ .compatible = "qcom,ipq5018-pcie", .data = PCIE_V2 },
+	{ .compatible = "qcom,devsoc-pcie", .data = PCIE_V2 },
 	{ .compatible = "qcom,ipq9574-pcie", .data = PCIE_V2 },
 	{ },
 };
