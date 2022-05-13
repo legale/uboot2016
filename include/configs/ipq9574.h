@@ -404,4 +404,13 @@ extern loff_t board_env_size;
 #define CONFIG_IPQ_FDT_FIXUP
 #define CONFIG_ARMV7_PSCI
 #define CONFIG_VERSION_ROLLBACK_PARTITION_INFO
+
+/*
+ * Undefine configs not needed
+ */
+#undef CONFIG_BOOTM_NETBSD
+#undef CONFIG_BOOTM_PLAN9
+#undef CONFIG_BOOTM_RTEMS
+#undef CONFIG_BOOTM_VXWORKS
+
 #endif /* _IPQ9574_H */
