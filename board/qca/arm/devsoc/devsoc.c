@@ -295,3 +295,8 @@ void set_flash_secondary_type(qca_smem_flash_info_t *smem)
 {
 	return;
 };
+
+void ipq_fdt_fixup_usb_device_mode(void *blob)
+{
+	return;
+}
