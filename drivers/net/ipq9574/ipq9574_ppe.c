@@ -428,7 +428,7 @@ void ppe_port_rxmac_status_set(uint32_t port)
 			MAC_RX_CONFIGURATION_ADDRESS +
 			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION), &reg_value);
 
-	reg_value |= 0x5ee00c0;
+	reg_value |= 0x300000c0;
 	reg_value |=RE;
 	reg_value |=ACS;
 	reg_value |=CST;
@@ -447,11 +447,11 @@ void ppe_mac_packet_filter_set(uint32_t port)
 	pr_debug("DEBUGGING mac_packet_filter_set......... PORTID = %d\n", port);
 	ipq9574_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 			MAC_PACKET_FILTER_ADDRESS +
-			(port * MAC_PACKET_FILTER_INC), 0x81);
+			(port * MAC_PACKET_FILTER_INC), 0x80000081);
 	pr_debug("NSS_SWITCH_XGMAC_MAC_PACKET_FILTER Address = 0x%x -> Value = %u\n",
 	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + MAC_PACKET_FILTER_ADDRESS +
 	      (port * MAC_PACKET_FILTER_ADDRESS),
-	      0x81);
+	      0x80000081);
 }
 
 void ipq9574_10g_r_speed_set(int port, int status)
@@ -477,7 +477,7 @@ void ipq9574_uxsgmii_speed_set(int port, int speed, int duplex,
 		uniphy_index = PPE_UNIPHY_INSTANCE0;
 
 	ppe_uniphy_usxgmii_autoneg_completed(uniphy_index);
-	ppe_uniphy_usxgmii_speed_set(uniphy_index, speed);
+	ppe_uniphy_usxgmii_speed_set(uniphy_index, port + 1, speed);
 	ppe_xgmac_speed_set(port, speed);
 	ppe_uniphy_usxgmii_duplex_set(uniphy_index, duplex);
 	ppe_uniphy_usxgmii_port_reset(uniphy_index);
@@ -835,6 +835,7 @@ void ppe_port_mux_mac_type_set(int port_id, int mode)
 			break;
 		case EPORT_WRAPPER_USXGMII:
 		case EPORT_WRAPPER_10GBASE_R:
+		case EPORT_WRAPPER_UQXGMII:
 			port_type = PORT_XGMAC_TYPE;
 			break;
 		default:
@@ -887,8 +888,10 @@ void ipq9574_ppe_interface_mode_init(void)
 	ppe_port_mux_mac_type_set(PORT3, mode0);
 	ppe_port_mux_mac_type_set(PORT4, mode0);
 	if (mode1 == EPORT_WRAPPER_MAX) {
-		ppe_port_mux_mac_type_set(PORT5, mode0);
-		uniphy_port5_clock_source_set();
+		if (mode0 != EPORT_WRAPPER_UQXGMII) {
+			ppe_port_mux_mac_type_set(PORT5, mode0);
+			uniphy_port5_clock_source_set();
+		}
 	} else if (is_uniphy_enabled(PPE_UNIPHY_INSTANCE1)) {
 		ppe_port_mux_mac_type_set(PORT5, mode1);
 	}

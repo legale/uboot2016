@@ -35,6 +35,7 @@ extern int ipq_mdio_write(int mii_id,
 extern int ipq_mdio_read(int mii_id,
 		int regnum, ushort *data);
 extern void ipq9574_qca8075_phy_serdes_reset(u32 phy_id);
+extern void qca8084_phy_interface_mode_set(void);
 
 void csr1_write(int phy_id, int addr, int  value)
 {
@@ -373,6 +374,154 @@ static void ppe_uniphy_10g_r_mode_set(uint32_t uniphy_index)
 		ppe_uniphy_reset(UNIPHY2_XPCS_RESET, false);
 }
 
+static void ppe_uniphy_uqxgmii_eee_set(uint32_t uniphy_index)
+{
+	uint32_t reg_value = 0;
+
+	/* configure eee related timer value */
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_EEE_MCTRL0_ADDRESS);
+	reg_value |= SIGN_BIT | MULT_FACT_100NS;
+	csr1_write(uniphy_index, VR_XS_PCS_EEE_MCTRL0_ADDRESS, reg_value);
+
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_EEE_TXTIMER_ADDRESS);
+	reg_value |= UNIPHY_XPCS_TSL_TIMER | UNIPHY_XPCS_TLU_TIMER
+			| UNIPHY_XPCS_TWL_TIMER;
+	csr1_write(uniphy_index, VR_XS_PCS_EEE_TXTIMER_ADDRESS, reg_value);
+
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_EEE_RXTIMER_ADDRESS);
+	reg_value |= UNIPHY_XPCS_100US_TIMER | UNIPHY_XPCS_TWR_TIMER;
+	csr1_write(uniphy_index, VR_XS_PCS_EEE_RXTIMER_ADDRESS, reg_value);
+
+	/* Transparent LPI mode and LPI pattern enable */
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_EEE_MCTRL1_ADDRESS);
+	reg_value |= TRN_LPI | TRN_RXLPI;
+	csr1_write(uniphy_index, VR_XS_PCS_EEE_MCTRL1_ADDRESS, reg_value);
+
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_EEE_MCTRL0_ADDRESS);
+	reg_value |= LRX_EN | LTX_EN;
+	csr1_write(uniphy_index, VR_XS_PCS_EEE_MCTRL0_ADDRESS, reg_value);
+}
+
+static void ppe_uniphy_uqxgmii_mode_set(uint32_t uniphy_index)
+{
+	uint32_t reg_value = 0;
+
+	writel(UNIPHY_MISC2_REG_VALUE, PPE_UNIPHY_BASE +
+	(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC2_REG_OFFSET);
+
+	/* reset uniphy */
+	writel(UNIPHY_PLL_RESET_REG_VALUE, PPE_UNIPHY_BASE +
+		(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_PLL_RESET_REG_OFFSET);
+	mdelay(500);
+	writel(UNIPHY_PLL_RESET_REG_DEFAULT_VALUE, PPE_UNIPHY_BASE +
+		(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_PLL_RESET_REG_OFFSET);
+	mdelay(500);
+
+	/* keep xpcs to reset status */
+	if (uniphy_index == 0)
+		ppe_uniphy_reset(UNIPHY0_XPCS_RESET, true);
+	else if (uniphy_index == 1)
+		ppe_uniphy_reset(UNIPHY1_XPCS_RESET, true);
+	else
+		ppe_uniphy_reset(UNIPHY2_XPCS_RESET, true);
+	mdelay(100);
+
+	/* configure uniphy to usxgmii mode */
+	writel(0x1021, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+			 + PPE_UNIPHY_MODE_CONTROL);
+
+	reg_value = readl(PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+			 + UNIPHYQP_USXG_OPITON1);
+	reg_value |= GMII_SRC_SEL;
+	writel(reg_value, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+			 + UNIPHYQP_USXG_OPITON1);
+
+	/* configure uniphy usxgmii gcc software reset */
+	if (uniphy_index == 0) {
+		ppe_uniphy_reset(UNIPHY0_SOFT_RESET, true);
+		mdelay(100);
+		ppe_uniphy_reset(UNIPHY0_SOFT_RESET, false);
+	} else if (uniphy_index == 1) {
+		ppe_uniphy_reset(UNIPHY1_SOFT_RESET, true);
+		mdelay(100);
+		ppe_uniphy_reset(UNIPHY1_SOFT_RESET, false);
+	} else {
+		ppe_uniphy_reset(UNIPHY2_SOFT_RESET, true);
+		mdelay(100);
+		ppe_uniphy_reset(UNIPHY2_SOFT_RESET, false);
+	}
+	mdelay(100);
+
+	/* wait calibration done to uniphy */
+	ppe_uniphy_calibration(uniphy_index);
+
+	/* release xpcs reset status */
+	if (uniphy_index == 0)
+		ppe_uniphy_reset(UNIPHY0_XPCS_RESET, false);
+	else if (uniphy_index == 1)
+		ppe_uniphy_reset(UNIPHY1_XPCS_RESET, false);
+	else
+		ppe_uniphy_reset(UNIPHY2_XPCS_RESET, false);
+	mdelay(100);
+
+	/* wait 10g base_r link up */
+	ppe_uniphy_10g_r_linkup(uniphy_index);
+
+	/* enable uniphy usxgmii */
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_DIG_CTRL1_ADDRESS);
+	reg_value |= USXG_EN;
+	csr1_write(uniphy_index, VR_XS_PCS_DIG_CTRL1_ADDRESS, reg_value);
+
+	/* set qxgmii mode */
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_KR_CTRL_ADDRESS);
+	reg_value |= USXG_MODE;
+	csr1_write(uniphy_index, VR_XS_PCS_KR_CTRL_ADDRESS, reg_value);
+
+	/* set AM interval mode */
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_DIG_STS_ADDRESS);
+	reg_value |= AM_COUNT;
+	csr1_write(uniphy_index, VR_XS_PCS_DIG_STS_ADDRESS, reg_value);
+
+	/* xpcs software reset */
+	reg_value = csr1_read(uniphy_index, VR_XS_PCS_DIG_CTRL1_ADDRESS);
+	reg_value |= VR_RST;
+	csr1_write(uniphy_index, VR_XS_PCS_DIG_CTRL1_ADDRESS, reg_value);
+
+	/* enable uniphy autoneg complete interrupt and 10M/100M 8-bits MII width */
+	reg_value = csr1_read(uniphy_index, VR_MII_AN_CTRL_ADDRESS);
+	reg_value |= MII_AN_INTR_EN;
+	reg_value |= MII_CTRL;
+	csr1_write(uniphy_index, VR_MII_AN_CTRL_ADDRESS, reg_value);
+	csr1_write(uniphy_index, VR_MII_AN_CTRL_CHANNEL1_ADDRESS, reg_value);
+	csr1_write(uniphy_index, VR_MII_AN_CTRL_CHANNEL2_ADDRESS, reg_value);
+	csr1_write(uniphy_index, VR_MII_AN_CTRL_CHANNEL3_ADDRESS, reg_value);
+
+	/* disable TICD */
+	reg_value = csr1_read(uniphy_index, VR_XAUI_MODE_CTRL_ADDRESS);
+	reg_value |= IPG_CHECK;
+	csr1_write(uniphy_index, VR_XAUI_MODE_CTRL_ADDRESS, reg_value);
+	csr1_write(uniphy_index, VR_XAUI_MODE_CTRL_CHANNEL1_ADDRESS, reg_value);
+	csr1_write(uniphy_index, VR_XAUI_MODE_CTRL_CHANNEL2_ADDRESS, reg_value);
+	csr1_write(uniphy_index, VR_XAUI_MODE_CTRL_CHANNEL3_ADDRESS, reg_value);
+
+	/* enable uniphy autoneg ability and usxgmii 10g speed and full duplex */
+	reg_value = csr1_read(uniphy_index, SR_MII_CTRL_ADDRESS);
+	reg_value |= AN_ENABLE;
+	reg_value &= ~SS5;
+	reg_value |= SS6 | SS13 | DUPLEX_MODE;
+	csr1_write(uniphy_index, SR_MII_CTRL_ADDRESS, reg_value);
+	csr1_write(uniphy_index, SR_MII_CTRL_CHANNEL1_ADDRESS, reg_value);
+	csr1_write(uniphy_index, SR_MII_CTRL_CHANNEL2_ADDRESS, reg_value);
+	csr1_write(uniphy_index, SR_MII_CTRL_CHANNEL3_ADDRESS, reg_value);
+
+	/* enable uniphy eee transparent mode*/
+	ppe_uniphy_uqxgmii_eee_set(uniphy_index);
+
+#ifdef CONFIG_QCA8084_PHY
+	/* phy interface mode configuration for qca8084 */
+	qca8084_phy_interface_mode_set();
+#endif
+}
 
 static void ppe_uniphy_usxgmii_mode_set(uint32_t uniphy_index)
 {
@@ -465,6 +614,10 @@ void ppe_uniphy_mode_set(uint32_t uniphy_index, uint32_t mode)
 		case EPORT_WRAPPER_10GBASE_R:
 			ppe_uniphy_10g_r_mode_set(uniphy_index);
 			break;
+		case EPORT_WRAPPER_UQXGMII:
+		case EPORT_WRAPPER_UQXGMII_3CHANNELS:
+			ppe_uniphy_uqxgmii_mode_set(uniphy_index);
+			break;
 		default:
 			break;
 	}
@@ -488,11 +641,20 @@ void ppe_uniphy_usxgmii_autoneg_completed(uint32_t uniphy_index)
 	csr1_write(uniphy_index, VR_MII_AN_INTR_STS, reg_value);
 }
 
-void ppe_uniphy_usxgmii_speed_set(uint32_t uniphy_index, int speed)
+void ppe_uniphy_usxgmii_speed_set(uint32_t uniphy_index, uint32_t port_id,
+				  int speed)
 {
 	uint32_t reg_value = 0;
 
-	reg_value = csr1_read(uniphy_index, SR_MII_CTRL_ADDRESS);
+	if (port_id == PORT2)
+		reg_value = csr1_read(uniphy_index, SR_MII_CTRL_CHANNEL1_ADDRESS);
+	else if (port_id == PORT3)
+		reg_value = csr1_read(uniphy_index, SR_MII_CTRL_CHANNEL2_ADDRESS);
+	else if (port_id == PORT4)
+		reg_value = csr1_read(uniphy_index, SR_MII_CTRL_CHANNEL3_ADDRESS);
+	else
+		reg_value = csr1_read(uniphy_index, SR_MII_CTRL_ADDRESS);
+
 	reg_value |= DUPLEX_MODE;
 
 	switch(speed) {
@@ -527,8 +689,15 @@ void ppe_uniphy_usxgmii_speed_set(uint32_t uniphy_index, int speed)
 		reg_value |=SS13;
 		break;
 	}
-	csr1_write(uniphy_index, SR_MII_CTRL_ADDRESS, reg_value);
 
+	if (port_id == PORT2)
+		csr1_write(uniphy_index, SR_MII_CTRL_CHANNEL1_ADDRESS, reg_value);
+	else if (port_id == PORT3)
+		csr1_write(uniphy_index, SR_MII_CTRL_CHANNEL2_ADDRESS, reg_value);
+	else if (port_id == PORT4)
+		csr1_write(uniphy_index, SR_MII_CTRL_CHANNEL3_ADDRESS, reg_value);
+	else
+		csr1_write(uniphy_index, SR_MII_CTRL_ADDRESS, reg_value);
 }
 
 void ppe_uniphy_usxgmii_duplex_set(uint32_t uniphy_index, int duplex)

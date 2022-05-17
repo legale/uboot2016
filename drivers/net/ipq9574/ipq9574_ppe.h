@@ -22,15 +22,7 @@
 #include <asm/io.h>
 #include <malloc.h>
 #include <phy.h>
-#include <net.h>
 #include <miiphy.h>
-
-#define PORT1					1
-#define PORT2					2
-#define PORT3					3
-#define PORT4					4
-#define PORT5					5
-#define PORT6					6
 
 #define IPQ9574_PORT5_MUX_PCS_UNIPHY0		0x0
 #define IPQ9574_PORT5_MUX_PCS_UNIPHY1		0x1
