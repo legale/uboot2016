@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
 */
 
+#include <linux/bitops.h>
+#include <linux/compat.h>
 #include <common.h>
 #include <command.h>
 #include <miiphy.h>
@@ -18,6 +20,12 @@
 #include <asm/io.h>
 #include <errno.h>
 #include "ipq_mdio.h"
+
+#ifdef DEBUG
+#define pr_debug(fmt, args...) printf(fmt, ##args);
+#else
+#define pr_debug(fmt, args...)
+#endif
 
 struct ipq_mdio_data {
 	struct mii_bus *bus;
@@ -162,6 +170,202 @@ int ipq_phy_read(struct mii_dev *bus,
 	return ipq_mdio_read(addr, regnum, NULL);
 }
 
+#ifdef CONFIG_QCA8084_PHY
+static inline void split_addr(uint32_t regaddr, uint16_t *r1, uint16_t *r2,
+			       uint16_t *page, uint16_t *switch_phy_id)
+{
+	*r1 = regaddr & 0x1c;
+
+	regaddr >>= 5;
+	*r2 = regaddr & 0x7;
+
+	regaddr >>= 3;
+	*page = regaddr & 0xffff;
+
+	regaddr >>= 16;
+	*switch_phy_id = regaddr & 0xff;
+}
+
+uint32_t ipq_mii_read(uint32_t reg)
+{
+	uint16_t r1, r2, page, switch_phy_id;
+	uint16_t lo, hi;
+
+	split_addr((uint32_t) reg, &r1, &r2, &page, &switch_phy_id);
+
+	mutex_lock(&switch_mdio_lock);
+	ipq_mdio_write(0x18 | (switch_phy_id >> 5), switch_phy_id & 0x1f, page);
+	udelay(100);
+	lo = ipq_mdio_read(0x10 | r2, r1, NULL);
+	hi = ipq_mdio_read(0x10 | r2, r1 + 2, NULL);
+	mutex_unlock(&switch_mdio_lock);
+
+	return (hi << 16) | lo;
+}
+
+void ipq_mii_write(uint32_t reg, uint32_t val)
+{
+	uint16_t r1, r2, page, switch_phy_id;
+	uint16_t lo, hi;
+
+	split_addr((uint32_t) reg, &r1, &r2, &page, &switch_phy_id);
+	lo = val & 0xffff;
+	hi = (uint16_t) (val >> 16);
+
+	mutex_lock(&switch_mdio_lock);
+	ipq_mdio_write(0x18 | (switch_phy_id >> 5), switch_phy_id & 0x1f, page);
+	udelay(100);
+	ipq_mdio_write(0x10 | r2, r1, lo);
+	ipq_mdio_write(0x10 | r2, r1 + 2, hi);
+	mutex_unlock(&switch_mdio_lock);
+}
+
+void ipq_mii_update(uint32_t reg, uint32_t mask, uint32_t val)
+{
+	uint32_t new_val = 0, org_val = 0;
+
+	org_val = ipq_mii_read(reg);
+
+	new_val = org_val & ~mask;
+	new_val |= val & mask;
+
+	if (new_val != org_val)
+		ipq_mii_write(reg, new_val);
+}
+
+static inline void ipq_clk_enable(uint32_t reg)
+{
+	u32 val;
+
+	val = ipq_mii_read(reg);
+	val |= BIT(0);
+	ipq_mii_write(reg, val);
+}
+
+static inline void ipq_clk_disable(uint32_t reg)
+{
+	u32 val;
+
+	val = ipq_mii_read(reg);
+	val &= ~BIT(0);
+	ipq_mii_write(reg, val);
+}
+
+static inline void ipq_clk_reset(uint32_t reg)
+{
+	u32 val;
+
+	val = ipq_mii_read(reg);
+	val |= BIT(2);
+	ipq_mii_write(reg, val);
+
+	udelay(21000);
+
+	val &= ~BIT(2);
+	ipq_mii_write(reg, val);
+}
+
+void ipq_clock_init(void)
+{
+	u32 val = 0;
+	int i;
+
+	/* Enable serdes */
+	ipq_clk_enable(SRDS0_SYS_CBCR);
+	ipq_clk_enable(SRDS1_SYS_CBCR);
+
+	/* Reset serdes */
+	ipq_clk_reset(SRDS0_SYS_CBCR);
+	ipq_clk_reset(SRDS1_SYS_CBCR);
+
+	/* Disable EPHY GMII clock */
+	i = 0;
+	while (i < 2 * PHY_ADDR_NUM) {
+		ipq_clk_disable(GEPHY0_TX_CBCR + i*0x20);
+		i++;
+	}
+
+	/* Enable ephy */
+	ipq_clk_enable(EPHY0_SYS_CBCR);
+	ipq_clk_enable(EPHY1_SYS_CBCR);
+	ipq_clk_enable(EPHY2_SYS_CBCR);
+	ipq_clk_enable(EPHY3_SYS_CBCR);
+
+	/* Reset ephy */
+	ipq_clk_reset(EPHY0_SYS_CBCR);
+	ipq_clk_reset(EPHY1_SYS_CBCR);
+	ipq_clk_reset(EPHY2_SYS_CBCR);
+	ipq_clk_reset(EPHY3_SYS_CBCR);
+
+	/* Deassert EPHY DSP */
+	val = ipq_mii_read(GCC_GEPHY_MISC);
+	val &= ~GENMASK(4, 0);
+	ipq_mii_write(GCC_GEPHY_MISC, val);
+
+	/* Enable efuse loading into analog circuit */
+	val = ipq_mii_read(EPHY_CFG);
+	/* BIT20 for PHY0 and PHY1, BIT21 for PHY2 and PHY3 */
+	val &= ~GENMASK(21, 20);
+	ipq_mii_write(EPHY_CFG, val);
+
+	udelay(11000);
+}
+
+void ipq_phy_addr_fixup(void)
+{
+	int phy_index, addr;
+	u32 val;
+	unsigned long phyaddr_mask = 0;
+
+	val = ipq_mii_read(EPHY_CFG);
+
+	for (phy_index = 0, addr = 1; addr <= 4; phy_index++, addr++) {
+		phyaddr_mask |= BIT(addr);
+		addr &= GENMASK(4, 0);
+		val &= ~(GENMASK(4, 0) << (phy_index * PHY_ADDR_LENGTH));
+		val |= addr << (phy_index * PHY_ADDR_LENGTH);
+	}
+
+	pr_debug("programme EPHY reg 0x%x with 0x%x\n", EPHY_CFG, val);
+	ipq_mii_write(EPHY_CFG, val);
+
+	/* Programe the UNIPHY address if uniphyaddr_fixup specified.
+	 * the UNIPHY address will select three MDIO address from
+	 * unoccupied MDIO address space.
+	 */
+	val = ipq_mii_read(UNIPHY_CFG);
+
+	/* For qca8386, the switch occupies the other 16 MDIO address,
+	 * for example, if the phy address is in the range of 0 to 15,
+	 * the switch will occupy the MDIO address from 16 to 31.
+	 */
+	phyaddr_mask |= GENMASK(31, 16);
+
+	phy_index = 0;
+
+	for_each_clear_bit_from(addr, &phyaddr_mask, PHY_MAX_ADDR) {
+		if (phy_index >= UNIPHY_ADDR_NUM)
+			break;
+		val &= ~(GENMASK(4, 0) << (phy_index * PHY_ADDR_LENGTH));
+		val |= addr << (phy_index * PHY_ADDR_LENGTH);
+		phy_index++;
+	}
+
+	if (phy_index < UNIPHY_ADDR_NUM) {
+		for_each_clear_bit(addr, &phyaddr_mask, PHY_MAX_ADDR) {
+			if (phy_index >= UNIPHY_ADDR_NUM)
+				break;
+			val &= ~(GENMASK(4, 0) << (phy_index * PHY_ADDR_LENGTH));
+			val |= addr << (phy_index * PHY_ADDR_LENGTH);
+			phy_index++;
+		}
+	}
+
+	pr_debug("programme UNIPHY reg 0x%x with 0x%x\n", UNIPHY_CFG, val);
+	ipq_mii_write(UNIPHY_CFG, val);
+}
+#endif
+
 int ipq_sw_mdio_init(const char *name)
 {
 	struct mii_dev *bus = mdio_alloc();
@@ -169,12 +373,54 @@ int ipq_sw_mdio_init(const char *name)
 		printf("Failed to allocate IPQ MDIO bus\n");
 		return -1;
 	}
+
 	bus->read = ipq_phy_read;
 	bus->write = ipq_phy_write;
 	bus->reset = NULL;
 	snprintf(bus->name, MDIO_NAME_LEN, name);
 	return mdio_register(bus);
 }
+
+#ifdef CONFIG_QCA8084_PHY
+static int do_ipq_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	char op[2];
+	unsigned int reg = 0;
+	unsigned short data = 0;
+
+	if (argc < 2)
+		return CMD_RET_USAGE;
+
+	op[0] = argv[1][0];
+	if (strlen(argv[1]) > 1)
+		op[1] = argv[1][1];
+	else
+		op[1] = '\0';
+
+	if (argc >= 3)
+		reg = simple_strtoul(argv[2], NULL, 16);
+	if (argc >= 4)
+		data = simple_strtoul(argv[3], NULL, 16);
+
+	if (op[0] == 'r') {
+		data = ipq_mii_read(reg);
+		printf("0x%x\n", data);
+	} else if (op[0] == 'w') {
+		ipq_mii_write(reg, data);
+	} else {
+		return CMD_RET_USAGE;
+	}
+
+	return 0;
+}
+
+U_BOOT_CMD(
+	ipq_mii, 4, 1, do_ipq_mii,
+	"IPQ mii utility commands",
+	"ipq_mii read <reg>		- read IPQ MII register <reg>\n"
+	"ipq_mii write <reg> <data>	- write IPQ MII register <reg> with <data>\n"
+);
+#endif
 
 static int do_ipq_mdio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {

@@ -41,6 +41,7 @@
 #define QCA8033_PHY_ADDR			0x6
 #define QCA8081_PHY				0x004DD100
 #define QCA8081_1_1_PHY				0x004DD101
+#define QCA8084_PHY				0x004DD180
 #define AQUANTIA_PHY_107			0x03a1b4e2
 #define AQUANTIA_PHY_109			0x03a1b502
 #define AQUANTIA_PHY_111			0x03a1b610
@@ -113,6 +114,8 @@ enum eport_wrapper_cfg {
 	EPORT_WRAPPER_RGMII,
 	EPORT_WRAPPER_PSGMII_FIBER,
 	EPORT_WRAPPER_SGMII_FIBER,
+	EPORT_WRAPPER_UQXGMII, /* for four channels qca8084 phy mode*/
+	EPORT_WRAPPER_UQXGMII_3CHANNELS, /* for three channels qca8084 phy mode */
 	EPORT_WRAPPER_MAX = 0xFF
 };
 
@@ -134,6 +137,8 @@ enum phy_mode {
 	AQ_PHY_TYPE = 3,
 	QCA8033_PHY_TYPE = 4,
 	SFP_PHY_TYPE = 5,
+	QCA8084_PHY_TYPE = 6,
+	UNUSED_PHY_TYPE = 0xFF,
 };
 
 typedef struct {

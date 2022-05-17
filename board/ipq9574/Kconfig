@@ -18,4 +18,6 @@ config IPQ9574_QCA_AQUANTIA_PHY
 config IPQ9574_QCA8075_PHY
 	bool "Enable Malibu PHY support for ipq9574"
 
+config QCA8084_PHY
+	bool "Enable QCA8084 PHY support for ipq9574"
 endif

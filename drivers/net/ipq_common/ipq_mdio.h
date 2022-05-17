@@ -34,4 +34,24 @@
 #endif
 #define IPQ_MDIO_RETRY				1000
 #define IPQ_MDIO_DELAY				5
+
+/* QCA8084 related MDIO Init macros */
+#define UNIPHY_CFG				0xC90F014
+#define EPHY_CFG				0xC90F018
+#define GEPHY0_TX_CBCR				0xC800058
+#define SRDS0_SYS_CBCR				0xC8001A8
+#define SRDS1_SYS_CBCR				0xC8001AC
+#define EPHY0_SYS_CBCR				0xC8001B0
+#define EPHY1_SYS_CBCR				0xC8001B4
+#define EPHY2_SYS_CBCR				0xC8001B8
+#define EPHY3_SYS_CBCR				0xC8001BC
+#define GCC_GEPHY_MISC				0xC800304
+#define PHY_ADDR_LENGTH				5
+#define PHY_ADDR_NUM				4
+#define UNIPHY_ADDR_NUM				3
+#define MII_HIGH_ADDR_PREFIX			0x18
+#define MII_LOW_ADDR_PREFIX			0x10
+
+DEFINE_MUTEX(switch_mdio_lock);
+
 #endif /* End _IPQ_MDIO_H */

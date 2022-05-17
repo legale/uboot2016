@@ -19,6 +19,14 @@
 #include <asm/cache.h>
 #include <asm/byteorder.h>	/* for nton* / ntoh* stuff */
 
+#define PORT0					0
+#define PORT1					1
+#define PORT2					2
+#define PORT3					3
+#define PORT4					4
+#define PORT5					5
+#define PORT6					6
+
 #define DEBUG_LL_STATE 0	/* Link local state machine changes */
 #define DEBUG_DEV_PKT 0		/* Packets or info directed to the device */
 #define DEBUG_NET_PKT 0		/* Packets on info on the network at large */
