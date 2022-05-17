@@ -327,6 +327,7 @@ typedef struct {
 extern void ipq9574_ppe_provision_init(void);
 extern void ipq9574_port_mac_clock_reset(int port);
 extern void ipq9574_speed_clock_set(int port, int clk[4]);
+extern void ipq9574_gmac_port_disable(int port);
 extern void ipq9574_pqsgmii_speed_set(int port, int speed, int status);
 extern void ipq9574_uxsgmii_speed_set(int port, int speed, int duplex, int status);
 extern void ppe_port_mux_mac_type_set(int port_id, int mode);

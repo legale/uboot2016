@@ -180,7 +180,7 @@ static void ipq9574_vsi_setup(int vsi, uint8_t group_mask)
 /*
  * ipq9574_gmac_port_disable()
  */
-static void ipq9574_gmac_port_disable(int port)
+void ipq9574_gmac_port_disable(int port)
 {
 	ipq9574_ppe_reg_write(IPQ9574_PPE_MAC_ENABLE + (0x200 * port), 0x70);
 	ipq9574_ppe_reg_write(IPQ9574_PPE_MAC_SPEED + (0x200 * port), 0x2);
