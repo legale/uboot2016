@@ -107,5 +107,9 @@ void pcie_v2_clock_init(int pcie_id);
 void pcie_v2_clock_deinit(int pcie_id);
 #endif
 int uart_clock_config(struct ipq_serial_platdata *plat);
+#ifdef CONFIG_USB_XHCI_IPQ
+void usb_clock_init(int id, int ssphy);
+void usb_clock_deinit(void);
+#endif
 
 #endif /*IPQ9574_CLK_H*/

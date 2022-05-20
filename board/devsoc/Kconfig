@@ -27,4 +27,6 @@ config MMC_FLASH
 config PCI_IPQ
 	bool "Enable pci support"
 
+config USB_XHCI_IPQ
+	bool "Enable usb support"
 endif

@@ -233,3 +233,85 @@ void pcie_v2_clock_deinit(int pcie_id)
 #endif
 }
 #endif
+#ifdef CONFIG_USB_XHCI_IPQ
+void usb_clock_init(int id, int ssphy)
+{
+#ifdef QCA_CLOCK_ENABLE
+	int cfg;
+
+	/* select usb phy mux */
+	if (ssphy)
+		writel(0x1, TCSR_USB_PCIE_SEL);
+
+	/* Configure usb0_master_clk_src */
+	cfg = (GCC_USB0_MASTER_CFG_RCGR_SRC_SEL |
+		GCC_USB0_MASTER_CFG_RCGR_SRC_DIV);
+	writel(cfg, GCC_USB0_MASTER_CFG_RCGR);
+	writel(CMD_UPDATE, GCC_USB0_MASTER_CMD_RCGR);
+	mdelay(100);
+	writel(ROOT_EN, GCC_USB0_MASTER_CMD_RCGR);
+
+	/* Configure usb0_mock_utmi_clk_src */
+	cfg = (GCC_USB_MOCK_UTMI_SRC_SEL |
+		GCC_USB_MOCK_UTMI_SRC_DIV);
+	writel(cfg, GCC_USB0_MOCK_UTMI_CFG_RCGR);
+	writel(GCC_USB_MOCK_UTMI_CLK_DIV, GCC_USB0_MOCK_UTMI_CBCR);
+	writel(CMD_UPDATE, GCC_USB0_MOCK_UTMI_CMD_RCGR);
+	mdelay(100);
+	writel(ROOT_EN, GCC_USB0_MOCK_UTMI_CMD_RCGR);
+
+	/* Configure usb0_aux_clk_src */
+	cfg = (GCC_USB0_AUX_CFG_SRC_SEL |
+		GCC_USB0_AUX_CFG_SRC_DIV);
+	writel(cfg, GCC_USB0_AUX_CFG_RCGR);
+	writel(CMD_UPDATE, GCC_USB0_AUX_CMD_RCGR);
+	mdelay(100);
+	writel(ROOT_EN, GCC_USB0_AUX_CMD_RCGR);
+
+	/* Configure usb0_lfps_cmd_rcgr */
+	cfg = (GCC_USB0_LFPS_CFG_SRC_SEL |
+		GCC_USB0_LFPS_CFG_SRC_DIV);
+	writel(cfg, GCC_USB0_LFPS_CFG_RCGR);
+	writel(LFPS_M, GCC_USB0_LFPS_M);
+	writel(LFPS_N, GCC_USB0_LFPS_N);
+	writel(LFPS_D, GCC_USB0_LFPS_D);
+	writel(readl(GCC_USB0_LFPS_CFG_RCGR) | GCC_USB0_LFPS_MODE,
+			GCC_USB0_LFPS_CFG_RCGR);
+	writel(CMD_UPDATE, GCC_USB0_LFPS_CMD_RCGR);
+	mdelay(100);
+	writel(ROOT_EN, GCC_USB0_LFPS_CMD_RCGR);
+
+	/* Configure CBCRs */
+	writel(CLK_DISABLE, GCC_SYS_NOC_USB0_AXI_CBCR);
+	writel(CLK_ENABLE, GCC_SYS_NOC_USB0_AXI_CBCR);
+	writel((readl(GCC_USB0_MASTER_CBCR) | CLK_ENABLE),
+		GCC_USB0_MASTER_CBCR);
+	writel(CLK_ENABLE, GCC_USB0_SLEEP_CBCR);
+	writel((GCC_USB_MOCK_UTMI_CLK_DIV | CLK_ENABLE),
+		GCC_USB0_MOCK_UTMI_CBCR);
+	writel(CLK_DISABLE, GCC_USB0_PIPE_CBCR);
+	writel(CLK_ENABLE, GCC_USB0_PHY_CFG_AHB_CBCR);
+	writel(CLK_ENABLE, GCC_USB0_AUX_CBCR);
+	writel(CLK_ENABLE, GCC_USB0_LFPS_CBCR);
+#else
+	return;
+#endif
+}
+
+void usb_clock_deinit(void)
+{
+
+#ifdef QCA_CLOCK_ENABLE
+	/* Disable clocks */
+	writel(0x8000, GCC_USB0_PHY_CFG_AHB_CBCR);
+	writel(0xcff0, GCC_USB0_MASTER_CBCR);
+	writel(0, GCC_USB0_SLEEP_CBCR);
+	writel(0, GCC_USB0_MOCK_UTMI_CBCR);
+	writel(0, GCC_USB0_AUX_CBCR);
+	writel(0, GCC_ANOC_USB_AXI_CBCR);
+	writel(0, GCC_SNOC_USB_CBCR);
+#else
+	return;
+#endif
+}
+#endif

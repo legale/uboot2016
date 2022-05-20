@@ -312,6 +312,23 @@ extern loff_t board_env_size;
 #define CONFIG_PCI_SCAN_SHOW
 #endif
 
+/*
+ * USB Support
+ */
+#ifdef CONFIG_USB_XHCI_IPQ
+#define CONFIG_USB_XHCI
+#define CONFIG_USB_XHCI_DWC3
+#define CONFIG_CMD_USB
+#define CONFIG_USB_STORAGE
+#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS      2
+#define CONFIG_USB_MAX_CONTROLLER_COUNT         1
+/*
+ * Block Device & Disk  Partition Config
+ */
+#define HAVE_BLOCK_DEVICE
+#define CONFIG_DOS_PARTITION
+#endif
+
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
 #undef CONFIG_BOOTM_RTEMS

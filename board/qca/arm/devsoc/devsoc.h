@@ -36,6 +36,7 @@ extern const add_node_t add_fdt_node[];
 
 #define TCSR_MODE_CTRL_2PORT_2LANE		0x1947544
 
+#define USB30_GUCTL				0x8A0C12C
 /*
  * weak function
  */

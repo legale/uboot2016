@@ -32,6 +32,9 @@
 #include <mmc.h>
 #include <sdhci.h>
 #endif
+#ifdef CONFIG_USB_XHCI_IPQ
+#include <usb.h>
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -287,6 +290,44 @@ void board_pci_deinit()
 	}
 
 	return;
+}
+#endif
+#ifdef CONFIG_USB_XHCI_IPQ
+void board_usb_deinit(int id)
+{
+	int nodeoff;
+	char node_name[8];
+
+	snprintf(node_name, sizeof(node_name), "usb%d", id);
+	nodeoff = fdt_path_offset(gd->fdt_blob, node_name);
+	if (fdtdec_get_int(gd->fdt_blob, nodeoff, "qcom,emulation", 0))
+		return;
+}
+
+int ipq_board_usb_init(void)
+{
+	int i, nodeoff, ssphy;
+	char node_name[8];
+
+	for (i=0; i < CONFIG_USB_MAX_CONTROLLER_COUNT; i++) {
+		snprintf(node_name, sizeof(node_name), "usb%d", i);
+		nodeoff = fdt_path_offset(gd->fdt_blob, node_name);
+		if (nodeoff < 0){
+			printf("USB: Node Not found, skipping initialization\n");
+			return 0;
+		}
+
+		ssphy = fdtdec_get_int(gd->fdt_blob, nodeoff, "ssphy", 0);
+		if (!fdtdec_get_int(gd->fdt_blob, nodeoff, "qcom,emulation", 0)) {
+
+			usb_clock_init(i, ssphy);
+		}else {
+			/* Config user control register */
+			writel(0x0C804010, USB30_GUCTL);
+		}
+	}
+
+	return 0;
 }
 #endif
 
