@@ -863,6 +863,7 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 	struct phy_ops *phy_get_ops;
 	static fal_port_speed_t old_speed[IPQ9574_PHY_MAX] = {[0 ... IPQ9574_PHY_MAX-1] = FAL_SPEED_BUTT};
 	static fal_port_speed_t curr_speed[IPQ9574_PHY_MAX];
+	static int current_active_port = -1, previous_active_port = -1;
 	fal_port_duplex_t duplex;
 	char *lstatus[] = {"up", "Down"};
 	char *dp[] = {"Half", "Full"};
@@ -873,6 +874,7 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 	int sfp_port[2] = {-1, -1}, sfp_port_cnt = -1;
 	int sgmii_mode = -1, sfp_mode = -1, sgmii_fiber = -1;
 	int phy_node = -1, res = -1;
+	char *active_port = NULL;
 
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
 
@@ -897,12 +899,43 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 	}
 
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
+
+	active_port = getenv("active_port");
+	if (active_port != NULL) {
+		current_active_port = simple_strtol(active_port, NULL, 10);
+		if (current_active_port < 0 || current_active_port > 5)
+			printf("active_port must be in the range of 0 to 5 in ipq9574 platform\n");
+	} else {
+		current_active_port = -1;
+	}
+
+	if (previous_active_port != current_active_port && current_active_port != -1) {
+		previous_active_port = current_active_port;
+		printf("Port%d has been set as the active_port\n", current_active_port);
+	}
+
 	/*
 	 * Check PHY link, speed, Duplex on all phys.
 	 * we will proceed even if single link is up
 	 * else we will return with -1;
 	 */
 	for (i =  0; i < IPQ9574_PHY_MAX; i++) {
+		if (current_active_port != -1 && i != current_active_port) {
+			ipq9574_gmac_port_disable(i);
+			ppe_port_bridge_txmac_set(i + 1, 1);
+			old_speed[i] = FAL_SPEED_BUTT;
+			/*
+			 * Old speed has been set as FAL_SPEED_BUTT here so that
+			 * if again the previous active_port is made as active,
+			 * the configurations required will be done again and MAC
+			 * would be enabled.
+			 *
+			 * Note that only for the active port TX/RX MAC would be
+			 * enabled and for all other ports, the same would be
+			 * disabled.
+			 */
+			continue;
+		}
 		if (i == sfp_port[0] || i == sfp_port[1]) {
 			status = phy_status_get_from_ppe(i);
 			duplex = FAL_FULL_DUPLEX;
