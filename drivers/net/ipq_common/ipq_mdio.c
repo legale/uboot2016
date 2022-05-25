@@ -298,9 +298,9 @@ void ipq_clock_init(void)
 	ipq_clk_reset(EPHY3_SYS_CBCR);
 
 	/* Deassert EPHY DSP */
-	val = ipq_mii_read(GCC_GEPHY_MISC);
+	val = ipq_mii_read(QCA8084_GCC_GEPHY_MISC);
 	val &= ~GENMASK(4, 0);
-	ipq_mii_write(GCC_GEPHY_MISC, val);
+	ipq_mii_write(QCA8084_GCC_GEPHY_MISC, val);
 
 	/* Enable efuse loading into analog circuit */
 	val = ipq_mii_read(EPHY_CFG);
