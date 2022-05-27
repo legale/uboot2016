@@ -21,6 +21,10 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#ifdef CONFIG_QPIC_SERIAL
+extern unsigned int qpic_training_offset;
+#endif
+
 #ifdef CONFIG_IPQ_FDT_FIXUP
 #define FDT_EDIT "fdtedit"
 /* Buffer size to hold numbers from 0-99 + 1 NULL character */
@@ -886,6 +890,24 @@ __weak void fdt_fixup_qpic(void *blob)
 	return;
 }
 
+__weak void fdt_fixup_qpic_serial_training_offset(void *blob)
+{
+#if defined(CONFIG_QPIC_SERIAL) && defined(CONFIG_IPQ_FDT_FIXUP)
+	char node_name[128];
+
+	if (qpic_training_offset != 0xBAD0FF5E){
+		snprintf(node_name, sizeof(node_name), "%s%s%d",
+				CONFIG_QPIC_NODE,
+				"%qcom,training_offset%",
+				qpic_training_offset);
+
+		parse_fdt_fixup(node_name, blob);
+	}
+#else
+	return;
+#endif
+}
+
 __weak void fdt_fixup_sdx65_gpio(void *blob)
 {
 	return;
@@ -1108,6 +1130,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 	fdt_fixup_cpus_node(blob);
 	fdt_low_memory_fixup(blob);
 	fdt_fixup_qpic(blob);
+	fdt_fixup_qpic_serial_training_offset(blob);
 #ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
 	fdt_fixup_runtime_failsafe(blob);
 #endif

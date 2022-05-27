@@ -49,10 +49,6 @@ const add_node_t add_fdt_node[] = {{}};
 
 unsigned int qpic_frequency = 0, qpic_phase = 0;
 
-#ifdef CONFIG_QPIC_SERIAL
-extern unsigned int qpic_training_offset;
-#endif
-
 #ifdef CONFIG_QCA_MMC
 struct sdhci_host mmc_host;
 #endif
