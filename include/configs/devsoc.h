@@ -351,6 +351,11 @@ extern loff_t board_env_size;
 #define TLV_BUF_OFFSET				(500 * 1024) - TME_CTXT_SIZE
 #define CONFIG_TLV_DUMP_SIZE			12 * 1024
 
+/*
+ * ARM PSCI command support
+ */
+#define CONFIG_ARMV7_PSCI
+
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
 #undef CONFIG_BOOTM_RTEMS

@@ -28,6 +28,8 @@ extern const add_node_t add_fdt_node[];
 #define KERNEL_AUTH_CMD				0x13
 #define SCM_CMD_SEC_AUTH			0x15
 
+#define PSCI_RESET_SMC_ID			0x84000009
+
 #define BLSP1_UART0_BASE			0x078AF000
 #define UART_PORT_ID(reg)			((reg - BLSP1_UART0_BASE) / 0x1000)
 
@@ -175,5 +177,6 @@ void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
 #ifdef CONFIG_PCI_IPQ
 void board_pci_init(int id);
 #endif
-
+unsigned int __invoke_psci_fn_smc(unsigned int, unsigned int,
+					 unsigned int, unsigned int);
 #endif /* _DEVSOC_CDP_H_ */

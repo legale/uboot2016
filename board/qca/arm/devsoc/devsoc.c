@@ -420,7 +420,7 @@ void reset_crashdump(void)
 
 void psci_sys_reset(void)
 {
-	return;
+	__invoke_psci_fn_smc(PSCI_RESET_SMC_ID, 0, 0, 0);
 }
 
 void qti_scm_pshold(void)
@@ -431,11 +431,9 @@ void qti_scm_pshold(void)
 void reset_cpu(unsigned long a)
 {
 	reset_crashdump();
-	if (is_scm_armv8()) {
-		psci_sys_reset();
-	} else {
-		qti_scm_pshold();
-	}
+
+	psci_sys_reset();
+
 	while(1);
 }
 
