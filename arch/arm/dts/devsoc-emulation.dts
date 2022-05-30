@@ -18,8 +18,8 @@
 / {
 	model ="QCA, DEVSOC-EMULATION";
 	compatible = "qca,devsoc", "qca,devsoc-emulation";
-	machid = <0xF040000>;
-	config_name = "config@emulation";
+	machid = <0xF060000>;
+	config_name = "config@emulation-fbc";
 
 	aliases {
 		console = "/serial@78AF000";
