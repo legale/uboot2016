@@ -191,23 +191,6 @@ extern loff_t board_env_size;
 /* Mii command support */
 #define CONFIG_CMD_MII
 
-/*
-* Below Configs need to be updated after enabling reset_crashdump
-* Included now to avoid build failure
-*/
-
-#define DLOAD_DISABLE				0x1
-#define SET_MAGIC				0x1
-#define CLEAR_MAGIC				0x0
-#define SCM_CMD_TZ_CONFIG_HW_FOR_RAM_DUMP_ID	0x9
-#define SCM_CMD_TZ_FORCE_DLOAD_ID		0x10
-#define SCM_CMD_TZ_PSHOLD			0x16
-#define BOOT_VERSION				0
-#define TZ_VERSION				1
-
-
-#define CONFIG_DEVSOC_TZ_WONCE_4_ADDR		0x193d010
-
 /* L1 cache line size is 64 bytes, L2 cache line size is 128 bytes
 * Cache flush and invalidation based on L1 cache, so the cache line
 * size is configured to 64 */
@@ -301,7 +284,6 @@ extern loff_t board_env_size;
 
 #define CONFIG_IPQ_FDT_FIXUP
 #define CONFIG_FDT_FIXUP_PARTITIONS
-#define CONFIG_OF_BOARD_SETUP
 /*
  * PCIE Enable
  */
@@ -328,6 +310,46 @@ extern loff_t board_env_size;
 #define HAVE_BLOCK_DEVICE
 #define CONFIG_DOS_PARTITION
 #endif
+
+/*
+ * Crash dump support
+ */
+#define CONFIG_OF_BOARD_SETUP
+
+#ifdef CONFIG_OF_BOARD_SETUP
+#define DLOAD_DISABLE				0x1
+#define SET_MAGIC				0x1
+#define CLEAR_MAGIC				0x0
+#define SCM_CMD_TZ_CONFIG_HW_FOR_RAM_DUMP_ID	0x9
+#define SCM_CMD_TZ_FORCE_DLOAD_ID		0x10
+#define SCM_CMD_TZ_PSHOLD			0x15
+#define BOOT_VERSION				0
+#define TZ_VERSION				1
+#endif
+
+/*
+ * CRASH DUMP ENABLE
+ */
+#define CONFIG_QCA_APPSBL_DLOAD
+#define CONFIG_IPQ5018_DMAGIC_ADDR		0x193D100
+#ifdef CONFIG_QCA_APPSBL_DLOAD
+
+#undef CONFIG_NET_RETRY_COUNT
+#define CONFIG_NET_RETRY_COUNT			500
+
+#define IPQ_TEMP_DUMP_ADDR			0x44000000
+#endif
+#define CONFIG_QCA_KERNEL_CRASHDUMP_ADDRESS	*((unsigned int *)0x08600658)
+#define CONFIG_CPU_CONTEXT_DUMP_SIZE		4096
+/* TZ generally stores the base address allocated by ctx-save driver
+ * in the imem location 0x08600658. the first 300K is used
+ * for TMEL ctxt. TZ stores the base address + 300K in the imem.
+ * In the minidump path, TLV_BUF_OFFSET is added to base addr.
+ * So update TLV_BUF_OFFSET to subtract 300K from the base.
+ */
+#define TME_CTXT_SIZE				300 * 1024
+#define TLV_BUF_OFFSET				(500 * 1024) - TME_CTXT_SIZE
+#define CONFIG_TLV_DUMP_SIZE			12 * 1024
 
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9

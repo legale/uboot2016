@@ -56,6 +56,65 @@ extern unsigned int qpic_training_offset;
 struct sdhci_host mmc_host;
 #endif
 
+struct dumpinfo_t dumpinfo_n[] = {
+	/* TZ stores the DDR physical address at which it stores the
+	 * APSS regs, UTCM copy dump. We will have the TZ IMEM
+	 * IMEM Addr at which the DDR physical address is stored as
+	 * the start
+	 *     --------------------
+         *     |  DDR phy (start) | ----> ------------------------
+         *     --------------------       | APSS regsave (8k)    |
+         *                                ------------------------
+         *                                |                      |
+	 *                                | 	 UTCM copy	 |
+         *                                |        (192k)        |
+	 *                                |                      |
+         *                                ------------------------
+	 */
+
+	/* Compressed EBICS dump follows descending order
+	 * to use in-memory compression for which destination
+	 * for compression will be address of EBICS2.BIN
+	 *
+	 * EBICS2 - (ddr size / 2) [to] end of ddr
+	 * EBICS1 - uboot end addr [to] (ddr size / 2)
+	 * EBICS0 - ddr start      [to] uboot start addr
+	 */
+
+	{ "EBICS0.BIN", 0x40000000, 0x10000000, 0 },
+	{ "EBICS2.BIN", 0x60000000, 0x20000000, 0, 0, 0, 0, 1 },
+	{ "EBICS1.BIN", CONFIG_UBOOT_END_ADDR, 0x10000000, 0, 0, 0, 0, 1 },
+	{ "EBICS0.BIN", 0x40000000, CONFIG_QCA_UBOOT_OFFSET, 0, 0, 0, 0, 1 },
+	{ "IMEM.BIN", 0x08600000, 0x00001000, 0 },
+	{ "UNAME.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "CPU_INFO.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "DMESG.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "PT.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "WLAN_MOD.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+};
+int dump_entries_n = ARRAY_SIZE(dumpinfo_n);
+
+/* Compressed dumps:
+ * EBICS_S2 - (ddr start + 256M) [to] end of ddr
+ * EBICS_S1 - uboot end addr     [to] (ddr start + 256M)
+ * EBICS_S0 - ddr start          [to] uboot start addr
+ */
+
+struct dumpinfo_t dumpinfo_s[] = {
+	{ "EBICS_S0.BIN", 0x40000000, 0xA600000, 0 },
+	{ "EBICS_S1.BIN", CONFIG_TZ_END_ADDR, 0x10000000, 0 },
+	{ "EBICS_S2.BIN", 0x50000000, 0x10000000, 0, 0, 0, 0, 1 },
+	{ "EBICS_S1.BIN", CONFIG_UBOOT_END_ADDR, 0x5B00000, 0, 0, 0, 0, 1 },
+	{ "EBICS_S0.BIN", 0x40000000, CONFIG_QCA_UBOOT_OFFSET, 0, 0, 0, 0, 1 },
+	{ "IMEM.BIN", 0x08600000, 0x00001000, 0 },
+	{ "UNAME.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "CPU_INFO.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "DMESG.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "PT.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+	{ "WLAN_MOD.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
+};
+int dump_entries_s = ARRAY_SIZE(dumpinfo_s);
+
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
 	int ret;
@@ -343,6 +402,19 @@ int apps_iscrashed(void)
 
 void reset_crashdump(void)
 {
+	unsigned int ret = 0;
+	unsigned int cookie = 0;
+
+#ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
+	cookie = ipq_read_tcsr_boot_misc();
+	fs_debug("\nFailsafe: %s: Clearing DLOAD and NonHLOS bits\n", __func__);
+	cookie &= ~(DLOAD_BITS);
+	cookie &= ~(IPQ_FS_NONHLOS_BIT);
+#endif
+	qca_scm_sdi();
+	ret = qca_scm_dload(cookie);
+	if (ret)
+		printf ("Error in reseting the Magic cookie\n");
 	return;
 }
 
