@@ -38,6 +38,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+extern int devsoc_edma_init(void *cfg);
 extern int ipq_spi_init(u16);
 
 const char *rsvd_node = "/reserved-memory";
@@ -499,3 +500,16 @@ void ipq_fdt_fixup_usb_device_mode(void *blob)
 {
 	return;
 }
+
+#ifdef CONFIG_DEVSOC_EDMA
+int board_eth_init(bd_t *bis)
+{
+	int ret = 0;
+
+	ret = devsoc_edma_init(NULL);
+	if (ret != 0)
+		printf("%s: devsoc_edma_init failed : %d\n", __func__, ret);
+
+	return ret;
+}
+#endif

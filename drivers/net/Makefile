@@ -93,6 +93,13 @@ obj-$(CONFIG_IPQ5018_GMAC) += ipq5018/ipq5018_gmac.o
 obj-$(CONFIG_IPQ5018_GMAC) += ipq5018/ipq5018_uniphy.o
 obj-$(CONFIG_IPQ5018_MDIO) += ipq5018/ipq5018_mdio.o
 obj-$(CONFIG_IPQ5018_GMAC) += ipq5018/athrs17_phy.o
+obj-$(CONFIG_DEVSOC_EDMA) += devsoc/devsoc_edma.o
+obj-$(CONFIG_DEVSOC_EDMA) += devsoc/devsoc_ppe.o
+
+ifndef CONFIG_DEVSOC_RUMI
+obj-$(CONFIG_DEVSOC_EDMA) += devsoc/devsoc_uniphy.o
+endif
+
 obj-$(CONFIG_IPQ_MDIO) += ipq_common/ipq_mdio.o
 obj-$(CONFIG_GEPHY) += ipq_common/ipq_gephy.o
 obj-$(CONFIG_QCA8075_PHY) += ipq_common/ipq_qca8075.o

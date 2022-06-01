@@ -21,10 +21,13 @@
 #endif
 
 #define CONFIG_DEVSOC
+#define CONFIG_DEVSOC_RUMI
 #undef	CONFIG_QCA_DISABLE_SCM
 #define CONFIG_SPI_FLASH_CYPRESS
 #define CONFIG_SYS_NO_FLASH
 #define CONFIG_IPQ_NO_RELOC
+
+#define CONFIG_SYS_NONCACHED_MEMORY     (1 << 20)
 
 #define CONFIG_SYS_VSNPRINTF
 
@@ -190,6 +193,27 @@ extern loff_t board_env_size;
 
 /* Mii command support */
 #define CONFIG_CMD_MII
+
+/*
+* Ethernet Configs
+*/
+#define CONFIG_DEVSOC_EDMA
+#ifdef CONFIG_DEVSOC_EDMA
+#define CONFIG_DEVSOC_BRIDGED_MODE	1
+#define CONFIG_NET_RETRY_COUNT		5
+#define CONFIG_SYS_RX_ETH_BUFFER	128
+#define CONFIG_TFTP_BLOCKSIZE		1280
+#define CONFIG_CMD_PING
+#define CONFIG_CMD_DHCP
+#define CONFIG_MII
+#define CONFIG_CMD_MII
+#define CONFIG_IPADDR          192.168.10.10
+#define CONFIG_NETMASK         255.255.255.0
+#define CONFIG_SERVERIP        192.168.10.1
+#define CONFIG_CMD_TFTPPUT
+#define CONFIG_IPQ_MDIO			1
+#define CONFIG_IPQ_ETH_INIT_DEFER
+#endif
 
 /* L1 cache line size is 64 bytes, L2 cache line size is 128 bytes
 * Cache flush and invalidation based on L1 cache, so the cache line
