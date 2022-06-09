@@ -38,6 +38,7 @@ extern void ipq_mii_update(uint32_t reg, uint32_t mask, uint32_t val);
 extern void qca8084_port_clk_rate_set(uint32_t qca8084_port_id, uint32_t rate);
 extern void qca8084_port_clk_en_set(uint32_t qca8084_port_id, uint8_t mask,
 				    uint8_t enable);
+extern void qca8084_uniphy_raw_clock_set(qca8084_clk_parent_t uniphy_clk, uint64_t rate);
 extern void qca8084_clk_assert(const char *clock_id);
 extern void qca8084_clk_deassert(const char *clock_id);
 extern void qca8084_port_clk_reset(uint32_t qca8084_port_id, uint8_t mask);
@@ -501,4 +502,154 @@ void qca8084_interface_uqxgmii_mode_set(void)
 	/*enable EEE for xpcs*/
 	pr_debug("enable EEE for xpcs\n");
 	qca8084_uniphy_xpcs_8023az_enable();
+}
+
+
+void qca8084_uniphy_sgmii_function_reset(u32 uniphy_index)
+{
+	u32 uniphy_addr = 0;
+
+	qca8084_serdes_addr_get(uniphy_index, &uniphy_addr);
+
+	/*sgmii channel0 adpt reset*/
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_CHANNEL0_CFG, QCA8084_UNIPHY_MMD1_SGMII_ADPT_RESET, 0);
+	mdelay(1);
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_CHANNEL0_CFG, QCA8084_UNIPHY_MMD1_SGMII_ADPT_RESET,
+		QCA8084_UNIPHY_MMD1_SGMII_ADPT_RESET);
+	/*ipg tune reset*/
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_USXGMII_RESET, QCA8084_UNIPHY_MMD1_SGMII_FUNC_RESET, 0);
+	mdelay(1);
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_USXGMII_RESET, QCA8084_UNIPHY_MMD1_SGMII_FUNC_RESET,
+		QCA8084_UNIPHY_MMD1_SGMII_FUNC_RESET);
+
+}
+
+void qca8084_interface_sgmii_mode_set(u32 uniphy_index, u32 qca8084_port_id, mac_config_t *config)
+{
+	u32 uniphy_addr = 0, mode_ctrl = 0, speed_mode = 0;
+	u32 uniphy_port_id = 0, ethphy_clk_mask = 0;
+	u64 raw_clk = 0;
+
+	/*get the uniphy address*/
+	qca8084_serdes_addr_get(uniphy_index, &uniphy_addr);
+
+	if(config->mac_mode == QCA8084_MAC_MODE_SGMII)
+	{
+		mode_ctrl = QCA8084_UNIPHY_MMD1_SGMII_MODE;
+		raw_clk = UNIPHY_CLK_RATE_125M;
+	}
+	else
+	{
+		mode_ctrl = QCA8084_UNIPHY_MMD1_SGMII_PLUS_MODE;
+		raw_clk = UNIPHY_CLK_RATE_312M;
+	}
+
+	if(config->clock_mode == QCA8084_INTERFACE_CLOCK_MAC_MODE)
+		mode_ctrl |= QCA8084_UNIPHY_MMD1_SGMII_MAC_MODE;
+	else
+	{
+		mode_ctrl |= QCA8084_UNIPHY_MMD1_SGMII_PHY_MODE;
+		/*eththy clock should be accessed for phy mode*/
+		ethphy_clk_mask = QCA8084_CLK_TYPE_EPHY;
+	}
+
+	pr_debug("uniphy:%d,mode:%s,autoneg_en:%d,force_speed:%d,clk_mask:0x%x\n",
+		uniphy_index, (config->mac_mode == QCA8084_MAC_MODE_SGMII)?"sgmii":"sgmii plus",
+		config->auto_neg, config->force_speed,
+		ethphy_clk_mask);
+
+	/*GMII interface clock disable*/
+	pr_debug("GMII interface clock disable\n");
+	qca8084_port_clk_en_set(qca8084_port_id, ethphy_clk_mask, 0);
+
+	/*when access uniphy0 clock, port5 should be used, but for phy mode,
+		the port 4 connect to uniphy0, so need to change the port id*/
+	if(uniphy_index == QCA8084_UNIPHY_SGMII_0)
+		uniphy_port_id = PORT5;
+	else
+		uniphy_port_id = qca8084_port_id;
+	qca8084_port_clk_en_set(uniphy_port_id, QCA8084_CLK_TYPE_UNIPHY, 0);
+
+	/*uniphy1 xpcs reset, and configure raw clk*/
+	if(uniphy_index == QCA8084_UNIPHY_SGMII_1)
+	{
+		pr_debug("uniphy1 xpcs reset, confiugre raw clock as:%lld\n",
+			raw_clk);
+		qca8084_clk_assert(QCA8084_UNIPHY_XPCS_RST);
+		qca8084_uniphy_raw_clock_set(QCA8084_P_UNIPHY1_RX, raw_clk);
+		qca8084_uniphy_raw_clock_set(QCA8084_P_UNIPHY1_TX, raw_clk);
+	}
+	else
+	{
+		pr_debug("uniphy0 configure raw clock as %lld\n",	raw_clk);
+		qca8084_uniphy_raw_clock_set(QCA8084_P_UNIPHY0_RX, raw_clk);
+		qca8084_uniphy_raw_clock_set(QCA8084_P_UNIPHY0_TX, raw_clk);
+	}
+
+	/*configure SGMII mode or SGMII+ mode*/
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_MODE_CTRL, QCA8084_UNIPHY_MMD1_SGMII_MODE_CTRL_MASK,
+		mode_ctrl);
+
+	/*GMII datapass selection, 0 is for SGMII, 1 is for USXGMII*/
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_GMII_DATAPASS_SEL, QCA8084_UNIPHY_MMD1_DATAPASS_MASK, QCA8084_UNIPHY_MMD1_DATAPASS_SGMII);
+	/*configue force or autoneg*/
+	if(!config->auto_neg)
+	{
+		qca8084_port_speed_clock_set(qca8084_port_id,
+			config->force_speed);
+		switch (config->force_speed)
+		{
+			case FAL_SPEED_10:
+				speed_mode = QCA8084_UNIPHY_MMD1_CH0_FORCE_ENABLE |
+					QCA8084_UNIPHY_MMD1_CH0_FORCE_SPEED_10M;
+				break;
+			case FAL_SPEED_100:
+				speed_mode = QCA8084_UNIPHY_MMD1_CH0_FORCE_ENABLE |
+					QCA8084_UNIPHY_MMD1_CH0_FORCE_SPEED_100M;
+				break;
+			case FAL_SPEED_1000:
+			case FAL_SPEED_2500:
+				speed_mode = QCA8084_UNIPHY_MMD1_CH0_FORCE_ENABLE |
+					QCA8084_UNIPHY_MMD1_CH0_FORCE_SPEED_1G;
+				break;
+			default:
+				break;
+		}
+	}
+	else
+	{
+		speed_mode = QCA8084_UNIPHY_MMD1_CH0_AUTONEG_ENABLE;
+	}
+	qca8084_phy_modify_mmd(uniphy_addr, QCA8084_UNIPHY_MMD1,
+		QCA8084_UNIPHY_MMD1_CHANNEL0_CFG, QCA8084_UNIPHY_MMD1_CH0_FORCE_SPEED_MASK, speed_mode);
+
+	/*GMII interface clock reset and release\n*/
+	pr_debug("GMII interface clock reset and release\n");
+	qca8084_port_clk_reset(qca8084_port_id, ethphy_clk_mask);
+	qca8084_port_clk_reset(uniphy_port_id, QCA8084_CLK_TYPE_UNIPHY);
+
+	/*analog software reset and release*/
+	pr_debug("analog software reset and release\n");
+	qca8084_phy_modify_mii(uniphy_addr,
+		QCA8084_UNIPHY_PLL_POWER_ON_AND_RESET, 0x40, QCA8084_UNIPHY_ANA_SOFT_RESET);
+	mdelay(1);
+	qca8084_phy_modify_mii(uniphy_addr,
+		QCA8084_UNIPHY_PLL_POWER_ON_AND_RESET, 0x40, QCA8084_UNIPHY_ANA_SOFT_RELEASE);
+
+	/*wait uniphy calibration done*/
+	pr_debug("wait uniphy calibration done\n");
+	qca8084_uniphy_calibration(uniphy_addr);
+
+	/*GMII interface clock enable*/
+	pr_debug("GMII interface clock enable\n");
+	qca8084_port_clk_en_set(qca8084_port_id, ethphy_clk_mask, 1);
+	qca8084_port_clk_en_set(uniphy_port_id, QCA8084_CLK_TYPE_UNIPHY, 1);
+
+	return;
 }

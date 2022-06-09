@@ -96,6 +96,8 @@
 #define QCA8084_GEPHY_P1_MDC_SW_RST		"qca8084_gephy_p1_mdc_sw_rst"
 #define QCA8084_GEPHY_P0_MDC_SW_RST		"qca8084_gephy_p0_mdc_sw_rst"
 
+
+
 typedef enum {
 	QCA8084_P_XO,
 	QCA8084_P_UNIPHY0_RX,
@@ -179,5 +181,73 @@ struct clk_lookup {
 #define CBCR_CLK_OFF				BIT(31)
 #define CBCR_CLK_RESET				BIT(2)
 #define CBCR_CLK_ENABLE				BIT(0)
+
+
+/* work mode */
+#define WORK_MODE
+#define WORK_MODE_ID                                    0
+#define WORK_MODE_OFFSET                                0xC90F030
+#define WORK_MODE_E_LENGTH                              4
+#define WORK_MODE_E_OFFSET                              0
+#define WORK_MODE_NR_E                                  1
+
+/* port5 sel */
+#define WORK_MODE_PORT5_SEL
+#define WORK_MODE_PORT5_SEL_BOFFSET                     5
+#define WORK_MODE_PORT5_SEL_BLEN                        1
+#define WORK_MODE_PORT5_SEL_FLAG                        HSL_RW
+
+/* phy3 sel1 */
+#define WORK_MODE_PHY3_SEL1
+#define WORK_MODE_PHY3_SEL1_BOFFSET                     4
+#define WORK_MODE_PHY3_SEL1_BLEN                        1
+#define WORK_MODE_PHY3_SEL1_FLAG                        HSL_RW
+
+/* phy3 sel0 */
+#define WORK_MODE_PHY3_SEL0
+#define WORK_MODE_PHY3_SEL0_BOFFSET                     3
+#define WORK_MODE_PHY3_SEL0_BLEN                        1
+#define WORK_MODE_PHY3_SEL0_FLAG                        HSL_RW
+
+/* phy2 sel */
+#define WORK_MODE_PHY2_SEL
+#define WORK_MODE_PHY2_SEL_BOFFSET                      2
+#define WORK_MODE_PHY2_SEL_BLEN                         1
+#define WORK_MODE_PHY2_SEL_FLAG                         HSL_RW
+
+/* phy1 sel */
+#define WORK_MODE_PHY1_SEL
+#define WORK_MODE_PHY1_SEL_BOFFSET                      1
+#define WORK_MODE_PHY1_SEL_BLEN                         1
+#define WORK_MODE_PHY1_SEL_FLAG                         HSL_RW
+
+/* phy0 sel */
+#define WORK_MODE_PHY0_SEL
+#define WORK_MODE_PHY0_SEL_BOFFSET                      0
+#define WORK_MODE_PHY0_SEL_BLEN                         1
+#define WORK_MODE_PHY0_SEL_FLAG                         HSL_RW
+
+#define QCA8084_WORK_MODE_MASK \
+	(BITSM(WORK_MODE_PHY0_SEL_BOFFSET, WORK_MODE_PORT5_SEL_BOFFSET + 1))
+
+typedef enum {
+	QCA8084_SWITCH_MODE =
+		(BIT(WORK_MODE_PHY3_SEL1_BOFFSET)),
+	QCA8084_SWITCH_BYPASS_PORT5_MODE =
+		(BIT(WORK_MODE_PORT5_SEL_BOFFSET)),
+	QCA8084_PHY_UQXGMII_MODE =
+		(BIT(WORK_MODE_PORT5_SEL_BOFFSET) |
+		 BIT(WORK_MODE_PHY3_SEL0_BOFFSET) |
+		 BIT(WORK_MODE_PHY2_SEL_BOFFSET) |
+		 BIT(WORK_MODE_PHY1_SEL_BOFFSET) |
+		 BIT(WORK_MODE_PHY0_SEL_BOFFSET)),
+	QCA8084_PHY_SGMII_UQXGMII_MODE =
+		(BIT(WORK_MODE_PORT5_SEL_BOFFSET) |
+		 BIT(WORK_MODE_PHY2_SEL_BOFFSET) |
+		 BIT(WORK_MODE_PHY1_SEL_BOFFSET) |
+		 BIT(WORK_MODE_PHY0_SEL_BOFFSET)),
+	QCA8084_WORK_MODE_MAX,
+} qca8084_work_mode_t;
+
 
 #endif                          /* _QCA8084_CLK_H_ */
