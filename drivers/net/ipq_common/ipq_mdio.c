@@ -265,6 +265,59 @@ static inline void ipq_clk_reset(uint32_t reg)
 	ipq_mii_write(reg, val);
 }
 
+static u16 ipq_phy_dbg_read(u32 phy_addr, u32 reg_id)
+{
+	ipq_mdio_write(phy_addr, PHY_DEBUG_PORT_ADDR, reg_id);
+
+	return ipq_mdio_read(phy_addr, PHY_DEBUG_PORT_DATA, NULL);
+}
+
+static void ipq_phy_dbg_write(u32 phy_addr, u32 reg_id, u16 reg_val)
+{
+
+	ipq_mdio_write(phy_addr, PHY_DEBUG_PORT_ADDR, reg_id);
+
+	ipq_mdio_write(phy_addr, PHY_DEBUG_PORT_DATA, reg_val);
+}
+
+static void ipq_qca8084_efuse_loading(u8 ethphy)
+{
+	u32 val = 0, ldo_efuse = 0, icc_efuse = 0, phy_addr = 0;
+	u16 reg_val = 0;
+
+	phy_addr = ipq_mii_read(EPHY_CFG) >> (ethphy * PHY_ADDR_LENGTH)
+		& GENMASK(4, 0);
+	switch(ethphy) {
+		case 0:
+			val = ipq_mii_read(QFPROM_RAW_CALIBRATION_ROW4_LSB);
+			ldo_efuse = (val & GENMASK(21, 18)) >> 18;
+			icc_efuse = (val & GENMASK(26, 22)) >> 22;
+			break;
+		case 1:
+			val = ipq_mii_read(QFPROM_RAW_CALIBRATION_ROW7_LSB);
+			ldo_efuse = (val & GENMASK(26, 23)) >> 23;
+			icc_efuse = (val & GENMASK(31, 27)) >> 27;
+			break;
+		case 2:
+			val = ipq_mii_read(QFPROM_RAW_CALIBRATION_ROW8_LSB);
+			ldo_efuse = (val & GENMASK(26, 23)) >> 23;
+			icc_efuse = (val & GENMASK(31, 27)) >> 27;
+			break;
+		case 3:
+			val = ipq_mii_read(QFPROM_RAW_CALIBRATION_ROW6_MSB);
+			ldo_efuse = (val & GENMASK(17, 14)) >> 14;
+			icc_efuse = (val & GENMASK(22, 18)) >> 18;
+			break;
+	}
+	reg_val = ipq_phy_dbg_read(phy_addr, PHY_LDO_EFUSE_REG);
+	reg_val = (reg_val & ~GENMASK(7, 4)) | (ldo_efuse << 4);
+	ipq_phy_dbg_write(phy_addr, PHY_LDO_EFUSE_REG, reg_val);
+
+	reg_val = ipq_phy_dbg_read(phy_addr, PHY_ICC_EFUSE_REG);
+	reg_val = (reg_val & ~GENMASK(4, 0)) | icc_efuse;
+	ipq_phy_dbg_write(phy_addr, PHY_ICC_EFUSE_REG, reg_val);
+}
+
 void ipq_clock_init(void)
 {
 	u32 val = 0;
@@ -301,6 +354,14 @@ void ipq_clock_init(void)
 	val = ipq_mii_read(QCA8084_GCC_GEPHY_MISC);
 	val &= ~GENMASK(4, 0);
 	ipq_mii_write(QCA8084_GCC_GEPHY_MISC, val);
+
+	/*for ES chips, need to load efuse manually*/
+	val = ipq_mii_read(QFPROM_RAW_PTE_ROW2_MSB);
+	val = (val & GENMASK(23, 16)) >> 16;
+	if(val == 1 || val == 2) {
+		for(i = 0; i < 4; i++)
+			ipq_qca8084_efuse_loading(i);
+	}
 
 	/* Enable efuse loading into analog circuit */
 	val = ipq_mii_read(EPHY_CFG);
