@@ -502,9 +502,16 @@ void ipq_fdt_fixup_usb_device_mode(void *blob)
 }
 
 #ifdef CONFIG_DEVSOC_EDMA
+void devsoc_eth_initialize(void)
+{
+	eth_clock_init();
+}
+
 int board_eth_init(bd_t *bis)
 {
 	int ret = 0;
+
+	devsoc_eth_initialize();
 
 	ret = devsoc_edma_init(NULL);
 	if (ret != 0)
