@@ -77,17 +77,10 @@ typedef struct qca_platform_v3 {
 	unsigned chip_serial;
 } qca_platform_v3;
 
-typedef struct qca_platform_v4 {
-	qca_platform_v3 v3;
-	unsigned oem_id;
-	unsigned product_id;
-} qca_platform_v4;
-
 union qca_platform {
 	qca_platform_v1 v1;
 	qca_platform_v2 v2;
 	qca_platform_v3 v3;
-	qca_platform_v4 v4;
 };
 
 struct smem_proc_comm {
@@ -926,13 +919,6 @@ unsigned int smem_read_platform_type(union qca_platform *platform_type)
 	status = smem_read_alloc_entry(SMEM_HW_SW_BUILD_ID,
 				       platform_type,
 				       sizeof(qca_platform_v3));
-	if (!status)
-		return status;
-
-	debug("smem: Mapping platform type v3 failed. Trying v4...\n");
-	status = smem_read_alloc_entry(SMEM_HW_SW_BUILD_ID,
-				       platform_type,
-				       sizeof(qca_platform_v4));
 	return status;
 }
 
@@ -956,9 +942,7 @@ unsigned int smem_get_board_platform_type()
 	if (!smem_read_alloc_entry(SMEM_HW_SW_BUILD_ID,
 				  &platform_type, sizeof(qca_platform_v2)) ||
 	    !smem_read_alloc_entry(SMEM_HW_SW_BUILD_ID,
-				  &platform_type, sizeof(qca_platform_v3)) ||
-	    !smem_read_alloc_entry(SMEM_HW_SW_BUILD_ID,
-				  &platform_type, sizeof(qca_platform_v4)))  {
+				  &platform_type, sizeof(qca_platform_v3)))  {
 		machid = ((platform_type.v1.hw_platform << 24) |
 			  ((SOCINFO_VERSION_MAJOR(platform_type.v1.platform_version)) << 16) |
 			  ((SOCINFO_VERSION_MINOR(platform_type.v1.platform_version)) << 8) |
