@@ -831,6 +831,7 @@ void ppe_port_mux_mac_type_set(int port_id, int mode)
 		case EPORT_WRAPPER_SGMII0_RGMII4:
 		case EPORT_WRAPPER_SGMII_PLUS:
 		case EPORT_WRAPPER_SGMII_FIBER:
+		case EPORT_WRAPPER_SGMII_CHANNEL0:
 			port_type = PORT_GMAC_TYPE;
 			break;
 		case EPORT_WRAPPER_USXGMII:

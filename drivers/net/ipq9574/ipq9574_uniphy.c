@@ -235,10 +235,30 @@ static void ppe_uniphy_qsgmii_mode_set(uint32_t uniphy_index)
 	mdelay(100);
 }
 
+void ppe_uniphy_set_forceMode(void)
+{
+	uint32_t reg_value;
+
+	reg_value = readl(PPE_UNIPHY_BASE + UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
+	reg_value |= UNIPHY_FORCE_SPEED_25M;
+
+	writel(reg_value, PPE_UNIPHY_BASE + UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
+}
+
 static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 {
-	writel(UNIPHY_MISC2_REG_SGMII_MODE, PPE_UNIPHY_BASE +
-		(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC2_REG_OFFSET);
+	if (uniphy_index == 0) {
+		writel(UNIPHY_MISC_SRC_PHY_MODE, PPE_UNIPHY_BASE +
+				(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC_SOURCE_SELECTION_REG_OFFSET);
+
+		ppe_uniphy_set_forceMode();
+
+		writel(UNIPHY_MISC2_REG_SGMII_PLUS_MODE, PPE_UNIPHY_BASE +
+				(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC2_REG_OFFSET);
+	} else {
+		writel(UNIPHY_MISC2_REG_SGMII_MODE, PPE_UNIPHY_BASE +
+				(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC2_REG_OFFSET);
+	}
 
 	writel(UNIPHY_PLL_RESET_REG_VALUE, PPE_UNIPHY_BASE +
 		(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_PLL_RESET_REG_OFFSET);
@@ -254,7 +274,12 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 		ppe_uniphy_reset(UNIPHY2_XPCS_RESET, true);
 	mdelay(100);
 
-	if (uniphy_index == 1) {
+	if (uniphy_index == 0) {
+		writel(0x0, NSS_CC_UNIPHY_PORT1_RX_CBCR);
+		writel(0x0, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4);
+		writel(0x0, NSS_CC_PORT1_RX_CBCR);
+		writel(0x0, NSS_CC_PORT1_RX_CBCR + 0x4);
+	} else if (uniphy_index == 1) {
 		writel(0x0, NSS_CC_UNIPHY_PORT1_RX_CBCR + (PORT5 - 1) * 0x8);
 		writel(0x0, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (PORT5 - 1) * 0x8);
 		writel(0x0, NSS_CC_PORT1_RX_CBCR + (PORT5 - 1) * 0x8);
@@ -280,7 +305,11 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 			break;
 
 		case EPORT_WRAPPER_SGMII_PLUS:
-			writel(0x820, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+			if (uniphy_index == 0)
+				writel(0x20, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+					 + PPE_UNIPHY_MODE_CONTROL);
+			else
+				writel(0x820, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
 					 + PPE_UNIPHY_MODE_CONTROL);
 			break;
 
@@ -304,7 +333,12 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 	}
 	mdelay(100);
 
-	if (uniphy_index == 1) {
+	if (uniphy_index == 0) {
+		writel(0x1, NSS_CC_UNIPHY_PORT1_RX_CBCR);
+		writel(0x1, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4);
+		writel(0x1, NSS_CC_PORT1_RX_CBCR);
+		writel(0x1, NSS_CC_PORT1_RX_CBCR + 0x4);
+	} else if (uniphy_index == 1) {
 		writel(0x1, NSS_CC_UNIPHY_PORT1_RX_CBCR + (PORT5 - 1) * 0x8);
 		writel(0x1, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (PORT5 - 1) * 0x8);
 		writel(0x1, NSS_CC_PORT1_RX_CBCR + (PORT5 - 1) * 0x8);
