@@ -21,6 +21,9 @@
 #define IPQ9574_PHY_MAX	6
 #define IPQ6018_PHY_MAX 5
 #define DEVSOC_PHY_MAX	2
+
+#define QCA8084_MAX_PORTS	6
+
 #define MDIO_CTRL_0_REG		0x00090040
 #define MDIO_CTRL_0_DIV(x)	(x << 0)
 #define MDIO_CTRL_0_MODE	(1 << 8)
@@ -29,6 +32,8 @@
 #define MDIO_CTRL_0_GPHY(x)	(x << 13)
 #define MDIO_CTRL_0_RES1(x)	(x << 17)
 
+#define PORT_LINK_DOWN		0
+#define PORT_LINK_UP		1
 #define GP_PULL_DOWN		1
 #define GP_OE_EN		(1 << 9)
 #define GP_VM_EN		(1 << 11)
@@ -145,6 +150,8 @@ enum phy_mode {
 typedef struct {
 	u32 phy_address;
 	u32 phy_type;
+	u32 forced_speed;
+	u32 forced_duplex;
 }phy_info_t;
 
 struct phy_ops {

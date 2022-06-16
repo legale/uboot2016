@@ -129,6 +129,12 @@
 #define QCA8084_UNIPHY_MMD_XPC_SPEED_10                                      0
 #define QCA8084_UNIPHY_MMD_TX_IPG_CHECK_DISABLE                              0x1
 
+#define UNIPHY_CLK_RATE_25M         25000000
+#define UNIPHY_CLK_RATE_50M         50000000
+#define UNIPHY_CLK_RATE_125M        125000000
+#define UNIPHY_CLK_RATE_312M        312500000
+#define UNIPHY_DEFAULT_RATE         UNIPHY_CLK_RATE_125M
+
 typedef enum {
 	QCA8084_UNIPHY_MAC = QCA8084_UNIPHY_MMD1_SGMII_MAC_MODE,
 	QCA8084_UNIPHY_PHY = QCA8084_UNIPHY_MMD1_SGMII_PHY_MODE,
@@ -136,5 +142,30 @@ typedef enum {
 	QCA8084_UNIPHY_SGMII_PLUS = QCA8084_UNIPHY_MMD1_SGMII_PLUS_MODE,
 	QCA8084_UNIPHY_UQXGMII = QCA8084_UNIPHY_MMD1_XPCS_MODE,
 } qca8084_uniphy_mode_t;
+
+typedef enum {
+	QCA8084_INTERFACE_CLOCK_MAC_MODE = 0,
+	QCA8084_INTERFACE_CLOCK_PHY_MODE = 1,
+} qca8084_clock_mode_t;
+
+typedef enum {
+	QCA8084_MAC_MODE_RGMII = 0,
+	QCA8084_MAC_MODE_GMII,
+	QCA8084_MAC_MODE_MII,
+	QCA8084_MAC_MODE_SGMII,
+	QCA8084_MAC_MODE_FIBER,
+	QCA8084_MAC_MODE_RMII,
+	QCA8084_MAC_MODE_SGMII_PLUS,
+	QCA8084_MAC_MODE_DEFAULT
+} qca8084_mac_mode_t;
+
+typedef struct {
+	qca8084_mac_mode_t mac_mode;
+	qca8084_clock_mode_t clock_mode;
+	bool auto_neg;
+	u32 force_speed;
+	bool prbs_enable;
+	bool rem_phy_lpbk;
+} mac_config_t;
 
 #endif

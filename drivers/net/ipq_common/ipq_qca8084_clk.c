@@ -1073,14 +1073,17 @@ void qca8084_port_clk_en_set(uint32_t qca8084_port_id, uint8_t mask,
 	return;
 }
 
-void qca8084_gcc_common_clk_parent_enable(void)
+void qca8084_gcc_common_clk_parent_enable(qca8084_work_mode_t clk_mode)
 {
 	/* Switch core */
 	qca8084_clk_parent_set(QCA8084_SWITCH_CORE_CLK, QCA8084_P_UNIPHY1_TX312P5M);
 	qca8084_clk_rate_set(QCA8084_SWITCH_CORE_CLK, UQXGMII_SPEED_2500M_CLK);
 
 	/* Disable switch core clock to save power in phy mode */
-	qca8084_clk_disable(QCA8084_SWITCH_CORE_CLK);
+	if (QCA8084_PHY_UQXGMII_MODE == clk_mode || QCA8084_PHY_SGMII_UQXGMII_MODE == clk_mode)
+		qca8084_clk_disable(QCA8084_SWITCH_CORE_CLK);
+	else
+		qca8084_clk_enable(QCA8084_SWITCH_CORE_CLK);
 
 	qca8084_clk_enable(QCA8084_APB_BRIDGE_CLK);
 
@@ -1100,7 +1103,10 @@ void qca8084_gcc_common_clk_parent_enable(void)
 	qca8084_clk_rate_set(QCA8084_SRDS0_SYS_CLK, QCA8084_SYS_CLK_RATE_25M);
 
 	/* Disable serdes0 clock to save power in phy mode */
-	qca8084_clk_disable(QCA8084_SRDS0_SYS_CLK);
+	if (QCA8084_PHY_UQXGMII_MODE == clk_mode || QCA8084_PHY_SGMII_UQXGMII_MODE == clk_mode)
+		qca8084_clk_disable(QCA8084_SRDS0_SYS_CLK);
+	else
+		qca8084_clk_enable(QCA8084_SRDS0_SYS_CLK);
 
 	qca8084_clk_enable(QCA8084_SRDS1_SYS_CLK);
 	qca8084_clk_enable(QCA8084_GEPHY0_SYS_CLK);
@@ -1115,12 +1121,27 @@ void qca8084_gcc_common_clk_parent_enable(void)
 	qca8084_clk_enable(QCA8084_SEC_CTRL_SENSE_CLK);
 }
 
-void qca8084_gcc_port_clk_parent_set(uint32_t qca8084_port_id)
+void qca8084_gcc_port_clk_parent_set(qca8084_work_mode_t clk_mode, uint32_t qca8084_port_id)
 {
 	qca8084_clk_parent_t port_tx_parent, port_rx_parent;
 	char *tx_clk_id, *rx_clk_id;
 
-	port_tx_parent = QCA8084_P_UNIPHY1_RX312P5M;
+	/* Initialize the clock parent with port 1, 2, 3, clock parent is same for these ports;
+	 * the clock parent will be updated for port 0, 4, 5.
+	 */
+	switch(clk_mode) {
+		case QCA8084_SWITCH_MODE:
+		case QCA8084_SWITCH_BYPASS_PORT5_MODE:
+			port_tx_parent = QCA8084_P_UNIPHY1_TX312P5M;
+			break;
+		case QCA8084_PHY_UQXGMII_MODE:
+		case QCA8084_PHY_SGMII_UQXGMII_MODE:
+			port_tx_parent = QCA8084_P_UNIPHY1_RX312P5M;
+			break;
+		default:
+			pr_debug("Unsupported clock mode %d\n", clk_mode);
+			return;
+	}
 	port_rx_parent = QCA8084_P_UNIPHY1_TX312P5M;
 
 	switch (qca8084_port_id) {
@@ -1143,8 +1164,24 @@ void qca8084_gcc_port_clk_parent_set(uint32_t qca8084_port_id)
 			rx_clk_id = QCA8084_MAC3_RX_CLK;
 			break;
 		case PORT4:
-			port_tx_parent = QCA8084_P_UNIPHY1_RX312P5M;
-			port_rx_parent = QCA8084_P_UNIPHY1_TX312P5M;
+			switch(clk_mode) {
+				case QCA8084_SWITCH_BYPASS_PORT5_MODE:
+				case QCA8084_PHY_SGMII_UQXGMII_MODE:
+					port_tx_parent = QCA8084_P_UNIPHY0_RX;
+					port_rx_parent = QCA8084_P_UNIPHY0_TX;
+					break;
+				case QCA8084_SWITCH_MODE:
+					port_tx_parent = QCA8084_P_UNIPHY1_TX312P5M;
+					port_rx_parent = QCA8084_P_UNIPHY1_TX312P5M;
+					break;
+				case QCA8084_PHY_UQXGMII_MODE:
+					port_tx_parent = QCA8084_P_UNIPHY1_RX312P5M;
+					port_rx_parent = QCA8084_P_UNIPHY1_TX312P5M;
+					break;
+				default:
+					pr_debug("Unsupported clock mode %d\n", clk_mode);
+					return;
+			}
 			tx_clk_id = QCA8084_MAC4_TX_CLK;
 			rx_clk_id = QCA8084_MAC4_RX_CLK;
 			break;
@@ -1153,7 +1190,19 @@ void qca8084_gcc_port_clk_parent_set(uint32_t qca8084_port_id)
 			port_rx_parent = QCA8084_P_UNIPHY0_RX;
 			tx_clk_id = QCA8084_MAC5_TX_CLK;
 			rx_clk_id = QCA8084_MAC5_RX_CLK;
-			qca8084_port5_uniphy0_clk_src_set(0);
+			switch (clk_mode) {
+				case QCA8084_SWITCH_BYPASS_PORT5_MODE:
+				case QCA8084_PHY_SGMII_UQXGMII_MODE:
+					qca8084_port5_uniphy0_clk_src_set(1);
+					break;
+				case QCA8084_SWITCH_MODE:
+				case QCA8084_PHY_UQXGMII_MODE:
+					qca8084_port5_uniphy0_clk_src_set(0);
+					break;
+				default:
+					pr_debug("Unsupported clock mode %d\n", clk_mode);
+					return;
+			}
 			break;
 		default:
 			pr_debug("Unsupported qca8084_port_id %d\n", qca8084_port_id);
@@ -1164,7 +1213,7 @@ void qca8084_gcc_port_clk_parent_set(uint32_t qca8084_port_id)
 	qca8084_clk_parent_set(rx_clk_id, port_rx_parent);
 }
 
-void qca8084_gcc_clock_init(void)
+void qca8084_gcc_clock_init(qca8084_work_mode_t clk_mode, u32 pbmp)
 {
 	uint32_t qca8084_port_id = 0;
 	/* clock type mask value for 6 manhattan ports */
@@ -1173,13 +1222,51 @@ void qca8084_gcc_clock_init(void)
 	uint8_t switch_flag = 0;
 	qca8084_clk_parent_t uniphy_index = QCA8084_P_UNIPHY0_RX;
 
-	clk_mask[PORT1] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
-	clk_mask[PORT2] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
-	clk_mask[PORT3] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
-	clk_mask[PORT4] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
+	switch (clk_mode) {
+		case QCA8084_SWITCH_MODE:
+		case QCA8084_SWITCH_BYPASS_PORT5_MODE:
+			while (pbmp) {
+				if (pbmp & 1) {
+					if (qca8084_port_id == PORT0 ||
+							qca8084_port_id == PORT5) {
+						clk_mask[qca8084_port_id] = QCA8084_CLK_TYPE_MAC |
+							QCA8084_CLK_TYPE_UNIPHY;
+					} else {
+						clk_mask[qca8084_port_id] = QCA8084_CLK_TYPE_MAC |
+							QCA8084_CLK_TYPE_EPHY;
+					}
+				}
+				pbmp >>= 1;
+				qca8084_port_id++;
+			}
+
+			if (clk_mode == QCA8084_SWITCH_BYPASS_PORT5_MODE) {
+				/* For phy port 4 in switch bypass mode */
+				clk_mask[PORT4] = QCA8084_CLK_TYPE_EPHY;
+				clk_mask[PORT5] = QCA8084_CLK_TYPE_UNIPHY;
+			}
+
+			switch_flag = 1;
+			break;
+		case QCA8084_PHY_UQXGMII_MODE:
+		case QCA8084_PHY_SGMII_UQXGMII_MODE:
+			clk_mask[PORT1] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
+			clk_mask[PORT2] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
+			clk_mask[PORT3] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
+			clk_mask[PORT4] = QCA8084_CLK_TYPE_UNIPHY | QCA8084_CLK_TYPE_EPHY;
+			if (clk_mode == QCA8084_PHY_SGMII_UQXGMII_MODE) {
+				/* For phy port4 in PHY bypass mode */
+				clk_mask[PORT4] = QCA8084_CLK_TYPE_EPHY;
+				clk_mask[PORT5] = QCA8084_CLK_TYPE_UNIPHY;
+			}
+			break;
+		default:
+			pr_debug("Unsupported clock mode %d\n", clk_mode);
+			return;
+	}
 
 	if (!gcc_common_clk_init) {
-		qca8084_gcc_common_clk_parent_enable();
+		qca8084_gcc_common_clk_parent_enable(clk_mode);
 		gcc_common_clk_init = 1;
 
 		/* Initialize the uniphy raw clock, if the port4 is in bypass mode, the uniphy0
@@ -1199,12 +1286,16 @@ void qca8084_gcc_clock_init(void)
 	qca8084_port_id = 0;
 	while (qca8084_port_id < ARRAY_SIZE(clk_mask)) {
 		if (clk_mask[qca8084_port_id] != 0) {
-			qca8084_gcc_port_clk_parent_set(qca8084_port_id);
+			qca8084_gcc_port_clk_parent_set(clk_mode, qca8084_port_id);
 			if (clk_mask[qca8084_port_id] & QCA8084_CLK_TYPE_MAC)
 				qca8084_port_clk_en_set(qca8084_port_id, QCA8084_CLK_TYPE_MAC, 1);
 			if (clk_mask[qca8084_port_id] & QCA8084_CLK_TYPE_UNIPHY && switch_flag == 1)
 				qca8084_port_clk_en_set(qca8084_port_id, QCA8084_CLK_TYPE_UNIPHY, 1);
+			pbmp |= BIT(qca8084_port_id);
 		}
 		qca8084_port_id++;
 	}
+
+	pr_debug("QCA8084 GCC CLK initialization with clock mode %d on port bmp 0x%x\n",
+			clk_mode, pbmp);
 }
