@@ -2076,7 +2076,7 @@ class Pack(object):
                                    flinfo.chipsize, blocksize, chipsize, root_part)
                 self.partitions = mibib_qcn9224.get_parts()
 
-                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701" || test "$machid" = "8050801" || test "$machid" = "8050a01" || test "$machid" = "8050b01"; then\n', fatal=False)
+                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701" || test "$machid" = "8050801" || test "$machid" = "8050a01" || test "$machid" = "8050b01" || test "$machid" = "8050c01"; then\n', fatal=False)
                 ret = self.__gen_flash_script(script, flinfo, root, True)
                 if ret == 0:
                     return 0 #Issue in packing al+wkk single-image
@@ -2102,7 +2102,7 @@ class Pack(object):
 		gpt = GPT(part_fname_qcn9224, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
 		self.partitions = gpt.get_parts()
 
-                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701" || test "$machid" = "8050801" || test "$machid" = "8050a01" || test "$machid" = "8050b01"; then\n', fatal=False)
+                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701" || test "$machid" = "8050801" || test "$machid" = "8050a01" || test "$machid" = "8050b01" || test "$machid" = "8050c01"; then\n', fatal=False)
 		ret = self.__gen_flash_script(script, flinfo, root, True)
 		if ret == 0:
 			return 0 #Issue in packing al+wkk single-image
