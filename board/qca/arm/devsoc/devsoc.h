@@ -39,6 +39,63 @@ extern const add_node_t add_fdt_node[];
 #define TCSR_MODE_CTRL_2PORT_2LANE		0x1947544
 
 #define USB30_GUCTL				0x8A0C12C
+
+/* USB Registers */
+#define TCSR_USB_PCIE_SEL			0x01947540
+#define TCSR_USB_PCIE_SEL_USB			0x1
+#define TCSR_USB_PCIE_SEL_PCI			0x0
+#define USB30_GENERAL_CFG			0x8AF8808
+#define USB30_GUCTL				0x8A0C12C
+#define USB30_FLADJ				0x8A0C630
+#define GUCTL					0x700C12C
+#define FLADJ					0x700C630
+
+#define SW_COLLAPSE_ENABLE			(1 << 0)
+#define SW_OVERRIDE_ENABLE			(1 << 2)
+#define XCFG_COARSE_TUNE_NUM			(2 << 0)
+#define XCFG_FINE_TUNE_NUM			(1 << 3)
+#define FSEL_VALUE				(5 << 4)
+
+#define QUSB2PHY_BASE				0x7B000
+
+#define USB3PHY_APB_BASE			0x4B0000
+
+#define SSCG_CTRL_REG_1				0x9c
+#define SSCG_CTRL_REG_2				0xa0
+#define SSCG_CTRL_REG_3				0xa4
+#define SSCG_CTRL_REG_4				0xa8
+#define SSCG_CTRL_REG_5				0xac
+#define SSCG_CTRL_REG_6				0xb0
+#define CDR_CTRL_REG_1				0x80
+#define CDR_CTRL_REG_2				0x84
+#define CDR_CTRL_REG_3				0x88
+#define CDR_CTRL_REG_4				0x8C
+#define CDR_CTRL_REG_5				0x90
+#define CDR_CTRL_REG_6				0x94
+#define CDR_CTRL_REG_7				0x98
+
+#define USB_PHY_CFG0				0x94
+#define USB_PHY_UTMI_CTRL0			0x3C
+#define USB_PHY_UTMI_CTRL5			0x50
+#define USB_PHY_FSEL_SEL			0xB8
+#define USB_PHY_HS_PHY_CTRL_COMMON0		0x54
+#define USB_PHY_REFCLK_CTRL			0xA0
+#define USB_PHY_HS_PHY_CTRL2			0x64
+#define USB2PHY_USB_PHY_M31_XCFGI_11		0xE4
+
+#define UTMI_PHY_OVERRIDE_EN			BIT(1)
+#define SLEEPM					BIT(1)
+#define POR_EN					BIT(1)
+#define FREQ_SEL				BIT(0)
+#define COMMONONN				BIT(7)
+#define FSEL					BIT(4)
+#define RETENABLEN				BIT(3)
+#define USB2_SUSPEND_N_SEL			BIT(3)
+#define USB2_SUSPEND_N				BIT(2)
+#define USB2_UTMI_CLK_EN			BIT(1)
+#define CLKCORE					BIT(1)
+#define ATERESET				~BIT(0)
+
 /*
  * weak function
  */

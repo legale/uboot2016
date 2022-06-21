@@ -234,14 +234,10 @@ void pcie_v2_clock_deinit(int pcie_id)
 }
 #endif
 #ifdef CONFIG_USB_XHCI_IPQ
-void usb_clock_init(int id, int ssphy)
+void usb_clock_init(void)
 {
 #ifdef QCA_CLOCK_ENABLE
 	int cfg;
-
-	/* select usb phy mux */
-	if (ssphy)
-		writel(0x1, TCSR_USB_PCIE_SEL);
 
 	/* Configure usb0_master_clk_src */
 	cfg = (GCC_USB0_MASTER_CFG_RCGR_SRC_SEL |
@@ -255,7 +251,9 @@ void usb_clock_init(int id, int ssphy)
 	cfg = (GCC_USB_MOCK_UTMI_SRC_SEL |
 		GCC_USB_MOCK_UTMI_SRC_DIV);
 	writel(cfg, GCC_USB0_MOCK_UTMI_CFG_RCGR);
-	writel(GCC_USB_MOCK_UTMI_CLK_DIV, GCC_USB0_MOCK_UTMI_CBCR);
+	writel(MOCK_UTMI_M, GCC_USB0_MOCK_UTMI_M);
+	writel(MOCK_UTMI_N, GCC_USB0_MOCK_UTMI_N);
+	writel(MOCK_UTMI_D, GCC_USB0_MOCK_UTMI_D);
 	writel(CMD_UPDATE, GCC_USB0_MOCK_UTMI_CMD_RCGR);
 	mdelay(100);
 	writel(ROOT_EN, GCC_USB0_MOCK_UTMI_CMD_RCGR);
@@ -282,8 +280,6 @@ void usb_clock_init(int id, int ssphy)
 	writel(ROOT_EN, GCC_USB0_LFPS_CMD_RCGR);
 
 	/* Configure CBCRs */
-	writel(CLK_DISABLE, GCC_SYS_NOC_USB0_AXI_CBCR);
-	writel(CLK_ENABLE, GCC_SYS_NOC_USB0_AXI_CBCR);
 	writel((readl(GCC_USB0_MASTER_CBCR) | CLK_ENABLE),
 		GCC_USB0_MASTER_CBCR);
 	writel(CLK_ENABLE, GCC_USB0_SLEEP_CBCR);
@@ -300,16 +296,13 @@ void usb_clock_init(int id, int ssphy)
 
 void usb_clock_deinit(void)
 {
-
 #ifdef QCA_CLOCK_ENABLE
-	/* Disable clocks */
-	writel(0x8000, GCC_USB0_PHY_CFG_AHB_CBCR);
-	writel(0xcff0, GCC_USB0_MASTER_CBCR);
-	writel(0, GCC_USB0_SLEEP_CBCR);
-	writel(0, GCC_USB0_MOCK_UTMI_CBCR);
-	writel(0, GCC_USB0_AUX_CBCR);
-	writel(0, GCC_ANOC_USB_AXI_CBCR);
-	writel(0, GCC_SNOC_USB_CBCR);
+	writel(0x0, GCC_USB0_PHY_CFG_AHB_CBCR);
+	writel(0x4220, GCC_USB0_MASTER_CBCR);
+	writel(0x0, GCC_USB0_SLEEP_CBCR);
+	writel(0x0, GCC_USB0_MOCK_UTMI_CBCR);
+	writel(0x0, GCC_USB0_AUX_CBCR);
+	writel(0x0, GCC_USB0_LFPS_CBCR);
 #else
 	return;
 #endif
