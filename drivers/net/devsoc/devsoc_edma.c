@@ -1826,7 +1826,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 					ipq_qca8081_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
-#ifdef CONFIG_DEVSOC_QCA_AQUANTIA_PHY
+#ifdef CONFIG_IPQ_QCA_AQUANTIA_PHY
 				case AQUANTIA_PHY_107:
 				case AQUANTIA_PHY_109:
 				case AQUANTIA_PHY_111:

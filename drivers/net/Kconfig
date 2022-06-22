@@ -110,3 +110,9 @@ config ZYNQ_GEM
 	  This MAC is present in Xilinx Zynq and ZynqMP SoCs.
 
 endif # NETDEVICES
+
+config IPQ_QCA_AQUANTIA_PHY
+	bool "Aquantia PHY support"
+	help
+	  Enable Aquantia PHY support.
+
