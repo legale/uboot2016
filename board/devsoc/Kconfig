@@ -41,4 +41,11 @@ config IPQ_TINY_SPI_NOR
 
 config ART_COMPRESSED
 	bool "Enable uncompress support"
+
+config QCA8081_PHY
+	bool "Enable QCA8081 PHY support"
+
+config QCA8084_PHY
+	depends on QCA8081_PHY
+	bool "Enable QCA8084 PHY support"
 endif

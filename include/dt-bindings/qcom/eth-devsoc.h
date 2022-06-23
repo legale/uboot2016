@@ -46,5 +46,7 @@
 #define AQ_PHY_TYPE			0x3
 #define QCA8033_PHY_TYPE		0x4
 #define SFP_PHY_TYPE			0x5
+#define QCA8084_PHY_TYPE		0x6
+#define UNUSED_PHY_TYPE 		0xFF
 #endif
 

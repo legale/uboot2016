@@ -18,7 +18,6 @@
  **************************************************************************
 */
 #include <common.h>
-#include <net.h>
 #include <asm-generic/errno.h>
 #include <asm/io.h>
 #include <malloc.h>
@@ -49,9 +48,12 @@ static struct devsoc_eth_dev *devsoc_edma_dev[DEVSOC_EDMA_DEV];
 
 uchar devsoc_def_enetaddr[6] = {0x00, 0x03, 0x7F, 0xBA, 0xDB, 0xAD};
 phy_info_t *phy_info[DEVSOC_PHY_MAX] = {0};
+phy_info_t *swt_info[QCA8084_MAX_PORTS] = {0};
 int sgmii_mode[2] = {0};
 
 #ifndef CONFIG_DEVSOC_RUMI
+extern void ipq_phy_addr_fixup(void);
+extern void ipq_clock_init(void);
 extern int ipq_sw_mdio_init(const char *);
 extern int ipq_mdio_read(int mii_id, int regnum, ushort *data);
 extern void devsoc_qca8075_phy_map_ops(struct phy_ops **ops);
@@ -61,9 +63,18 @@ extern int ipq_qca8033_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca8081_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca_aquantia_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_board_fw_download(unsigned int phy_addr);
+extern int ipq_qca8084_hw_init(phy_info_t * phy_info[]);
+extern int ipq_qca8084_link_update(phy_info_t * phy_info[]);
+extern void ipq_qca8084_switch_hw_reset(int gpio);
 #endif
 
 static int tftp_acl_our_port;
+#ifndef CONFIG_DEVSOC_RUMI
+#ifdef CONFIG_QCA8084_PHY
+static int qca8084_swt_enb = 0;
+static int qca8084_chip_detect = 0;
+#endif
+#endif
 
 /*
  * EDMA hardware instance
@@ -902,49 +913,61 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 	 */
 	for (i =  0; i < DEVSOC_PHY_MAX; i++) {
 #ifndef CONFIG_DEVSOC_RUMI
-		if (!priv->ops[i]) {
-			printf("Phy ops not mapped\n");
+		if (phy_info[i]->phy_type == UNUSED_PHY_TYPE)
+			continue;
+#ifdef CONFIG_QCA8084_PHY
+		else if ((qca8084_swt_enb && qca8084_chip_detect) &&
+				(phy_info[i]->phy_type == QCA8084_PHY_TYPE)) {
+			if (!ipq_qca8084_link_update(swt_info))
+				linkup++;
 			continue;
 		}
-		phy_get_ops = priv->ops[i];
-
-		if (!phy_get_ops->phy_get_link_status ||
-				!phy_get_ops->phy_get_speed ||
-				!phy_get_ops->phy_get_duplex) {
-			printf("Error:Link status/Get speed/Get duplex not mapped\n");
-			return -1;
-		}
-
-		if (phy_node >= 0) {
-			/*
-			 * For each ethernet port, one node should be added
-			 * inside port_phyinfo with appropriate phy address
-			 */
-			phy_addr = phy_info[i]->phy_address;
-		} else {
-			printf("Error:Phy addresses not configured in DT\n");
-			return -1;
-		}
-
-		status = phy_get_ops->phy_get_link_status(priv->mac_unit, phy_addr);
-		phy_get_ops->phy_get_speed(priv->mac_unit, phy_addr, &curr_speed[i]);
-		phy_get_ops->phy_get_duplex(priv->mac_unit, phy_addr, &duplex);
-
-		if (status == 0) {
-			linkup++;
-			if (old_speed[i] == curr_speed[i]) {
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-					priv->mac_unit, i, lstatus[status], curr_speed[i],
-					dp[duplex]);
+#endif
+		else {
+			if (!priv->ops[i]) {
+				printf("Phy ops not mapped\n");
 				continue;
-			} else {
-				old_speed[i] = curr_speed[i];
 			}
-		} else {
-			printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-				priv->mac_unit, i, lstatus[status], curr_speed[i],
-				dp[duplex]);
-			continue;
+			phy_get_ops = priv->ops[i];
+
+			if (!phy_get_ops->phy_get_link_status ||
+					!phy_get_ops->phy_get_speed ||
+					!phy_get_ops->phy_get_duplex) {
+				printf("Error:Link status/Get speed/Get duplex not mapped\n");
+				return -1;
+			}
+
+			if (phy_node >= 0) {
+				/*
+				 * For each ethernet port, one node should be added
+				 * inside port_phyinfo with appropriate phy address
+				 */
+				phy_addr = phy_info[i]->phy_address;
+			} else {
+				printf("Error:Phy addresses not configured in DT\n");
+				return -1;
+			}
+
+			status = phy_get_ops->phy_get_link_status(priv->mac_unit, phy_addr);
+			phy_get_ops->phy_get_speed(priv->mac_unit, phy_addr, &curr_speed[i]);
+			phy_get_ops->phy_get_duplex(priv->mac_unit, phy_addr, &duplex);
+
+			if (status == 0) {
+				linkup++;
+				if (old_speed[i] == curr_speed[i]) {
+					printf("eth%d PHY%d %s Speed :%d %s duplex\n",
+							priv->mac_unit, i, lstatus[status], curr_speed[i],
+							dp[duplex]);
+					continue;
+				} else {
+					old_speed[i] = curr_speed[i];
+				}
+			} else {
+				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
+						priv->mac_unit, i, lstatus[status], curr_speed[i],
+						dp[duplex]);
+				continue;
+			}
 		}
 #endif
 
@@ -1631,13 +1654,14 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 	return 0;
 }
 
-void get_phy_address(int offset)
+void get_phy_address(int offset, phy_info_t * phy_info[], int max_phy_ports)
 {
 	int phy_type;
 	int phy_address;
+	int forced_speed, forced_duplex;
 	int i;
 
-	for (i = 0; i < DEVSOC_PHY_MAX; i++)
+	for (i = 0; i < max_phy_ports; i++)
 		phy_info[i] = devsoc_alloc_mem(sizeof(phy_info_t));
 	i = 0;
 	for (offset = fdt_first_subnode(gd->fdt_blob, offset); offset > 0;
@@ -1646,7 +1670,13 @@ void get_phy_address(int offset)
 					      offset, "phy_address", 0);
 		phy_type = fdtdec_get_uint(gd->fdt_blob,
 					   offset, "phy_type", 0);
+		forced_speed = fdtdec_get_uint(gd->fdt_blob,
+					   offset, "forced-speed", 0);
+		forced_duplex = fdtdec_get_uint(gd->fdt_blob,
+					   offset, "forced-duplex", 0);
 		phy_info[i]->phy_address = phy_address;
+		phy_info[i]->forced_speed = forced_speed;
+		phy_info[i]->forced_duplex = forced_duplex;
 		phy_info[i++]->phy_type = phy_type;
 	}
 }
@@ -1666,8 +1696,12 @@ int devsoc_edma_init(void *edma_board_cfg)
 #ifdef CONFIG_DEVSOC_QCA8075_PHY
 	static int sw_init_done = 0;
 #endif
-	int node, phy_addr, aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
-	int mode, phy_node = -1, res = -1;
+#ifdef CONFIG_QCA8084_PHY
+	static int qca8084_init_done = 0;
+	int qca8084_gpio, clk[4] = {0};
+#endif
+	int node, phy_addr, mode, phy_node = -1, res = -1;
+	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
 
 	/*
 	 * Init non cache buffer
@@ -1687,9 +1721,22 @@ int devsoc_edma_init(void *edma_board_cfg)
 		}
 	}
 
+#ifdef CONFIG_QCA8084_PHY
+	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node, "qca8084_switch_enable", 0);
+	if (qca8084_swt_enb) {
+		qca8084_gpio =  fdtdec_get_uint(gd->fdt_blob, node, "qca808x_gpio", 0);
+		if (qca8084_gpio)
+			ipq_qca8084_switch_hw_reset(qca8084_gpio);
+	}
+
+	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/qca8084_swt_info");
+	if (phy_node >= 0)
+		get_phy_address(phy_node, swt_info, QCA8084_MAX_PORTS);
+#endif
+
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
 	if (phy_node >= 0)
-		get_phy_address(phy_node);
+		get_phy_address(phy_node, phy_info, DEVSOC_PHY_MAX);
 
 	mode = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode0", -1);
 	if (mode < 0) {
@@ -1785,6 +1832,13 @@ int devsoc_edma_init(void *edma_board_cfg)
 				printf("Error:Phy addresses not configured in DT\n");
 				goto init_failed;
 			}
+#ifdef CONFIG_QCA8084_PHY
+			if (phy_info[phy_id]->phy_type == QCA8084_PHY_TYPE && !qca8084_init_done) {
+				ipq_phy_addr_fixup();
+				ipq_clock_init();
+				qca8084_init_done = 1;
+			}
+#endif
 
 			phy_chip_id1 = ipq_mdio_read(phy_addr, QCA_PHY_ID1, NULL);
 			phy_chip_id2 = ipq_mdio_read(phy_addr, QCA_PHY_ID2, NULL);
@@ -1826,6 +1880,11 @@ int devsoc_edma_init(void *edma_board_cfg)
 					ipq_qca8081_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
+#ifdef CONFIG_QCA8084_PHY
+				case QCA8084_PHY:
+					qca8084_chip_detect = 1;
+					break;
+#endif
 #ifdef CONFIG_IPQ_QCA_AQUANTIA_PHY
 				case AQUANTIA_PHY_107:
 				case AQUANTIA_PHY_109:
@@ -1856,6 +1915,31 @@ int devsoc_edma_init(void *edma_board_cfg)
 		if (ret)
 			goto init_failed;
 
+#ifndef CONFIG_DEVSOC_RUMI
+#ifdef CONFIG_QCA8084_PHY
+		/** QCA8084 switch specific configurations */
+		if (qca8084_swt_enb && qca8084_chip_detect) {
+			/** Force speed devsoc 2nd port for QCA8084 switch mode */
+			clk[0] = 0x301;
+			clk[1] = 0x0;
+			clk[2] = 0x401;
+			clk[3] = 0x0;
+
+			pr_debug("Force speed devsoc 2nd PORT for QCA8084 switch mode \n");
+			devsoc_speed_clock_set(PORT1, clk);
+
+			/** Force Link-speed: 1000M
+			 *  Force Link-status: enable */
+			devsoc_pqsgmii_speed_set(PORT1, 0x2, 0x0);
+
+			ret = ipq_qca8084_hw_init(swt_info);
+			if (ret < 0) {
+				printf("Error: ipq_qca8084_hw_init failed \n");
+				goto init_failed;
+			}
+		}
+#endif
+#endif
 		eth_register(dev[i]);
 	}
 
