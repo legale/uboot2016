@@ -790,39 +790,6 @@ int ipq_board_usb_init(void)
 }
 #endif
 
-static void __fixup_usb_device_mode(void *blob)
-{
-	parse_fdt_fixup("/soc/usb3@8A00000/dwc3@8A00000%dr_mode%?peripheral", blob);
-	parse_fdt_fixup("/soc/usb3@8A00000/dwc3@8A00000%maximum-speed%?high-speed", blob);
-}
-
-static void fdt_fixup_diag_gadget(void *blob)
-{
-	__fixup_usb_device_mode(blob);
-
-	if (fdt_path_offset(blob, "/soc/qcom,gadget_diag@0") < 0){
-		parse_fdt_fixup("/qti,gadget_diag@0%status%?ok", blob);
-	} else {
-		parse_fdt_fixup("/soc/qcom,gadget_diag@0%status%?ok", blob);
-	}
-}
-
-void ipq_fdt_fixup_usb_device_mode(void *blob)
-{
-	const char *usb_cfg;
-
-	usb_cfg = getenv("usb_mode");
-	if (!usb_cfg)
-		return;
-
-	if (!strncmp(usb_cfg, "peripheral", sizeof("peripheral")))
-		__fixup_usb_device_mode(blob);
-	else if (!strncmp(usb_cfg, "diag_gadget", sizeof("diag_gadget")))
-		fdt_fixup_diag_gadget(blob);
-	else
-		printf("%s: invalid param for usb_mode\n", __func__);
-}
-
 void enable_caches(void)
 {
 	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
