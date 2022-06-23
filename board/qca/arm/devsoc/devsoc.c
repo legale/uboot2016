@@ -355,36 +355,147 @@ void board_pci_deinit()
 #ifdef CONFIG_USB_XHCI_IPQ
 void board_usb_deinit(int id)
 {
-	int nodeoff;
+	int nodeoff, ssphy;
 	char node_name[8];
 
 	snprintf(node_name, sizeof(node_name), "usb%d", id);
 	nodeoff = fdt_path_offset(gd->fdt_blob, node_name);
 	if (fdtdec_get_int(gd->fdt_blob, nodeoff, "qcom,emulation", 0))
 		return;
+
+	ssphy = fdtdec_get_int(gd->fdt_blob, nodeoff, "ssphy", 0);
+	/* Enable USB PHY Power down */
+	setbits_le32(QUSB2PHY_BASE + 0xA4, 0x0);
+	/* Disable clocks */
+	usb_clock_deinit();
+	/* GCC_QUSB2_0_PHY_BCR */
+	set_mdelay_clearbits_le32(GCC_QUSB2_0_PHY_BCR, 0x1, 10);
+	/* GCC_USB0_PHY_BCR */
+	if (ssphy)
+		set_mdelay_clearbits_le32(GCC_USB0_PHY_BCR, 0x1, 10);
+	/* GCC Reset USB BCR */
+	set_mdelay_clearbits_le32(GCC_USB_BCR, 0x1, 10);
+	/* Deselect the usb phy mux */
+	if (ssphy)
+		writel(TCSR_USB_PCIE_SEL_PCI, TCSR_USB_PCIE_SEL);
+
+}
+
+static void usb_init_hsphy(void __iomem *phybase, int ssphy)
+{
+	if (!ssphy) {
+		/*Enable utmi instead of pipe*/
+		writel((readl(USB30_GENERAL_CFG) |
+			PIPE_UTMI_CLK_DIS), USB30_GENERAL_CFG);
+		udelay(100);
+		writel((readl(USB30_GENERAL_CFG) |
+			PIPE_UTMI_CLK_SEL | PIPE3_PHYSTATUS_SW),
+			USB30_GENERAL_CFG);
+		udelay(100);
+		writel((readl(USB30_GENERAL_CFG) &
+			~PIPE_UTMI_CLK_DIS), USB30_GENERAL_CFG);
+	}
+	/* Disable USB PHY Power down */
+	setbits_le32(phybase + 0xA4, 0x1);
+	/* Enable override ctrl */
+	writel(UTMI_PHY_OVERRIDE_EN, phybase + USB_PHY_CFG0);
+	/* Enable POR*/
+	writel(POR_EN, phybase + USB_PHY_UTMI_CTRL5);
+	udelay(15);
+	/* Configure frequency select value*/
+	writel(FREQ_SEL, phybase + USB_PHY_FSEL_SEL);
+	/* Configure refclk frequency */
+
+	writel(FSEL_VALUE << FSEL, phybase + USB_PHY_HS_PHY_CTRL_COMMON0);
+
+	writel(readl(phybase + USB_PHY_UTMI_CTRL5) & ATERESET,
+		phybase + USB_PHY_UTMI_CTRL5);
+
+	writel(USB2_SUSPEND_N_SEL | USB2_SUSPEND_N,
+			phybase + USB_PHY_HS_PHY_CTRL2);
+
+	writel(SLEEPM, phybase + USB_PHY_UTMI_CTRL0);
+
+	writel(XCFG_COARSE_TUNE_NUM | XCFG_COARSE_TUNE_NUM,
+		phybase + USB2PHY_USB_PHY_M31_XCFGI_11);
+
+	udelay(100);
+
+	writel(readl(phybase + USB_PHY_UTMI_CTRL5) & ~POR_EN,
+		phybase + USB_PHY_UTMI_CTRL5);
+
+	writel(readl(phybase + USB_PHY_HS_PHY_CTRL2) & USB2_SUSPEND_N_SEL,
+		phybase + USB_PHY_HS_PHY_CTRL2);
+}
+
+static void usb_init_ssphy(void __iomem *phybase)
+{
+	writel(CLK_ENABLE, GCC_USB0_PHY_CFG_AHB_CBCR);
+	writel(CLK_ENABLE, GCC_USB0_PIPE_CBCR);
+	udelay(100);
+	/*set frequency initial value*/
+	writel(0x1cb9, phybase + SSCG_CTRL_REG_4);
+	writel(0x023a, phybase + SSCG_CTRL_REG_5);
+	/*set spectrum spread count*/
+	writel(0xd360, phybase + SSCG_CTRL_REG_3);
+	/*set fstep*/
+	writel(0x1, phybase + SSCG_CTRL_REG_1);
+	writel(0xeb, phybase + SSCG_CTRL_REG_2);
+	return;
+}
+
+static void usb_init_phy(int ssphy)
+{
+	void __iomem *boot_clk_ctl, *usb_bcr, *qusb2_phy_bcr;
+
+	boot_clk_ctl = (u32 *)GCC_USB0_BOOT_CLOCK_CTL;
+	usb_bcr = (u32 *)GCC_USB_BCR;
+	qusb2_phy_bcr = (u32 *)GCC_QUSB2_0_PHY_BCR;
+
+	/* Disable USB Boot Clock */
+	clrbits_le32(boot_clk_ctl, 0x0);
+
+	/* GCC Reset USB BCR */
+	set_mdelay_clearbits_le32(usb_bcr, 0x1, 10);
+
+	if (ssphy)
+		setbits_le32(GCC_USB0_PHY_BCR, 0x1);
+	setbits_le32(qusb2_phy_bcr, 0x1);
+	udelay(1);
+	/* Config user control register */
+	writel(0x4004010, USB30_GUCTL);
+	writel(0x4945920, USB30_FLADJ);
+	if (ssphy)
+		clrbits_le32(GCC_USB0_PHY_BCR, 0x1);
+	clrbits_le32(qusb2_phy_bcr, 0x1);
+	udelay(30);
+
+	if (ssphy)
+		usb_init_ssphy((u32 *)USB3PHY_APB_BASE);
+	usb_init_hsphy((u32 *)QUSB2PHY_BASE, ssphy);
 }
 
 int ipq_board_usb_init(void)
 {
-	int i, nodeoff, ssphy;
-	char node_name[8];
+	int nodeoff, ssphy;
 
-	for (i=0; i < CONFIG_USB_MAX_CONTROLLER_COUNT; i++) {
-		snprintf(node_name, sizeof(node_name), "usb%d", i);
-		nodeoff = fdt_path_offset(gd->fdt_blob, node_name);
-		if (nodeoff < 0){
-			printf("USB: Node Not found, skipping initialization\n");
-			return 0;
-		}
+	nodeoff = fdt_path_offset(gd->fdt_blob, "usb0");
+	if (nodeoff < 0){
+		printf("USB: Node Not found,skipping initialization\n");
+		return 0;
+	}
 
-		ssphy = fdtdec_get_int(gd->fdt_blob, nodeoff, "ssphy", 0);
-		if (!fdtdec_get_int(gd->fdt_blob, nodeoff, "qcom,emulation", 0)) {
-
-			usb_clock_init(i, ssphy);
-		}else {
-			/* Config user control register */
-			writel(0x0C804010, USB30_GUCTL);
-		}
+	ssphy = fdtdec_get_int(gd->fdt_blob, nodeoff, "ssphy", 0);
+	if (!fdtdec_get_int(gd->fdt_blob, nodeoff, "qcom,emulation", 0)) {
+		/* select usb phy mux */
+		if (ssphy)
+			writel(TCSR_USB_PCIE_SEL_USB,
+				TCSR_USB_PCIE_SEL);
+		usb_clock_init();
+		usb_init_phy(ssphy);
+	} else {
+		/* Config user control register */
+		writel(0x0C804010, USB30_GUCTL);
 	}
 
 	return 0;

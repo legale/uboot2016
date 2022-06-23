@@ -129,6 +129,74 @@
 #define NSS_CC_PORT1_RX_CBCR			0x39B00480
 #define NSS_CC_UNIPHY_PORT1_RX_CBCR		0x39B004B4
 
+
+#define GCC_USB_BCR				0x182C000
+#define GCC_USB0_MASTER_CMD_RCGR		0x182C004
+#define GCC_USB0_MASTER_CFG_RCGR		0x182C008
+#define GCC_USB0_MASTER_M			0x182C00C
+#define GCC_USB0_MASTER_N			0x182C010
+#define GCC_USB0_MASTER_D			0x182C014
+#define GCC_USB0_AUX_CMD_RCGR			0x182C018
+#define GCC_USB0_AUX_CFG_RCGR			0x182C01C
+#define GCC_USB0_AUX_M				0x182C020
+#define GCC_USB0_AUX_N				0x182C024
+#define GCC_USB0_AUX_D				0x182C028
+#define GCC_USB0_MOCK_UTMI_CMD_RCGR		0x182C02C
+#define GCC_USB0_MOCK_UTMI_CFG_RCGR		0x182C030
+#define GCC_USB0_MOCK_UTMI_M			0x182C034
+#define GCC_USB0_MOCK_UTMI_N			0x182C038
+#define GCC_USB0_MOCK_UTMI_D			0x182C03C
+#define GCC_USB0_MOCK_UTMI_DIV_CDIVR		0x182C040
+#define GCC_USB0_MASTER_CBCR			0x182C048
+#define GCC_USB0_MASTER_SREGR			0x182C04C
+#define GCC_USB0_AUX_CBCR			0x182C050
+#define GCC_USB0_MOCK_UTMI_CBCR			0x182C054
+#define GCC_USB0_SLEEP_CBCR			0x182C058
+#define GCC_USB0_PHY_CFG_AHB_CBCR		0x182C05C
+#define GCC_USB0_BOOT_CLOCK_CTL			0x182C060
+#define GCC_USB0_PHY_BCR			0x182C06C
+#define GCC_USB3PHY_0_PHY_BCR			0x182C070
+#define GCC_USB0_PHY_PIPE_MISC			0x182C074
+#define GCC_USB0_PIPE_CBCR			0x182C078
+#define GCC_USB0_LFPS_CMD_RCGR			0x182C07C
+#define GCC_USB0_LFPS_CFG_RCGR			0x182C080
+#define GCC_USB0_LFPS_M				0x182C084
+#define GCC_USB0_LFPS_N				0x182C088
+#define GCC_USB0_LFPS_D				0x182C08C
+#define GCC_USB0_LFPS_CBCR			0x182C090
+#define GCC_USB0_EUD_AT_CBCR			0x1830004
+
+#define GCC_USB0_BOOT_CLOCK_CTL			0x182C060
+#define GCC_QUSB2_0_PHY_BCR			0x182C068
+
+#define GCC_USB0_LFPS_CFG_SRC_SEL		(0x1 << 8)
+#define GCC_USB0_LFPS_CFG_SRC_DIV		(0x1F << 0)
+#define LFPS_M					0x1
+#define LFPS_N					0xFE
+#define LFPS_D					0xFD
+#define GCC_USB0_LFPS_MODE			(0x2 << 12)
+
+#define GCC_USB0_AUX_CFG_MODE_DUAL_EDGE 	(2 << 12)
+#define GCC_USB0_AUX_CFG_SRC_SEL		(0 << 8)
+#define GCC_USB0_AUX_CFG_SRC_DIV		(0x3 << 0)
+
+#define AUX_M					0x0
+#define AUX_N					0x0
+#define AUX_D					0x0
+
+#define GCC_USB0_MASTER_CFG_RCGR_SRC_SEL	(1 << 8)
+#define GCC_USB0_MASTER_CFG_RCGR_SRC_DIV	(0x7 << 0)
+
+#define GCC_USB_MOCK_UTMI_SRC_SEL		(1 << 8)
+#define GCC_USB_MOCK_UTMI_SRC_DIV		(0x13 << 0)
+#define MOCK_UTMI_M				0x1
+#define MOCK_UTMI_N				0xFE
+#define MOCK_UTMI_D				0xFD
+
+#define PIPE_UTMI_CLK_SEL			0x1
+#define PIPE3_PHYSTATUS_SW			(0x1 << 3)
+#define PIPE_UTMI_CLK_DIS			(0x1 << 8)
+
 #ifdef CONFIG_QCA_MMC
 void emmc_clock_init(void);
 void emmc_clock_reset(void);
@@ -139,7 +207,7 @@ void pcie_v2_clock_deinit(int pcie_id);
 #endif
 int uart_clock_config(struct ipq_serial_platdata *plat);
 #ifdef CONFIG_USB_XHCI_IPQ
-void usb_clock_init(int id, int ssphy);
+void usb_clock_init(void);
 void usb_clock_deinit(void);
 #endif
 
