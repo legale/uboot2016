@@ -32,4 +32,13 @@ config USB_XHCI_IPQ
 
 config IPQ_I2C
 	bool "Enable i2c support"
+
+config IPQ_TINY
+	bool "Enable Tiny support"
+
+config IPQ_TINY_SPI_NOR
+	bool "This config helps to update spi-nor"
+
+config ART_COMPRESSED
+	bool "Enable uncompress support"
 endif
