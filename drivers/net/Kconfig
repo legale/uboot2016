@@ -116,3 +116,7 @@ config IPQ_QCA_AQUANTIA_PHY
 	help
 	  Enable Aquantia PHY support.
 
+config ATHRS17C_SWITCH
+	bool "QTI S17C switch support"
+	help
+	  Enable QTI S17C switch support.

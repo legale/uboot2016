@@ -66,6 +66,15 @@ extern int ipq_board_fw_download(unsigned int phy_addr);
 extern int ipq_qca8084_hw_init(phy_info_t * phy_info[]);
 extern int ipq_qca8084_link_update(phy_info_t * phy_info[]);
 extern void ipq_qca8084_switch_hw_reset(int gpio);
+
+#ifdef CONFIG_ATHRS17C_SWITCH
+extern void ppe_uniphy_set_forceMode(uint32_t uniphy_index);
+
+extern int ipq_qca8337_switch_init(ipq_s17c_swt_cfg_t *s17c_swt_cfg);
+extern int ipq_qca8337_link_update(ipq_s17c_swt_cfg_t *s17c_swt_cfg);
+extern void ipq_s17c_switch_reset(int gpio);
+ipq_s17c_swt_cfg_t s17c_swt_cfg;
+#endif
 #endif
 
 static int tftp_acl_our_port;
@@ -923,6 +932,15 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 			continue;
 		}
 #endif
+#ifdef CONFIG_ATHRS17C_SWITCH
+		else if (phy_info[i]->phy_type == ATHRS17C_SWITCH_TYPE) {
+			if (s17c_swt_cfg.chip_detect) {
+				if (!ipq_qca8337_link_update(&s17c_swt_cfg))
+					linkup++;
+				continue;
+			}
+		}
+#endif
 		else {
 			if (!priv->ops[i]) {
 				printf("Phy ops not mapped\n");
@@ -1700,6 +1718,9 @@ int devsoc_edma_init(void *edma_board_cfg)
 	static int qca8084_init_done = 0;
 	int qca8084_gpio, clk[4] = {0};
 #endif
+#ifdef CONFIG_ATHRS17C_SWITCH
+	int s17c_swt_enb = 0, s17c_rst_gpio = 0;
+#endif
 	int node, phy_addr, mode, phy_node = -1, res = -1;
 	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
 
@@ -1732,6 +1753,34 @@ int devsoc_edma_init(void *edma_board_cfg)
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/qca8084_swt_info");
 	if (phy_node >= 0)
 		get_phy_address(phy_node, swt_info, QCA8084_MAX_PORTS);
+#endif
+
+#ifdef CONFIG_ATHRS17C_SWITCH
+	s17c_swt_enb = fdtdec_get_uint(gd->fdt_blob, node,
+			"s17c_switch_enable", 0);
+	if (s17c_swt_enb) {
+		s17c_swt_cfg.chip_detect = 0;
+		s17c_rst_gpio = fdtdec_get_uint(gd->fdt_blob, node,
+				"s17c_rst_gpio", 0);
+
+		ipq_s17c_switch_reset(s17c_rst_gpio);
+
+		/*
+		 * Set ref clock 25MHZ and enable Force mode
+		 */
+		ppe_uniphy_set_forceMode(PORT0);
+
+		phy_node = fdt_path_offset(gd->fdt_blob,
+				"/ess-switch/s17c_swt_info");
+		s17c_swt_cfg.port_count =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "s17c_mac_pwr", 0);
+		s17c_swt_cfg.port_count =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "s17c_port_count", 0);
+		fdtdec_get_int_array(gd->fdt_blob, phy_node,
+				"s17c_port_address",
+				s17c_swt_cfg.port_phy_address,
+				s17c_swt_cfg.port_count);
+	}
 #endif
 
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
@@ -1885,6 +1934,12 @@ int devsoc_edma_init(void *edma_board_cfg)
 					qca8084_chip_detect = 1;
 					break;
 #endif
+#ifdef CONFIG_ATHRS17C_SWITCH
+				case QCA8337_PHY:
+					if (s17c_swt_enb)
+						s17c_swt_cfg.chip_detect = 1;
+					break;
+#endif
 #ifdef CONFIG_IPQ_QCA_AQUANTIA_PHY
 				case AQUANTIA_PHY_107:
 				case AQUANTIA_PHY_109:
@@ -1938,6 +1993,10 @@ int devsoc_edma_init(void *edma_board_cfg)
 				goto init_failed;
 			}
 		}
+#endif
+#ifdef CONFIG_ATHRS17C_SWITCH
+		if (s17c_swt_cfg.chip_detect)
+			ipq_qca8337_switch_init(&s17c_swt_cfg);
 #endif
 #endif
 		eth_register(dev[i]);

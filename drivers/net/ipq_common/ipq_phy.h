@@ -16,6 +16,9 @@
 
 #include <common.h>
 #include <net.h>
+#ifdef CONFIG_ATHRS17C_SWITCH
+#include "athrs17_phy.h"
+#endif
 
 #define PHY_MAX		6
 #define IPQ9574_PHY_MAX	6
@@ -40,6 +43,7 @@
 #define GP_PU_RES(x)		(x << 13)
 #define QCA8075_RST_VAL		(GP_PULL_DOWN | GP_OE_EN | \
 				GP_VM_EN | GP_PU_RES(2))
+#define QCA8337_PHY				0x004DD036
 #define QCA8075_PHY_V1_0_5P			0x004DD0B0
 #define QCA8075_PHY_V1_1_5P			0x004DD0B1
 #define QCA8075_PHY_V1_1_2P			0x004DD0B2
@@ -144,6 +148,7 @@ enum phy_mode {
 	QCA8033_PHY_TYPE = 4,
 	SFP_PHY_TYPE = 5,
 	QCA8084_PHY_TYPE = 6,
+	ATHRS17C_SWITCH_TYPE = 7,
 	UNUSED_PHY_TYPE = 0xFF,
 };
 
