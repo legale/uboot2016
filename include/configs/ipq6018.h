@@ -294,8 +294,8 @@ extern loff_t board_env_size;
 
 #ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
 #define CONFIG_HW_WATCHDOG
-#define IPQ_FS_NONHLOS_BIT              (1 << 9)
-#define IPQ_FS_HLOS_BIT                 (1 << 10)
+#define IPQ_FS_NONHLOS_BIT              (1 << 10)
+#define IPQ_FS_HLOS_BIT                 (1 << 11)
 #endif
 
 #ifdef CONFIG_IPQ_RUNTIME_FAILSAFE_DEBUG
