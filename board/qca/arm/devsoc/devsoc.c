@@ -507,8 +507,23 @@ __weak int ipq_get_tz_version(char *version_name, int buf_size)
 	return 1;
 }
 
+int apps_iscrashed_crashdump_disabled(void)
+{
+	u32 *dmagic = (u32 *)CONFIG_DEVSOC_DMAGIC_ADDR;
+
+	if (*dmagic & DLOAD_DISABLED)
+		return 1;
+
+	return 0;
+}
+
 int apps_iscrashed(void)
 {
+	u32 *dmagic = (u32 *)CONFIG_DEVSOC_DMAGIC_ADDR;
+
+	if (*dmagic & DLOAD_MAGIC_COOKIE)
+		return 1;
+
 	return 0;
 }
 
