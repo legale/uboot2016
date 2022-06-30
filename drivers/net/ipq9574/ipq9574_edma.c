@@ -63,8 +63,8 @@ extern int ipq_board_fw_download(unsigned int phy_addr);
 extern void ipq_qca8084_phy_hw_init(struct phy_ops **ops, u32 phy_addr);
 extern void qca8084_phy_uqxgmii_speed_fixup(uint32_t phy_addr, uint32_t qca8084_port_id,
 					    uint32_t status, fal_port_speed_t new_speed);
-extern int ipq_qca8084_hw_init(phy_info_t * phy_info[], int node);
-extern void ipq_qca8084_link_update(u32 port_id);
+extern int ipq_qca8084_hw_init(phy_info_t * phy_info[]);
+extern int ipq_qca8084_link_update(phy_info_t * phy_info[]);
 extern void ipq_qca8084_switch_hw_reset(int gpio);
 
 static int tftp_acl_our_port;
@@ -983,6 +983,11 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 				printf("Error: Wrong mode specified for SFP Port in DT\n");
 				return sfp_mode;
 			}
+		} else if (qca8084_swt_enb && (phy_info[i]->phy_type == QCA8084_PHY_TYPE)) {
+			if (!ipq_qca8084_link_update(swt_info))
+				linkup++;
+			i = PORT3;
+			continue;
 		} else {
 			if (!priv->ops[i]) {
 				printf("Phy ops not mapped\n");
@@ -1027,13 +1032,6 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 			printf("eth%d PHY%d %s Speed :%d %s duplex\n",
 				priv->mac_unit, i, lstatus[status], curr_speed[i],
 				dp[duplex]);
-
-			if ((phy_info[i]->phy_type == QCA8084_PHY_TYPE) && qca8084_swt_enb) {
-				if (old_speed[i] != curr_speed[i]) {
-					old_speed[i] = curr_speed[i];
-					ipq_qca8084_link_update(phy_addr);
-				}
-			}
 			continue;
 		}
 
@@ -1269,22 +1267,18 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 			}
 		}
 
-		if (!qca8084_swt_enb || (i != PORT0))
-			ipq9574_speed_clock_set(i, clk);
+		ipq9574_speed_clock_set(i, clk);
 
 		if (!qca8084_swt_enb && (phy_info[i]->phy_type == QCA8084_PHY_TYPE))
 			qca8084_phy_uqxgmii_speed_fixup(phy_info[i]->phy_address,
 					i + 1, status, curr_speed[i]);
 
-		if (!qca8084_swt_enb || (i != PORT0))
-			ipq9574_port_mac_clock_reset(i);
+		ipq9574_port_mac_clock_reset(i);
 
 		if (i == aquantia_port[0] || i == aquantia_port[1] ||
 				((phy_info[i]->phy_type == QCA8084_PHY_TYPE) && (!qca8084_swt_enb))) {
 			ipq9574_uxsgmii_speed_set(i, mac_speed, duplex, status);
 		}
-		else if (qca8084_swt_enb && (phy_info[i]->phy_type == QCA8084_PHY_TYPE))
-			ipq_qca8084_link_update(phy_addr);
 		else if ((i == sfp_port[0] || i == sfp_port[1]) && sgmii_fiber == 0)
 			ipq9574_10g_r_speed_set(i, status);
 		else
@@ -2146,7 +2140,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 					break;
 			}
 
-			ret = ipq_qca8084_hw_init(swt_info, swt_node);
+			ret = ipq_qca8084_hw_init(swt_info);
 			if (ret < 0) {
 				printf("Error: ipq_qca8084_hw_init failed \n");
 				goto init_failed;

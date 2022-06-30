@@ -1349,34 +1349,46 @@ void qca_switch_init(u32 port_bmp, u32 cpu_bmp, phy_info_t * phy_info[])
 	return;
 }
 /**************************************************************************/
-void ipq_qca8084_link_update(u32 port_id)
+int ipq_qca8084_link_update(phy_info_t * phy_info[])
 {
 	struct port_phy_status phy_status = {0};
-	int rv = qca8084_phy_get_status(port_id, &phy_status);
-	if (rv < 0) {
-		printf("%s %d failed get phy status of idx %d \n",
+	int rv, port_id, status = 1;
+
+	for (int i=PORT1; i<PORT5; i++) {
+		port_id = phy_info[i]->phy_address;
+		rv = qca8084_phy_get_status(port_id, &phy_status);
+		if (rv < 0) {
+			printf("%s %d failed get phy status of idx %d \n",
 				__func__, __LINE__, port_id);
-		return;
+			return status;
+		}
+
+		printf("QCA8084-switch PORT%d %s Speed :%d %s duplex\n", port_id,
+			(phy_status.link_status?"Up":"Down"),
+			phy_status.speed, (phy_status.duplex?"Half":"Full"));
+
+		if (phy_status.link_status == PORT_LINK_DOWN) {
+			/* enable mac rx function */
+			qca8084_port_rxmac_status_set(port_id, false);
+			/* enable mac tx function */
+			qca8084_port_txmac_status_set(port_id, false);
+			/* update gcc, mac speed, mac duplex and phy stauts */
+			port_link_update(port_id, phy_status);
+		}
+
+		if (phy_status.link_status == PORT_LINK_UP) {
+			/* update gcc, mac speed, mac duplex and phy stauts */
+			port_link_update(port_id, phy_status);
+			/* enable mac tx function */
+			qca8084_port_txmac_status_set(port_id, true);
+			/* enable mac rx function */
+			qca8084_port_rxmac_status_set(port_id, true);
+
+			status = 0;
+		}
 	}
 
-	if (phy_status.link_status == PORT_LINK_DOWN) {
-		/* enable mac rx function */
-		qca8084_port_rxmac_status_set(port_id, false);
-		/* enable mac tx function */
-		qca8084_port_txmac_status_set(port_id, false);
-		/* update gcc, mac speed, mac duplex and phy stauts */
-		port_link_update(port_id, phy_status);
-	}
-
-	if (phy_status.link_status == PORT_LINK_UP) {
-		/* update gcc, mac speed, mac duplex and phy stauts */
-		port_link_update(port_id, phy_status);
-		/* enable mac tx function */
-		qca8084_port_txmac_status_set(port_id, true);
-		/* enable mac rx function */
-		qca8084_port_rxmac_status_set(port_id, true);
-	}
-	return;
+	return status;
 }
 
 int ipq_qca8084_hw_init(phy_info_t * phy_info[])
