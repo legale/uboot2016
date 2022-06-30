@@ -149,4 +149,29 @@
 		#size-cells = <1>;
 		reg = <0x8a00000 0xe000>;
 	};
+
+	i2c@78B6000 {
+		compatible = "qcom,qup-i2c";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x78B6000 0x600>;
+		clock-frequency  = <400000>;
+		i2c_gpio {
+			gpio1 {
+				gpio = <29>;
+				func = <3>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+				oe = <GPIO_OE_ENABLE>;
+			};
+
+			gpio2 {
+				gpio = <30>;
+				func = <3>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+				oe = <GPIO_OE_ENABLE>;
+			};
+		};
+	};
 };

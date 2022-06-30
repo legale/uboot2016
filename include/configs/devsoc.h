@@ -380,6 +380,15 @@ extern loff_t board_env_size;
  */
 #define CONFIG_ARMV7_PSCI
 
+/*
+ * I2C Enable
+ */
+#ifdef CONFIG_IPQ_I2C
+#define CONFIG_SYS_I2C_QUP
+#define CONFIG_CMD_I2C
+#define CONFIG_DM_I2C
+#endif
+
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
 #undef CONFIG_BOOTM_RTEMS

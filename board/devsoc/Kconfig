@@ -29,4 +29,7 @@ config PCI_IPQ
 
 config USB_XHCI_IPQ
 	bool "Enable usb support"
+
+config IPQ_I2C
+	bool "Enable i2c support"
 endif
