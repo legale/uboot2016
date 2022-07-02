@@ -188,11 +188,20 @@ extern loff_t board_env_size;
 #undef CONFIG_GZIP
 #undef CONFIG_ZLIB
 
-#define CONFIG_CMD_BOOTZ
+#ifdef CONFIG_IPQ_TINY
 
+/* undef gzip lib */
+#undef CONFIG_GZIP
+#undef CONFIG_ZLIB
+
+#else
+
+#define CONFIG_CMD_BOOTZ
 
 /* Mii command support */
 #define CONFIG_CMD_MII
+
+#endif
 
 /*
 * Ethernet Configs
@@ -206,7 +215,6 @@ extern loff_t board_env_size;
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_MII
-#define CONFIG_CMD_MII
 #define CONFIG_IPADDR          192.168.10.10
 #define CONFIG_NETMASK         255.255.255.0
 #define CONFIG_SERVERIP        192.168.10.1
