@@ -721,6 +721,7 @@ void qca8084_clk_rate_set(const char *clock_id, uint32_t rate)
 	qca8084_clk_update(cmd_reg);
 }
 
+#ifdef CONFIG_QCA8084_DEBUG
 void qca8084_port5_uniphy0_clk_src_get(uint8_t *bypass_en)
 {
 	uint32_t reg_val = 0;
@@ -855,6 +856,7 @@ U_BOOT_CMD(
 	"qca8084_clk_dump	- dump all the qca8084 clocks\n"
 	"This command can be used to check if clocks are all as expected\n"
 );
+#endif  /* CONFIG_QCA8084_DEBUG */
 
 void qca8084_port5_uniphy0_clk_src_set(uint8_t bypass_en)
 {

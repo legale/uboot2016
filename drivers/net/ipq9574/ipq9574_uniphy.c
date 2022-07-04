@@ -551,7 +551,7 @@ static void ppe_uniphy_uqxgmii_mode_set(uint32_t uniphy_index)
 	/* enable uniphy eee transparent mode*/
 	ppe_uniphy_uqxgmii_eee_set(uniphy_index);
 
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_PHY_MODE
 	/* phy interface mode configuration for qca8084 */
 	qca8084_phy_interface_mode_set();
 #endif

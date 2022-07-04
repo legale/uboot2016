@@ -35,13 +35,20 @@ extern void qca8084_phy_modify_mii(uint32_t phy_addr, uint32_t mii_reg,
 extern uint32_t ipq_mii_read(uint32_t reg);
 extern void ipq_mii_write(uint32_t reg, uint32_t val);
 extern void ipq_mii_update(uint32_t reg, uint32_t mask, uint32_t val);
-extern void qca8084_port_clk_rate_set(uint32_t qca8084_port_id, uint32_t rate);
 extern void qca8084_port_clk_en_set(uint32_t qca8084_port_id, uint8_t mask,
 				    uint8_t enable);
-extern void qca8084_uniphy_raw_clock_set(qca8084_clk_parent_t uniphy_clk, uint64_t rate);
 extern void qca8084_clk_assert(const char *clock_id);
-extern void qca8084_clk_deassert(const char *clock_id);
 extern void qca8084_port_clk_reset(uint32_t qca8084_port_id, uint8_t mask);
+extern void qca8084_port_clk_rate_set(uint32_t qca8084_port_id, uint32_t rate);
+
+#ifdef CONFIG_QCA8084_PHY_MODE
+extern void qca8084_clk_deassert(const char *clock_id);
+#endif
+
+#ifdef CONFIG_QCA8084_SWT_MODE
+extern void qca8084_uniphy_raw_clock_set(qca8084_clk_parent_t uniphy_clk,
+		uint64_t rate);
+#endif
 
 void qca8084_serdes_addr_get(uint32_t serdes_id, uint32_t *address)
 {
@@ -65,6 +72,51 @@ void qca8084_serdes_addr_get(uint32_t serdes_id, uint32_t *address)
 	}
 }
 
+static void qca8084_uniphy_calibration(uint32_t uniphy_addr)
+{
+	uint16_t uniphy_data = 0;
+	uint32_t retries = 100, calibration_done = 0;
+
+	/* wait calibration done to uniphy*/
+	while (calibration_done != QCA8084_UNIPHY_MMD1_CALIBRATION_DONE) {
+		mdelay(1);
+		if (retries-- == 0)
+			pr_debug("uniphy callibration time out!\n");
+		uniphy_data = qca8084_phy_mmd_read(uniphy_addr, QCA8084_UNIPHY_MMD1,
+			QCA8084_UNIPHY_MMD1_CALIBRATION4);
+
+		calibration_done = (uniphy_data & QCA8084_UNIPHY_MMD1_CALIBRATION_DONE);
+	}
+}
+
+void qca8084_port_speed_clock_set(uint32_t qca8084_port_id,
+				  fal_port_speed_t speed)
+{
+	uint32_t clk_rate = 0;
+
+	switch(speed)
+	{
+		case FAL_SPEED_2500:
+			clk_rate = UQXGMII_SPEED_2500M_CLK;
+			break;
+		case FAL_SPEED_1000:
+			clk_rate = UQXGMII_SPEED_1000M_CLK;
+			break;
+		case FAL_SPEED_100:
+			clk_rate = UQXGMII_SPEED_100M_CLK;
+			break;
+		case FAL_SPEED_10:
+			clk_rate = UQXGMII_SPEED_10M_CLK;
+			break;
+		default:
+			pr_debug("Unknown speed\n");
+			return;
+	}
+
+	qca8084_port_clk_rate_set(qca8084_port_id, clk_rate);
+}
+
+#ifdef CONFIG_QCA8084_PHY_MODE
 void qca8084_ephy_addr_get(uint32_t qca8084_port_id, uint32_t *phy_addr)
 {
 	uint32_t data = 0;
@@ -185,33 +237,6 @@ static void qca8084_uniphy_xpcs_modify_port_mmd(uint32_t qca8084_port_id,
 	qca8084_uniphy_xpcs_modify_mmd(mmd_id, mmd_reg, mask, value);
 }
 
-void qca8084_port_speed_clock_set(uint32_t qca8084_port_id,
-				  fal_port_speed_t speed)
-{
-	uint32_t clk_rate = 0;
-
-	switch(speed)
-	{
-		case FAL_SPEED_2500:
-			clk_rate = UQXGMII_SPEED_2500M_CLK;
-			break;
-		case FAL_SPEED_1000:
-			clk_rate = UQXGMII_SPEED_1000M_CLK;
-			break;
-		case FAL_SPEED_100:
-			clk_rate = UQXGMII_SPEED_100M_CLK;
-			break;
-		case FAL_SPEED_10:
-			clk_rate = UQXGMII_SPEED_10M_CLK;
-			break;
-		default:
-			pr_debug("Unknown speed\n");
-			return;
-	}
-
-	qca8084_port_clk_rate_set(qca8084_port_id, clk_rate);
-}
-
 static void qca8084_uniphy_xpcs_8023az_enable(void)
 {
 	uint16_t uniphy_data = 0;
@@ -248,23 +273,6 @@ static void qca8084_uniphy_xpcs_8023az_enable(void)
 	qca8084_uniphy_xpcs_modify_mmd(QCA8084_UNIPHY_MMD3,
 					QCA8084_UNIPHY_MMD3_EEE_MODE_CTRL,
 					0x3, QCA8084_UNIPHY_MMD3_EEE_EN);
-}
-
-static void qca8084_uniphy_calibration(uint32_t uniphy_addr)
-{
-	uint16_t uniphy_data = 0;
-	uint32_t retries = 100, calibration_done = 0;
-
-	/* wait calibration done to uniphy*/
-	while (calibration_done != QCA8084_UNIPHY_MMD1_CALIBRATION_DONE) {
-		mdelay(1);
-		if (retries-- == 0)
-			pr_debug("uniphy callibration time out!\n");
-		uniphy_data = qca8084_phy_mmd_read(uniphy_addr, QCA8084_UNIPHY_MMD1,
-			QCA8084_UNIPHY_MMD1_CALIBRATION4);
-
-		calibration_done = (uniphy_data & QCA8084_UNIPHY_MMD1_CALIBRATION_DONE);
-	}
 }
 
 static void qca8084_uniphy_xpcs_10g_r_linkup(void)
@@ -503,8 +511,9 @@ void qca8084_interface_uqxgmii_mode_set(void)
 	pr_debug("enable EEE for xpcs\n");
 	qca8084_uniphy_xpcs_8023az_enable();
 }
+#endif /* CONFIG_QCA8084_PHY_MODE */
 
-
+#ifdef CONFIG_QCA8084_SWT_MODE
 void qca8084_uniphy_sgmii_function_reset(u32 uniphy_index)
 {
 	u32 uniphy_addr = 0;
@@ -653,3 +662,4 @@ void qca8084_interface_sgmii_mode_set(u32 uniphy_index, u32 qca8084_port_id, mac
 
 	return;
 }
+#endif /* CONFIG_QCA8084_SWT_MODE */

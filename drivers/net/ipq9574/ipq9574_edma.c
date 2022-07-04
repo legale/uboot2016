@@ -60,12 +60,18 @@ extern int ipq_qca8033_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca8081_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca_aquantia_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_board_fw_download(unsigned int phy_addr);
+
+#ifdef CONFIG_QCA8084_PHY_MODE
 extern void ipq_qca8084_phy_hw_init(struct phy_ops **ops, u32 phy_addr);
 extern void qca8084_phy_uqxgmii_speed_fixup(uint32_t phy_addr, uint32_t qca8084_port_id,
 					    uint32_t status, fal_port_speed_t new_speed);
+#endif /* CONFIG_QCA8084_PHY_MODE */
+
+#ifdef CONFIG_QCA8084_SWT_MODE
 extern int ipq_qca8084_hw_init(phy_info_t * phy_info[]);
 extern int ipq_qca8084_link_update(phy_info_t * phy_info[]);
 extern void ipq_qca8084_switch_hw_reset(int gpio);
+#endif /* CONFIG_QCA8084_SWT_MODE */
 
 static int tftp_acl_our_port;
 static int qca8084_swt_enb = 0;
@@ -983,11 +989,13 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 				printf("Error: Wrong mode specified for SFP Port in DT\n");
 				return sfp_mode;
 			}
+#ifdef CONFIG_QCA8084_SWT_MODE
 		} else if (qca8084_swt_enb && (phy_info[i]->phy_type == QCA8084_PHY_TYPE)) {
 			if (!ipq_qca8084_link_update(swt_info))
 				linkup++;
 			i = PORT3;
 			continue;
+#endif /* CONFIG_QCA8084_SWT_MODE */
 		} else {
 			if (!priv->ops[i]) {
 				printf("Phy ops not mapped\n");
@@ -1068,11 +1076,13 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 							clk[0] = 0x409;
 							clk[2] = 0x509;
 						}
+#ifdef CONFIG_QCA8084_PHY_MODE
 					} else if (phy_info[i]->phy_type == QCA8084_PHY_TYPE) {
 						clk[0] = 0x213;
 						clk[1] = 0x18;
 						clk[2] = 0x313;
 						clk[3] = 0x18;
+#endif /* CONFIG_QCA8084_PHY_MODE */
 					}
 				}
 				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
@@ -1100,11 +1110,13 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 							clk[0] = 0x409;
 							clk[2] = 0x509;
 						}
+#ifdef CONFIG_QCA8084_PHY_MODE
 					} else if (phy_info[i]->phy_type == QCA8084_PHY_TYPE) {
 						clk[0] = 0x204;
 						clk[1] = 0x9;
 						clk[2] = 0x304;
 						clk[3] = 0x9;
+#endif /* CONFIG_QCA8084_PHY_MODE */
 					}
 				}
 				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
@@ -1138,9 +1150,11 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 							clk[0] = 0x401;
 							clk[2] = 0x501;
 						}
+#ifdef CONFIG_QCA8084_PHY_MODE
 					} else if (phy_info[i]->phy_type == QCA8084_PHY_TYPE) {
 						clk[0] = 0x204;
 						clk[2] = 0x304;
+#endif /* CONFIG_QCA8084_PHY_MODE */
 					}
 				}
 				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
@@ -1180,10 +1194,12 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 							clk[0] = 0x201;
 							clk[2] = 0x301;
 						}
+#ifdef CONFIG_QCA8084_PHY_MODE
 					} else if (phy_info[i]->phy_type == QCA8084_PHY_TYPE) {
 						mac_speed = 0x4;
 						clk[0] = 0x207;
 						clk[2] = 0x307;
+#endif /* CONFIG_QCA8084_PHY_MODE */
 					}
 				}
 				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
@@ -1269,9 +1285,11 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 
 		ipq9574_speed_clock_set(i, clk);
 
+#ifdef CONFIG_QCA8084_PHY_MODE
 		if (!qca8084_swt_enb && (phy_info[i]->phy_type == QCA8084_PHY_TYPE))
 			qca8084_phy_uqxgmii_speed_fixup(phy_info[i]->phy_address,
 					i + 1, status, curr_speed[i]);
+#endif /* CONFIG_QCA8084_PHY_MODE */
 
 		ipq9574_port_mac_clock_reset(i);
 
@@ -1888,7 +1906,9 @@ int ipq9574_edma_init(void *edma_board_cfg)
 #ifdef CONFIG_QCA8084_PHY
 	static int qca8084_init_done = 0;
 	int phy_type;
+#ifdef CONFIG_QCA8084_SWT_MODE
 	int qca8084_gpio, swt_node = -1, clk[4] = {0};
+#endif /* CONFIG_QCA8084_SWT_MODE */
 #endif
 	int node, phy_addr, mode, phy_node = -1, res = -1;
 	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
@@ -1911,7 +1931,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 		}
 	}
 
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node, "qca8084_switch_enable", 0);
 	qca8084_gpio =  fdtdec_get_uint(gd->fdt_blob, node, "qca808x_gpio", 0);
 	if (qca8084_swt_enb) {
@@ -2082,7 +2102,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 					ipq_qca8081_phy_init(&ipq9574_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_PHY_MODE
 				case QCA8084_PHY:
 					ipq_qca8084_phy_hw_init(&ipq9574_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
@@ -2116,6 +2136,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 		if (ret)
 			goto init_failed;
 
+#ifdef CONFIG_QCA8084_SWT_MODE
 		/** QCA8084 switch specific configurations */
 		if (qca8084_swt_enb) {
 			/** Force speed alder 1st port for QCA8084 switch mode */
@@ -2146,6 +2167,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 				goto init_failed;
 			}
 		}
+#endif
 
 		eth_register(dev[i]);
 	}

@@ -79,7 +79,7 @@ ipq_s17c_swt_cfg_t s17c_swt_cfg;
 
 static int tftp_acl_our_port;
 #ifndef CONFIG_DEVSOC_RUMI
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 static int qca8084_swt_enb = 0;
 static int qca8084_chip_detect = 0;
 #endif
@@ -924,7 +924,7 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 #ifndef CONFIG_DEVSOC_RUMI
 		if (phy_info[i]->phy_type == UNUSED_PHY_TYPE)
 			continue;
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 		else if ((qca8084_swt_enb && qca8084_chip_detect) &&
 				(phy_info[i]->phy_type == QCA8084_PHY_TYPE)) {
 			if (!ipq_qca8084_link_update(swt_info))
@@ -1714,7 +1714,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 #ifdef CONFIG_DEVSOC_QCA8075_PHY
 	static int sw_init_done = 0;
 #endif
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 	static int qca8084_init_done = 0;
 	int qca8084_gpio, clk[4] = {0};
 #endif
@@ -1743,7 +1743,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 		}
 	}
 
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node, "qca8084_switch_enable", 0);
 	if (qca8084_swt_enb) {
 		qca8084_gpio =  fdtdec_get_uint(gd->fdt_blob, node, "qca808x_gpio", 0);
@@ -1882,7 +1882,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 				printf("Error:Phy addresses not configured in DT\n");
 				goto init_failed;
 			}
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 			if (phy_info[phy_id]->phy_type == QCA8084_PHY_TYPE && !qca8084_init_done) {
 				ipq_phy_addr_fixup();
 				ipq_clock_init();
@@ -1930,7 +1930,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 					ipq_qca8081_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 				case QCA8084_PHY:
 					qca8084_chip_detect = 1;
 					break;
@@ -1972,7 +1972,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 			goto init_failed;
 
 #ifndef CONFIG_DEVSOC_RUMI
-#ifdef CONFIG_QCA8084_PHY
+#ifdef CONFIG_QCA8084_SWT_MODE
 		/** QCA8084 switch specific configurations */
 		if (qca8084_swt_enb && qca8084_chip_detect) {
 			/** Force speed devsoc 2nd port for QCA8084 switch mode */
