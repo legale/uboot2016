@@ -557,12 +557,12 @@ int qca8084_gpio_pin_cfg_get_oe(u32 pin, bool *oe)
 	return rv;
 }
 
-static inline enum qca8084_pin_config_param pinconf_to_config_param(unsigned long config)
+static enum qca8084_pin_config_param pinconf_to_config_param(unsigned long config)
 {
 	return (enum qca8084_pin_config_param) (config & 0xffUL);
 }
 
-static inline u32 pinconf_to_config_argument(unsigned long config)
+static u32 pinconf_to_config_argument(unsigned long config)
 {
 	return (u32) ((config >> 8) & 0xffffffUL);
 }
@@ -722,7 +722,7 @@ static int qca8084_reg_field_set(u32 reg_addr, u32 bit_offset,
 	return 0;
 }
 
-static inline void ipq_qca8084_switch_reset(void)
+static void ipq_qca8084_switch_reset(void)
 {
 	/* Reset switch core */
 	qca8084_clk_reset(QCA8084_SWITCH_CORE_CLK);

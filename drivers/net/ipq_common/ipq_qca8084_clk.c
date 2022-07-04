@@ -390,7 +390,7 @@ static struct clk_lookup qca8084_clk_lookup_table[] = {
 	CLK_LOOKUP(0, 0, 0x30c, BIT(0), QCA8084_UNIPHY_XPCS_RST, NULL, 0, NULL, 0),
 };
 
-static inline struct clk_lookup *qca8084_clk_find(const char *clock_id)
+static struct clk_lookup *qca8084_clk_find(const char *clock_id)
 {
 	int i;
 	struct clk_lookup *clk;
@@ -404,7 +404,7 @@ static inline struct clk_lookup *qca8084_clk_find(const char *clock_id)
 	return NULL;
 }
 
-static inline void qca8084_clk_update(uint32_t cmd_reg)
+static void qca8084_clk_update(uint32_t cmd_reg)
 {
 	uint32_t i, reg_val;
 
@@ -933,7 +933,7 @@ void qca8084_port_clk_rate_set(uint32_t qca8084_port_id, uint32_t rate)
 	return;
 }
 
-static inline void qca8084_clk_ids_get(uint32_t qca8084_port_id,
+static void qca8084_clk_ids_get(uint32_t qca8084_port_id,
 		uint8_t mask, char **clk_ids)
 {
 	switch (qca8084_port_id) {

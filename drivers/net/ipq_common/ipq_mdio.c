@@ -171,7 +171,7 @@ int ipq_phy_read(struct mii_dev *bus,
 }
 
 #ifdef CONFIG_QCA8084_PHY
-static inline void split_addr(uint32_t regaddr, uint16_t *r1, uint16_t *r2,
+static void split_addr(uint32_t regaddr, uint16_t *r1, uint16_t *r2,
 			       uint16_t *page, uint16_t *switch_phy_id)
 {
 	*r1 = regaddr & 0x1c;
@@ -233,7 +233,7 @@ void ipq_mii_update(uint32_t reg, uint32_t mask, uint32_t val)
 		ipq_mii_write(reg, new_val);
 }
 
-static inline void ipq_clk_enable(uint32_t reg)
+static void ipq_clk_enable(uint32_t reg)
 {
 	u32 val;
 
@@ -242,7 +242,7 @@ static inline void ipq_clk_enable(uint32_t reg)
 	ipq_mii_write(reg, val);
 }
 
-static inline void ipq_clk_disable(uint32_t reg)
+static void ipq_clk_disable(uint32_t reg)
 {
 	u32 val;
 
@@ -251,7 +251,7 @@ static inline void ipq_clk_disable(uint32_t reg)
 	ipq_mii_write(reg, val);
 }
 
-static inline void ipq_clk_reset(uint32_t reg)
+static void ipq_clk_reset(uint32_t reg)
 {
 	u32 val;
 
