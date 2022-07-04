@@ -40,7 +40,6 @@ extern int ipq9574_edma_init(void *cfg);
 extern int ipq_spi_init(u16);
 
 unsigned int qpic_frequency = 0, qpic_phase = 0;
-extern unsigned int qpic_training_offset;
 static int aq_phy_initialised = 0;
 extern unsigned ipq_runtime_fs_feature_enabled;
 
@@ -88,30 +87,6 @@ void fdt_fixup_runtime_failsafe(void *blob)
 	}
 }
 #endif
-
-void fdt_fixup_qpic(void *blob)
-{
-	int node_off, ret;
-	const char *qpic_node = {"/soc/nand@79b0000"};
-
-	/* This fixup is for passing qpic training offset to HLOS */
-	node_off = fdt_path_offset(blob, qpic_node);
-	if (node_off < 0) {
-		printf("%s: QPIC: unable to find node '%s'\n",
-				__func__, qpic_node);
-		return;
-	}
-
-	if (qpic_training_offset != 0xBAD0FF5E){
-		ret = fdt_setprop_u32(blob, node_off, "qcom,training_offset",
-			qpic_training_offset);
-		if (ret) {
-			printf("%s : Unable to set property 'qcom,training_offset'\n",
-					__func__);
-			return;
-		}
-	}
-}
 
 void board_nand_init(void)
 {

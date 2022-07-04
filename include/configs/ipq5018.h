@@ -162,6 +162,7 @@ extern loff_t board_env_size;
 #endif
 
 #ifdef CONFIG_QPIC_SERIAL
+#define CONFIG_QPIC_NODE			"/soc/qpic-nand@79b0000/"
 #ifdef QSPI_SERIAL_DEBUG /* QSPI DEBUG */
 #define qspi_debug(fmt,args...)	printf (fmt ,##args)
 #else
