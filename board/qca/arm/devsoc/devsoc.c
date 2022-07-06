@@ -79,9 +79,11 @@ struct dumpinfo_t dumpinfo_n[] = {
 	 */
 
 	{ "EBICS0.BIN", 0x40000000, 0x10000000, 0 },
+#ifndef CONFIG_IPQ_TINY
 	{ "EBICS2.BIN", 0x60000000, 0x20000000, 0, 0, 0, 0, 1 },
 	{ "EBICS1.BIN", CONFIG_UBOOT_END_ADDR, 0x10000000, 0, 0, 0, 0, 1 },
 	{ "EBICS0.BIN", 0x40000000, CONFIG_QCA_UBOOT_OFFSET, 0, 0, 0, 0, 1 },
+#endif
 	{ "IMEM.BIN", 0x08600000, 0x00001000, 0 },
 	{ "UNAME.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
 	{ "CPU_INFO.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
@@ -100,9 +102,11 @@ int dump_entries_n = ARRAY_SIZE(dumpinfo_n);
 struct dumpinfo_t dumpinfo_s[] = {
 	{ "EBICS_S0.BIN", 0x40000000, 0xA600000, 0 },
 	{ "EBICS_S1.BIN", CONFIG_TZ_END_ADDR, 0x10000000, 0 },
+#ifndef CONFIG_IPQ_TINY
 	{ "EBICS_S2.BIN", 0x50000000, 0x10000000, 0, 0, 0, 0, 1 },
 	{ "EBICS_S1.BIN", CONFIG_UBOOT_END_ADDR, 0x5B00000, 0, 0, 0, 0, 1 },
 	{ "EBICS_S0.BIN", 0x40000000, CONFIG_QCA_UBOOT_OFFSET, 0, 0, 0, 0, 1 },
+#endif
 	{ "IMEM.BIN", 0x08600000, 0x00001000, 0 },
 	{ "UNAME.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
 	{ "CPU_INFO.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },

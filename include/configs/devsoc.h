@@ -185,9 +185,6 @@ extern loff_t board_env_size;
 
 #define NUM_ALT_PARTITION			16
 
-#undef CONFIG_GZIP
-#undef CONFIG_ZLIB
-
 #ifdef CONFIG_IPQ_TINY
 
 /* undef gzip lib */
@@ -200,6 +197,10 @@ extern loff_t board_env_size;
 
 /* Mii command support */
 #define CONFIG_CMD_MII
+
+/* compress crash dump support */
+#define CONFIG_CMD_ZIP
+#define CONFIG_GZIP_COMPRESSED
 
 #endif
 
