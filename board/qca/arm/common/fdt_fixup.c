@@ -884,6 +884,10 @@ __weak void fdt_fixup_bt_debug(void *blob)
 {
 	return;
 }
+__weak void fdt_fixup_flash(void *blob)
+{
+	return;
+}
 
 __weak void fdt_fixup_qpic(void *blob)
 {
@@ -1154,6 +1158,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 #ifdef CONFIG_IPQ_FDT_FIXUP
 	ipq_fdt_fixup(blob);
 #endif
+	fdt_fixup_flash(blob);
 	fdt_fixup_ethernet(blob);
 	ipq_fdt_fixup_usb_device_mode(blob);
 	fdt_fixup_auto_restart(blob);
