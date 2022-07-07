@@ -110,3 +110,13 @@ config ZYNQ_GEM
 	  This MAC is present in Xilinx Zynq and ZynqMP SoCs.
 
 endif # NETDEVICES
+
+config IPQ_QCA_AQUANTIA_PHY
+	bool "Aquantia PHY support"
+	help
+	  Enable Aquantia PHY support.
+
+config ATHRS17C_SWITCH
+	bool "QTI S17C switch support"
+	help
+	  Enable QTI S17C switch support.

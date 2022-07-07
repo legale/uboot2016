@@ -24,13 +24,9 @@
 #include <asm/io.h>
 #include <malloc.h>
 #include <phy.h>
-#include <net.h>
 #include <miiphy.h>
 
-
 #define DEVSOC_PPE_BASE_ADDR			0x3a000000
-#define PORT1					1
-#define PORT2					2
 
 #define DEVSOC_PORT5_MUX_PCS_UNIPHY0		0x0
 #define DEVSOC_PORT5_MUX_PCS_UNIPHY1		0x1
