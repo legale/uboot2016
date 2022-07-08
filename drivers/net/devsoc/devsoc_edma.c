@@ -1723,12 +1723,13 @@ int devsoc_edma_init(void *edma_board_cfg)
 #endif
 	int node, phy_addr, mode, phy_node = -1, res = -1;
 	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
-
+#endif
 	/*
 	 * Init non cache buffer
 	 */
 	noncached_init();
 
+#ifndef CONFIG_DEVSOC_RUMI
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
 
 	if (node >= 0) {
