@@ -407,6 +407,11 @@ extern loff_t board_env_size;
 #define CONFIG_DM_I2C
 #endif
 
+/*
+ * ELF authentication
+ */
+#define CONFIG_IPQ_ELF_AUTH
+
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
 #undef CONFIG_BOOTM_RTEMS
