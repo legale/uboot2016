@@ -349,6 +349,7 @@ int i2c_read_data(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int alen, 
 	uint32_t *fifo;
 	int idx = 0;
 	int cfg;
+	int fs_div, hs_div;
 
 	config_i2c_state(QUP_STATE_RESET);
 
@@ -383,9 +384,18 @@ int i2c_read_data(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int alen, 
 		goto out;
 	}
 
+	hs_div = 3;
+
 	/* Configure the I2C Master clock */
-	cfg = ((src_clk_freq / (I2C_CLK_100KHZ * 2)) - 3) & 0xff;
-	writel(cfg, i2c_base_addr + QUP_I2C_MASTER_CLK_CTL_OFFSET);
+	if (src_clk_freq <= I2C_STANDARD_CLK) {
+		fs_div = ((QUP_I2C_SRC_CLK_50MHZ / src_clk_freq) / 2) - 3;
+		cfg = (hs_div << 8) | (fs_div & 0xff);
+		writel(cfg, i2c_base_addr + QUP_I2C_MASTER_CLK_CTL_OFFSET);
+	} else {
+		fs_div = ((QUP_I2C_SRC_CLK_50MHZ / src_clk_freq) - 6) * 2 / 3;
+		cfg = ((fs_div / 2) << 16) | (hs_div << 8) | (fs_div & 0xff);
+		writel(cfg, i2c_base_addr + QUP_I2C_MASTER_CLK_CTL_OFFSET);
+	}
 
 	/* Write to FIFO in Pause State */
 	/* Set to PAUSE state */
@@ -657,6 +667,8 @@ int i2c_write_data(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int alen,
 	uint32_t *fifo;
 	uint32_t cfg;
 
+	int fs_div, hs_div;
+
 	/* Set to Reset State */
 	ret = config_i2c_state(QUP_STATE_RESET);
 
@@ -685,9 +697,18 @@ int i2c_write_data(struct i2c_qup_bus *i2c_bus, uchar chip, uint addr, int alen,
 		goto out;
 	}
 
+	hs_div = 3;
+
 	/* Configure the I2C Master clock */
-	cfg = ((src_clk_freq / (I2C_CLK_100KHZ * 2)) - 3) & 0xff;
-	writel(cfg, i2c_base_addr + QUP_I2C_MASTER_CLK_CTL_OFFSET);
+	if (src_clk_freq <= I2C_STANDARD_CLK) {
+		fs_div = ((QUP_I2C_SRC_CLK_50MHZ / src_clk_freq) / 2) - 3;
+		cfg = (hs_div << 8) | (fs_div & 0xff);
+		writel(cfg, i2c_base_addr + QUP_I2C_MASTER_CLK_CTL_OFFSET);
+	} else {
+		fs_div = ((QUP_I2C_SRC_CLK_50MHZ / src_clk_freq) - 6) * 2 / 3;
+		cfg = ((fs_div / 2) << 16) | (hs_div << 8) | (fs_div & 0xff);
+		writel(cfg, i2c_base_addr + QUP_I2C_MASTER_CLK_CTL_OFFSET);
+	}
 
 
 	/* Write to FIFO in Pause State */
