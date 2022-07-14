@@ -434,6 +434,16 @@ extern loff_t board_env_size;
 #endif
 
 /*
+ * TINY NOR 16M Profile
+ */
+#ifdef CONFIG_IPQ_TINY_SPI_NOR
+#define CONFIG_CMD_DISABLE_BASE
+#define CONFIG_CMD_DISABLE_BOOTP
+#define CONFIG_CMD_DISABLE_CHPART
+#define CONFIG_CMD_DISABLE_FDT
+#endif
+
+/*
  * ELF authentication
  */
 #define CONFIG_IPQ_ELF_AUTH

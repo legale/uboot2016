@@ -207,7 +207,9 @@ void fit_print_contents(const void *fit)
 			printf("%s Image %u (%s)\n", p, count++,
 			       fit_get_name(fit, noffset, NULL));
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 			fit_image_print(fit, noffset, p);
+#endif
 		}
 	}
 
@@ -242,6 +244,7 @@ void fit_print_contents(const void *fit)
 	}
 }
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 /**
  * fit_image_print_data() - prints out the hash node details
  * @fit: pointer to the FIT format image header
@@ -451,6 +454,7 @@ void fit_image_print(const void *fit, int image_noffset, const char *p)
 		}
 	}
 }
+#endif
 
 #endif /* !defined(CONFIG_SPL_BUILD) || defined(CONFIG_FIT_SPL_PRINT) */
 
@@ -547,6 +551,7 @@ int fit_image_get_node(const void *fit, const char *image_uname)
 	return noffset;
 }
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 /**
  * fit_image_get_os - get os id for a given component image node
  * @fit: pointer to the FIT format image header
@@ -674,6 +679,7 @@ int fit_image_get_comp(const void *fit, int noffset, uint8_t *comp)
 	*comp = genimg_get_comp_id(data);
 	return 0;
 }
+#endif
 
 /**
  * fit_image_get_load() - get load addr property for given component image node
@@ -1113,6 +1119,7 @@ int fit_all_image_verify(const void *fit)
 	return 1;
 }
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 /**
  * fit_image_check_os - check whether image node is of a given os type
  * @fit: pointer to the FIT format image header
@@ -1202,6 +1209,7 @@ int fit_image_check_comp(const void *fit, int noffset, uint8_t comp)
 		return 0;
 	return (comp == image_comp);
 }
+#endif
 
 /**
  * fdt_check_no_at() - Check for nodes whose names contain '@'
@@ -1563,7 +1571,9 @@ void fit_conf_print(const void *fit, int noffset, const char *p)
 
 static int fit_image_select(const void *fit, int rd_noffset, int verify)
 {
+#ifndef CONFIG_REDUCE_FOOTPRINT
 	fit_image_print(fit, rd_noffset, "   ");
+#endif
 
 	if (verify) {
 		puts("   Verifying Hash Integrity ... ");
@@ -1733,6 +1743,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 	}
 
 	bootstage_mark(bootstage_id + BOOTSTAGE_SUB_CHECK_ARCH);
+#ifndef CONFIG_REDUCE_FOOTPRINT
 #if !defined(USE_HOSTCC) && !defined(CONFIG_SANDBOX)
 	if (!fit_image_check_target_arch(fit, noffset)) {
 		puts("Unsupported Architecture\n");
@@ -1740,6 +1751,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 		return -ENOEXEC;
 	}
 #endif
+
 #if !defined(CONFIG_DTB_COMPRESSION)
 	if (image_type == IH_TYPE_FLATDT &&
 	    !fit_image_check_comp(fit, noffset, IH_COMP_NONE)) {
@@ -1747,8 +1759,13 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 		return -EPROTONOSUPPORT;
 	}
 #endif
+#endif
 
 	bootstage_mark(bootstage_id + BOOTSTAGE_SUB_CHECK_ALL);
+#ifdef CONFIG_REDUCE_FOOTPRINT
+	type_ok = 1;
+	os_ok = 1;
+#else
 	type_ok = fit_image_check_type(fit, noffset, image_type) ||
 		(image_type == IH_TYPE_KERNEL &&
 			fit_image_check_type(fit, noffset,
@@ -1757,6 +1774,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 	os_ok = image_type == IH_TYPE_FLATDT ||
 		fit_image_check_os(fit, noffset, IH_OS_LINUX) ||
 		fit_image_check_os(fit, noffset, IH_OS_OPENRTOS);
+#endif
 
 	/*
 	 * If either of the checks fail, we should report an error, but

@@ -363,7 +363,9 @@ int do_bootm_linux(int flag, int argc, char * const argv[],
 		return 0;
 	}
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 	boot_prep_linux(images);
+#endif
 	boot_jump_linux(images, flag);
 	return 0;
 }

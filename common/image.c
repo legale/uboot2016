@@ -623,6 +623,7 @@ const char *genimg_get_comp_name(uint8_t comp)
 					comp));
 }
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 /**
  * get_table_entry_id - translate short entry name to id
  * @table: pointer to a translation table for entries of a specific type
@@ -674,6 +675,7 @@ int genimg_get_comp_id(const char *name)
 {
 	return (get_table_entry_id(uimage_comp, "Compression", name));
 }
+#endif
 
 #ifndef USE_HOSTCC
 /**
