@@ -441,6 +441,9 @@ extern loff_t board_env_size;
 #define CONFIG_CMD_DISABLE_BOOTP
 #define CONFIG_CMD_DISABLE_CHPART
 #define CONFIG_CMD_DISABLE_FDT
+#define CONFIG_FIT_DISABLE_MD5
+#define CONFIG_FIT_DISABLE_SHA1
+#define CONFIG_FIT_DISABLE_SHA256
 #endif
 
 /*
