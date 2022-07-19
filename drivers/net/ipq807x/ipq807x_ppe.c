@@ -170,9 +170,9 @@ static void ipq807x_gmac_enable(void)
 }
 
 /*
- * ipq807x_gmac_port_enable()
+ * ipq807x_gmac_port_disable()
  */
-static void ipq807x_gmac_port_enable(int port)
+void ipq807x_gmac_port_disable(int port)
 {
 	ipq807x_ppe_reg_write(IPQ807X_PPE_MAC_ENABLE + (0x200 * port), 0x70);
 	ipq807x_ppe_reg_write(IPQ807X_PPE_MAC_SPEED + (0x200 * port), 0x2);
@@ -1311,7 +1311,7 @@ void ipq807x_ppe_provision_init(void)
 	ipq807x_ppe_interface_mode_init();
 	/* Port 0-5 enable */
 	for (i = 0; i < 6; i++) {
-		ipq807x_gmac_port_enable(i);
+		ipq807x_gmac_port_disable(i);
 		ppe_port_bridge_txmac_set(i + 1, 1);
 	}
 

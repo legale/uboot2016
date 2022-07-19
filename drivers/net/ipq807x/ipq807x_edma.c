@@ -882,6 +882,7 @@ static int ipq807x_eth_init(struct eth_device *eth_dev, bd_t *this)
 	struct ipq807x_eth_dev *priv = eth_dev->priv;
 	struct ipq807x_edma_common_info *c_info = priv->c_info;
 	struct ipq807x_edma_hw *ehw = &c_info->hw;
+	static int current_active_port = -1, previous_active_port = -1;
 	int i;
 	uint32_t data;
 	u8 status;
@@ -896,6 +897,7 @@ static int ipq807x_eth_init(struct eth_device *eth_dev, bd_t *this)
 	int sfp_port = -1;
 	int phy_node = -1;
 	int ret_sgmii_mode;
+	char *active_port = NULL;
 
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
 	if (node >= 0)
@@ -908,12 +910,38 @@ static int ipq807x_eth_init(struct eth_device *eth_dev, bd_t *this)
 		 sfp_port = fdtdec_get_uint(gd->fdt_blob, node, "sfp_port", -1);
 
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
+
+	active_port = getenv("active_port");
+	if (active_port != NULL) {
+		current_active_port = simple_strtol(active_port, NULL, 10);
+		if (current_active_port < 0 || current_active_port > 5)
+			printf("active_port must be in the range of 0 to 5 in ipq807x platform\n");
+	} else {
+		current_active_port = -1;
+	}
+
+	if (previous_active_port != current_active_port && current_active_port != -1) {
+		previous_active_port = current_active_port;
+		printf("Port%d has been set as the active_port\n", current_active_port);
+	}
+
 	/*
 	 * Check PHY link, speed, Duplex on all phys.
 	 * we will proceed even if single link is up
 	 * else we will return with -1;
 	 */
 	for (i =  0; i < PHY_MAX; i++) {
+		if (current_active_port != -1 && i != current_active_port) {
+			ipq807x_gmac_port_disable(i);
+			ppe_port_bridge_txmac_set(i + 1, 1);
+
+			/*
+			 * Note that only for the active port TX/RX MAC would be
+			 * enabled and for all other ports, the same would be
+			 * disabled.
+			 */
+			continue;
+		}
 
 		if (i == sfp_port) {
 			status = phy_status_get_from_ppe(i);
