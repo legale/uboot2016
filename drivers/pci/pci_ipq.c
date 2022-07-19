@@ -404,6 +404,22 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define PCIE_PHY_DELAY_MS			0xFFFFFFFF
 
+#if defined(CONFIG_IPQ9574)
+#define QCN_VENDOR_ID				0x17CB
+#define QCN9224_DEVICE_ID			0x1109
+#define MAX_UNWINDOWED_ADDRESS                  0x80000
+#define WINDOW_ENABLE_BIT                       0x40000000
+#define WINDOW_SHIFT                            19
+#define WINDOW_VALUE_MASK                       0x3F
+#define WINDOW_START                            MAX_UNWINDOWED_ADDRESS
+#define WINDOW_RANGE_MASK                       0x7FFFF
+
+#define QCN9224_PCIE_REMAP_BAR_CTRL_OFFSET      0x310C
+#define QCN9224_TCSR_SOC_HW_VERSION		0x1B00000
+#define QCN9224_TCSR_SOC_HW_VERSION_MASK	GENMASK(11,8)
+#define QCN9224_TCSR_SOC_HW_VERSION_SHIFT 	8
+#endif
+
 static unsigned int local_buses[] = { 0, 0 };
 struct pci_controller pci_hose[PCI_MAX_DEVICES];
 extern int get_soc_version(uint32_t *soc_ver_major, uint32_t *soc_ver_minor);
@@ -1041,7 +1057,6 @@ void ipq_pcie_config_cfgtype(uint32_t phyaddr)
 #define PCIE_ATU_LIMIT_OUTBOUND_7_GEN3			0xE10
 #define PCIE_ATU_LOWER_TARGET_OUTBOUND_7_GEN3		0xE14
 #define PCIE_ATU_UPPER_TARGET_OUTBOUND_7_GEN3		0xE18
-
 
 static void dw_pcie_writel_rc_gen3(uint32_t dbi_base, u32 val, u32 reg)
 {
@@ -1829,3 +1844,73 @@ void pci_init_board (void)
 		}
 	}
 }
+
+#if defined(CONFIG_IPQ9574)
+static struct pci_device_id supported_device[] = {
+	{QCN_VENDOR_ID, QCN9224_DEVICE_ID},
+	{}
+};
+
+static void pci_select_window(uint32_t base, uint32_t offset)
+{
+	u32 window = (offset >> WINDOW_SHIFT) & WINDOW_VALUE_MASK;
+	u32 prev_window = 0, curr_window = 0, prev_cleared_window = 0;
+
+	prev_window = readl(base + QCN9224_PCIE_REMAP_BAR_CTRL_OFFSET);
+
+	/* Clear out last 6 bits of window register */
+	prev_cleared_window = prev_window & ~(0x3f);
+
+	/* Write the new last 6 bits of window register. Only window 1 values
+	 * are changed. Window 2 and 3 are unaffected.
+	*/
+	curr_window = prev_cleared_window | window;
+
+	writel(WINDOW_ENABLE_BIT | curr_window, base +
+	       QCN9224_PCIE_REMAP_BAR_CTRL_OFFSET);
+}
+
+static int do_detect_qcn9224(cmd_tbl_t *cmdtp, int flag,
+			    int argc, char * const argv[])
+{
+	pci_dev_t devbusfn;
+	uint32_t qcn9224_version = 0;
+	struct pci_controller *hose;
+	pci_addr_t pci_mem_base, bar0_base;
+
+	devbusfn = pci_find_devices(supported_device, 0);
+	if (devbusfn == -1)
+		goto out;
+
+	hose = pci_bus_to_hose(PCI_BUS(devbusfn));
+	if(hose == NULL)
+		goto out;
+
+	/* PCI setup */
+	/* Get PCIe base address and map the EP registers to Base + 0x400000, BAR0 */
+	pci_mem_base = hose->regions[0].bus_start;
+	bar0_base = pci_mem_base + 0x400000;
+
+	pci_write_config_dword (devbusfn, PCI_COMMAND,
+			(PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER));
+
+	pci_write_config_dword (devbusfn, PCI_BASE_ADDRESS_0, bar0_base);
+
+	/* Read QCN9224 version */
+	pci_select_window(bar0_base, QCN9224_TCSR_SOC_HW_VERSION);
+
+	qcn9224_version = readl(bar0_base + WINDOW_START +
+				(QCN9224_TCSR_SOC_HW_VERSION & WINDOW_RANGE_MASK));
+
+	qcn9224_version = (qcn9224_version & QCN9224_TCSR_SOC_HW_VERSION_MASK) >>
+						QCN9224_TCSR_SOC_HW_VERSION_SHIFT;
+
+	setenv_ulong("qcn9224_version",(unsigned long)qcn9224_version);
+out:
+	return CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(detect_qcn9224, 1, 1, do_detect_qcn9224,
+	   "Detect qcn9224 version and populate it on qcn9224_version Env",
+	   "qcn9224_version will be zero if not attached else one / two");
+#endif
