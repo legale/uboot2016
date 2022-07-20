@@ -1273,6 +1273,7 @@ void ipq6018_ppe_provision_init(void)
 	ipq6018_ppe_vp_port_tbl_set(2, 3);
 	ipq6018_ppe_vp_port_tbl_set(3, 4);
 	ipq6018_ppe_vp_port_tbl_set(4, 5);
+	ipq6018_ppe_vp_port_tbl_set(5, 6);
 #endif
 
 	/* Unicast priority map */
