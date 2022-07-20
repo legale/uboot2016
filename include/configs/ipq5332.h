@@ -345,7 +345,6 @@ extern loff_t board_env_size;
 #define CONFIG_MMC_FORCE_CAP_4BIT_BUSWIDTH
 #endif
 
-#define CONFIG_IPQ_FDT_FIXUP
 #define CONFIG_FDT_FIXUP_PARTITIONS
 /*
  * PCIE Enable
@@ -459,6 +458,7 @@ extern loff_t board_env_size;
 #define CONFIG_DISABLE_RAMDISK
 #else
 #define CONFIG_IPQ_ELF_AUTH
+#define CONFIG_IPQ_FDT_FIXUP
 #endif
 
 /*
