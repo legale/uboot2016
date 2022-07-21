@@ -289,7 +289,7 @@ static int abortboot(int bootdelay)
 
 static void process_fdt_options(const void *blob)
 {
-#if defined(CONFIG_OF_CONTROL)
+#if defined(CONFIG_OF_CONTROL) && !defined(CONFIG_REDUCE_FOOTPRINT)
 	ulong addr;
 
 	/* Add an env variable to point to a kernel payload, if available */
@@ -324,7 +324,7 @@ const char *bootdelay_process(void)
 	s = getenv("bootdelay");
 	bootdelay = s ? (int)simple_strtol(s, NULL, 10) : CONFIG_BOOTDELAY;
 
-#ifdef CONFIG_OF_CONTROL
+#if defined(CONFIG_OF_CONTROL) && !defined(CONFIG_REDUCE_FOOTPRINT)
 	bootdelay = fdtdec_get_config_int(gd->fdt_blob, "bootdelay",
 			bootdelay);
 #endif
