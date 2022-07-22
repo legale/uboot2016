@@ -314,6 +314,7 @@ typedef struct {
 extern void ipq6018_ppe_provision_init(void);
 extern void ipq6018_port_mac_clock_reset(int port);
 extern void ipq6018_speed_clock_set(int port, int speed_clock1, int speed_clock2);
+extern void ipq6018_gmac_port_disable(int port);
 extern void ipq6018_pqsgmii_speed_set(int port, int speed, int status);
 extern void ipq6018_uxsgmii_speed_set(int port, int speed, int duplex, int status);
 extern void ppe_port_mux_mac_type_set(int port_id, int mode);
