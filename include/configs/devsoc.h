@@ -411,6 +411,7 @@ extern loff_t board_env_size;
  * ELF authentication
  */
 #define CONFIG_IPQ_ELF_AUTH
+#define CONFIG_VERSION_ROLLBACK_PARTITION_INFO
 
 #undef CONFIG_BOOTM_NETBSD
 #undef CONFIG_BOOTM_PLAN9
