@@ -447,7 +447,7 @@ static int do_ipq_mii(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	char op[2];
 	unsigned int reg = 0;
-	unsigned short data = 0;
+	unsigned int data = 0;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
@@ -487,7 +487,7 @@ static int do_ipq_mdio(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
 {
 	char		op[2];
 	unsigned int	addr = 0, reg = 0;
-	unsigned short	data = 0;
+	unsigned int	data = 0;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
