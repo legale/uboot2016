@@ -124,6 +124,18 @@ enum pcie_port_lane_mode_t{
 	 mdelay(delay);					\
 	 clrbits_le32(addr, value);			\
 
+#define GCC_PCIE3X2_BCR				(GCC_PCIE3X2_BASE+0x000)
+#define GCC_PCIE3X2_PHY_BCR			(GCC_PCIE3X2_BASE+0x060)
+
+#define GCC_PCIE3X1_0_BCR			(GCC_PCIE3X1_0_BASE+0x000)
+#define GCC_PCIE3X1_0_PHY_BCR			(GCC_PCIE3X1_0_BASE+0x060)
+
+#define GCC_PCIE3X1_1_BCR			(GCC_PCIE3X1_1_BASE+0x000)
+#define GCC_PCIE3X1_1_PHY_BCR			(GCC_PCIE3X1_1_BASE+0x030)
+
+#define GCC_PCIE_BCR_ENABLE			(1 << 0)
+#define GCC_PCIE_BLK_ARES			(1 << 0)
+
 /*
  * SMEM
  */
@@ -238,6 +250,7 @@ void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
 		int req_clk_src_type);
 #ifdef CONFIG_PCI_IPQ
 void board_pci_init(int id);
+void pcie_reset(int pcie_id);
 #endif
 unsigned int __invoke_psci_fn_smc(unsigned int, unsigned int,
 					 unsigned int, unsigned int);

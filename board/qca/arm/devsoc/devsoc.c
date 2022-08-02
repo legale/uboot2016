@@ -265,6 +265,55 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 #ifdef CONFIG_PCI_IPQ
+void pcie_reset(int pcie_id)
+{
+#ifdef QCA_CLOCK_ENABLE
+	u32 reg_val;
+
+	switch(pcie_id) {
+	case 0:
+		reg_val = readl(GCC_PCIE3X1_0_BCR);
+		writel(reg_val | GCC_PCIE_BCR_ENABLE, GCC_PCIE3X1_0_BCR);
+		mdelay(1);
+		writel(reg_val & (~GCC_PCIE_BCR_ENABLE), GCC_PCIE3X1_0_BCR);
+
+		reg_val = readl(GCC_PCIE3X1_0_PHY_BCR);
+		writel(reg_val | GCC_PCIE_BLK_ARES, GCC_PCIE3X1_0_PHY_BCR);
+		mdelay(1);
+		writel(reg_val & (~GCC_PCIE_BLK_ARES), GCC_PCIE3X1_0_PHY_BCR);
+
+		break;
+	case 1:
+		reg_val = readl(GCC_PCIE3X2_BCR);
+		writel(reg_val | GCC_PCIE_BCR_ENABLE, GCC_PCIE3X2_BCR);
+		mdelay(1);
+		writel(reg_val & (~GCC_PCIE_BCR_ENABLE), GCC_PCIE3X2_BCR);
+
+		reg_val = readl(GCC_PCIE3X2_PHY_BCR);
+		writel(reg_val | GCC_PCIE_BLK_ARES, GCC_PCIE3X2_PHY_BCR);
+		mdelay(1);
+		writel(reg_val & (~GCC_PCIE_BLK_ARES), GCC_PCIE3X2_PHY_BCR);
+
+		break;
+	case 2:
+		reg_val = readl(GCC_PCIE3X1_1_BCR);
+		writel(reg_val | GCC_PCIE_BCR_ENABLE, GCC_PCIE3X1_1_BCR);
+		mdelay(1);
+		writel(reg_val & (~GCC_PCIE_BCR_ENABLE), GCC_PCIE3X1_1_BCR);
+
+		reg_val = readl(GCC_PCIE3X1_1_PHY_BCR);
+		writel(reg_val | GCC_PCIE_BLK_ARES, GCC_PCIE3X1_1_PHY_BCR);
+		mdelay(1);
+		writel(reg_val & (~GCC_PCIE_BLK_ARES), GCC_PCIE3X1_1_PHY_BCR);
+
+		break;
+	}
+
+#else
+	return;
+#endif
+}
+
 void board_pci_init(int id)
 {
 	int node, gpio_node, ret, lane;
@@ -304,6 +353,7 @@ void board_pci_init(int id)
 		set_mdelay_clearbits_le32(pci_rst.end + 1, 0x1, 10);
 	}
 
+	pcie_reset(id);
 	pcie_v2_clock_init(id);
 
 	return;
