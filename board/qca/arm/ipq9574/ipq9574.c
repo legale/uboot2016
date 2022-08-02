@@ -1381,7 +1381,7 @@ unsigned int get_dts_machid(unsigned int machid)
 		case MACH_TYPE_IPQ9574_AP_AL02_C9:
 			return MACH_TYPE_IPQ9574_AP_AL02_C1;
 		case MACH_TYPE_IPQ9574_AP_AL02_C11:
-			return MACH_TYPE_IPQ9574_AP_AL02_C4;
+			return MACH_TYPE_IPQ9574_AP_AL02_C13;
 		case MACH_TYPE_IPQ9574_AP_AL02_C12:
                         return MACH_TYPE_IPQ9574_AP_AL02_C4;
 		case MACH_TYPE_IPQ9574_AP_AL02_C14:
