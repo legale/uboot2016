@@ -137,6 +137,15 @@ enum pcie_port_lane_mode_t{
 #define GCC_PCIE_BLK_ARES			(1 << 0)
 
 /*
+ * QFPROM Register for SKU Validation
+ */
+#define QFPROM_CORR_FEATURE_CONFIG_ROW1_MSB	0xA4024
+
+#define PCIE_0_CLOCK_DISABLE_BIT		11
+#define PCIE_1_CLOCK_DISABLE_BIT		12
+#define PCIE_2_CLOCK_DISABLE_BIT		10
+
+/*
  * SMEM
  */
 #ifdef CONFIG_SMEM_VERSION_C

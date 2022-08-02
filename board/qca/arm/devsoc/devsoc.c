@@ -314,6 +314,31 @@ void pcie_reset(int pcie_id)
 #endif
 }
 
+int ipq_validate_qfrom_fuse(unsigned int reg_add, int pos)
+{
+	return (readl(reg_add) & (1 << pos));
+}
+
+int ipq_sku_pci_validation(int id)
+{
+	int pos = 0;
+
+	switch(id){
+	case 0:
+		pos = PCIE_0_CLOCK_DISABLE_BIT;
+	break;
+	case 1:
+		pos = PCIE_1_CLOCK_DISABLE_BIT;
+	break;
+	case 2:
+		pos = PCIE_2_CLOCK_DISABLE_BIT;
+	break;
+	}
+
+	return ipq_validate_qfrom_fuse(
+			QFPROM_CORR_FEATURE_CONFIG_ROW1_MSB, pos);
+}
+
 void board_pci_init(int id)
 {
 	int node, gpio_node, ret, lane;
