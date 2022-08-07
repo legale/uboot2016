@@ -791,7 +791,7 @@ class Pack(object):
     def __gen_flash_script_wififw_ubi_volume_qcn9224_v1(self, entries, fw_filename, wifi_fw_type, script):
 
         script.append("detect_qcn9224", fatal=False)
-        script.append('if test "$qcn9224_version" = "1" || test "$qcn9224_version" = ""; then\n', fatal=False)
+        script.append('if test "$qcn9224_version" = "1" then\n', fatal=False)
 
         script.start_activity("Flashing " + fw_filename[:-13] + ":")
 	script.imxtract(fw_filename[:-13] + "-" + sha1(fw_filename))
@@ -977,7 +977,7 @@ class Pack(object):
 	    return 1
 
         script.append("detect_qcn9224", fatal=False)
-        script.append('if test "$qcn9224_version" = "1" || test "$qcn9224_version" = ""; then\n', fatal=False)
+        script.append('if test "$qcn9224_version" = "1" then\n', fatal=False)
 
 	script.start_activity("Flashing %s:" % ( filename[:-13] ))
 
