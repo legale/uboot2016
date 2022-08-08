@@ -1552,11 +1552,11 @@ class Pack(object):
 			   if filename == "":
 				continue
 			   wifi_fw_type = str(fw_type)
-                           if wifi_fw_type < wifi_fw_type_max:
+                           if wifi_fw_type < "7":
 			        ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
 			        if ret == 0:
 			            return 0
-                           elif wifi_fw_type == wifi_fw_type_max:
+                           elif wifi_fw_type == "7":
                                 ret = self.__gen_flash_script_wififw_qcn9224_v1(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
                                 if ret == 0:
                                     return 0
