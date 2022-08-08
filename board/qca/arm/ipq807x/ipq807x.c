@@ -1841,10 +1841,12 @@ int bring_sec_core_up(unsigned int cpuid, unsigned int entry, unsigned int arg)
 	return 0;
 }
 
+#ifndef CONFIG_CMD_DISABLE_EXECTZT
 void run_tzt(void *address)
 {
 	execute_tzt(address);
 }
+#endif
 
 void sdi_disable(void)
 {

@@ -226,9 +226,12 @@ typedef struct {
 #define	SCM_RW_OP   2
 #define	SCM_BUF_VAL 3
 
+#ifndef CONFIG_DISABLE_KERNEL64
 void __attribute__ ((noreturn)) jump_kernel64(void *kernel_entry,
 		void *fdt_addr);
+#endif
 
-
+#ifndef CONFIG_CMD_DISABLE_EXECTZT
 void __attribute__ ((noreturn)) execute_tzt(void *entry_addr);
+#endif
 #endif

@@ -2063,10 +2063,12 @@ void fdt_fixup_art_format(void *blob)
 }
 #endif
 
+#ifndef CONFIG_CMD_DISABLE_EXECTZT
 void run_tzt(void *address)
 {
 	execute_tzt(address);
 }
+#endif
 
 void fdt_fixup_set_dload_warm_reset(void *blob)
 {
