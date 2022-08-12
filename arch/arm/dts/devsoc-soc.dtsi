@@ -48,28 +48,21 @@
 			blsp0_spi_clk {
 				gpio = <14>;
 				func = <1>;
-				pull = <GPIO_NO_PULL>;
 				oe = <GPIO_OE_ENABLE>;
-				drvstr = <GPIO_2MA>;
 			};
 			blsp0_spi_mosi {
 				gpio = <15>;
 				func = <1>;
-				pull = <GPIO_NO_PULL>;
 				oe = <GPIO_OE_ENABLE>;
-				drvstr = <GPIO_2MA>;
 			};
 			blsp0_spi_miso {
 				gpio = <16>;
 				func = <1>;
-				pull = <GPIO_NO_PULL>;
-				drvstr = <GPIO_2MA>;
 			};
 			blsp0_spi_cs {
 				gpio = <17>;
 				func = <1>;
 				oe = <GPIO_OE_ENABLE>;
-				drvstr = <GPIO_2MA>;
 			};
 		};
 	};

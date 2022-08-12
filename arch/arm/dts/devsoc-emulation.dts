@@ -36,17 +36,12 @@
 				gpio = <18>;
 				func = <1>;
 				pull = <GPIO_PULL_DOWN>;
-				oe = <GPIO_OE_DISABLE>;
 				drvstr = <GPIO_8MA>;
-				od_en = <GPIO_OD_DISABLE>;
 			};
 			blsp0_uart_tx {
 				gpio = <19>;
 				func = <1>;
-				pull = <GPIO_NO_PULL>;
-				oe = <GPIO_OE_DISABLE>;
 				drvstr = <GPIO_8MA>;
-				od_en = <GPIO_OD_DISABLE>;
 			};
 		};
 	};
@@ -61,41 +56,31 @@
 			qspi_dat3 {
 				gpio = <8>;
 				func = <2>;
-				pull = <GPIO_NO_PULL>;
-				od_en = <GPIO_OD_DISABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			qspi_dat2 {
 				gpio = <9>;
 				func = <2>;
-				pull = <GPIO_NO_PULL>;
-				od_en = <GPIO_OD_DISABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			qspi_dat1 {
 				gpio = <10>;
 				func = <2>;
-				pull = <GPIO_NO_PULL>;
-				od_en = <GPIO_OD_DISABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			qspi_dat0 {
 				gpio = <11>;
 				func = <2>;
-				pull = <GPIO_NO_PULL>;
-				od_en = <GPIO_OD_DISABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			qspi_cs_n {
 				gpio = <12>;
 				func = <2>;
-				od_en = <GPIO_OD_DISABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			qspi_clk {
 				gpio = <13>;
 				func = <2>;
-				od_en = <GPIO_OD_DISABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 		};
@@ -108,16 +93,13 @@
 		pci_gpio {
 			pci_rst {
 				gpio = <42>;
-				func = <0>;
 				pull = <GPIO_PULL_UP>;
-				oe = <GPIO_OD_ENABLE>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			pci_clk {
 				gpio = <37>;
-				func = <0>;
-				pull = <GPIO_NO_PULL>;
-				oe = <GPIO_OD_ENABLE>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 		};
@@ -130,16 +112,13 @@
 		pci_gpio {
 			pci_rst {
 				gpio = <41>;
-				func = <0>;
 				pull = <GPIO_PULL_UP>;
-				oe = <GPIO_OD_ENABLE>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 			pci_clk {
 				gpio = <46>;
-				func = <0>;
-				pull = <GPIO_NO_PULL>;
-				oe = <GPIO_OD_ENABLE>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 		};
@@ -152,16 +131,12 @@
 		pci_gpio {
 			pci_rst {
 				gpio = <40>;
-				func = <0>;
 				pull = <GPIO_PULL_DOWN>;
-				oe = <GPIO_OD_ENABLE>;
-				drvstr = <GPIO_2MA>;
+				oe = <GPIO_OE_ENABLE>;
 			};
 			pci_clk {
 				gpio = <43>;
-				func = <0>;
-				pull = <GPIO_NO_PULL>;
-				oe = <GPIO_OD_ENABLE>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 		};
