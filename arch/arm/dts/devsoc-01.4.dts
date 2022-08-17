@@ -137,7 +137,7 @@
 			pci_rst {
 				gpio = <38>;
 				pull = <GPIO_PULL_UP>;
-				oe = <GPIO_OD_ENABLE>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 		};
