@@ -36,6 +36,7 @@
 #include <usb.h>
 #endif
 
+#define FLASH_SEL_BIT	7
 DECLARE_GLOBAL_DATA_PTR;
 
 extern int devsoc_edma_init(void *cfg);
@@ -115,6 +116,56 @@ struct dumpinfo_t dumpinfo_s[] = {
 	{ "WLAN_MOD.BIN", 0, 0, 0, 0, 0, MINIMAL_DUMP },
 };
 int dump_entries_s = ARRAY_SIZE(dumpinfo_s);
+
+void fdt_fixup_flash(void *blob)
+{
+	int node_off, ret;
+	char *flash = "/soc/nand@79b0000";
+
+	if (gd->bd->bi_arch_number == MACH_TYPE_DEVSOC_EMULATION)
+		return;
+
+	node_off = fdt_path_offset(gd->fdt_blob, "nand");
+	if (!fdtdec_get_is_enabled(gd->fdt_blob, node_off))
+		flash = "/soc/sdhci@7804000";
+
+	node_off = fdt_path_offset(blob, flash);
+	if (node_off >= 0) {
+		ret = fdt_setprop_string(blob, node_off, "status", "okay");
+		if (ret < 0)
+			printf("Unable to set status of %s\n", flash);
+	} else {
+		printf("%s: unable to find node %d\n", __func__, node_off);
+	}
+	return;
+}
+
+void ipq_uboot_fdt_fixup(void)
+{
+	int node, ret = 0;
+	char *flash;
+	void *blob = (void *)gd->fdt_blob;
+	ulong machid = gd->bd->bi_arch_number;
+
+	if (machid == MACH_TYPE_DEVSOC_EMULATION)
+		return;
+
+	/* fix peripherals required for basic board bring up
+	 * like flash etc.
+	 */
+	flash = ((machid >> FLASH_SEL_BIT) & 0x1) ? "mmc" : "nand";
+
+	node = fdt_path_offset(gd->fdt_blob, flash);
+	if (node >= 0) {
+		ret = fdt_setprop_string(blob, node, "status", "okay");
+		if (ret < 0 && ret != -FDT_ERR_NOSPACE)
+			printf("Unable to set status of %s\n", flash);
+	} else {
+		printf("%s node not available\n", flash);
+	}
+
+	return;
+}
 
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
@@ -231,6 +282,11 @@ int board_mmc_init(bd_t *bis)
 	if (node < 0) {
 		printf("sdhci: Node Not found, skipping initialization\n");
 		return -1;
+	}
+
+	if (!fdtdec_get_is_enabled(gd->fdt_blob, node)) {
+		printf("MMC: disabled, skipping initialization\n");
+		return ret;
 	}
 
 	gpio_node = fdt_subnode_offset(gd->fdt_blob, node, "mmc_gpio");
@@ -576,6 +632,18 @@ int ipq_board_usb_init(void)
 	return 0;
 }
 #endif
+
+unsigned int get_dts_machid(unsigned int machid)
+{
+	/* By default nand flash enabled, so flash
+	 * selection bit in mach id in dts is zero.
+	 * For emmc flash this bit will be setted,
+	 * so clear this bit to make machid similar
+	 * to dts mach id.
+	 */
+	machid &= ~(1 << FLASH_SEL_BIT);
+	return machid;
+}
 
 __weak int ipq_get_tz_version(char *version_name, int buf_size)
 {
