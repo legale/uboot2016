@@ -57,3 +57,60 @@ void i2c_clock_config(void)
 	}
 }
 #endif
+
+#if defined(CONFIG_QPIC_NAND) && defined(CONFIG_QSPI_SERIAL_TRAINING)
+__weak void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
+				int req_clk_src_type)
+{
+	switch (blk_type) {
+	case QPIC_IO_MACRO_CLK:
+		/* select the clk source for IO_PAD_MACRO
+		 * clk source wil be either XO = 24MHz. or GPLL0 = 800MHz.
+		 */
+		if (req_clk_src_type == XO_CLK_SRC) {
+			/* default XO clock will enabled
+			 * i.e XO clock = 24MHz.
+			 * so div value will 0.
+			 * Input clock to IO_MACRO will be divided by 4 by default
+			 * by hardware and then taht clock will be go on bus.
+			 * i.e 24/4MHz = 6MHz i.e 6MHz will go onto the bus.
+			 */
+			writel(0x0, GCC_QPIC_IO_MACRO_CFG_RCGR);
+
+		} else if (req_clk_src_type == GPLL0_CLK_SRC) {
+			/* selct GPLL0 clock source 800MHz
+			 * so 800/4 = 200MHz.
+			 * Input clock to IO_MACRO will be divided by 4 by default
+			 * by hardware and then that clock will be go on bus.
+			 * i.e 200/4MHz = 50MHz i.e 50MHz will go onto the bus.
+			 */
+			if (clk_rate == IO_MACRO_CLK_320_MHZ)
+			       writel(0x104, GCC_QPIC_IO_MACRO_CFG_RCGR);
+			else if (clk_rate == IO_MACRO_CLK_266_MHZ)
+				writel(0x105, GCC_QPIC_IO_MACRO_CFG_RCGR);
+			else if (clk_rate == IO_MACRO_CLK_228_MHZ)
+				writel(0x106, GCC_QPIC_IO_MACRO_CFG_RCGR);
+			else if (clk_rate == IO_MACRO_CLK_100_MHZ)
+				writel(0x10F, GCC_QPIC_IO_MACRO_CFG_RCGR);
+			else if (clk_rate == IO_MACRO_CLK_200_MHZ)
+				writel(0x107, GCC_QPIC_IO_MACRO_CFG_RCGR);
+		} else {
+			printf("wrong clk src selection requested.\n");
+		}
+
+		/* Enablle update bit to update the new configuration */
+		writel((UPDATE_EN | readl(GCC_QPIC_IO_MACRO_CMD_RCGR)),
+				GCC_QPIC_IO_MACRO_CMD_RCGR);
+
+		/* Enable the QPIC_IO_MACRO_CLK */
+		writel(0x1, GCC_QPIC_IO_MACRO_CBCR);
+		break;
+	case QPIC_CORE_CLK:
+	       /* To DO if needed for QPIC core clock setting */
+	       break;
+	default:
+	       printf("wrong qpic block type\n");
+	       break;
+	}
+}
+#endif

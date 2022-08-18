@@ -81,14 +81,6 @@ int uart_clock_config(struct ipq_serial_platdata *plat)
 	return 0;
 }
 
-#ifdef CONFIG_QPIC_NAND
-void qpic_set_clk_rate(unsigned int clk_rate, int blk_type,
-				int req_clk_src_type)
-{
-	return;
-}
-#endif
-
 #ifdef CONFIG_QCA_MMC
 void emmc_clock_init(void)
 {
