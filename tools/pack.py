@@ -381,7 +381,7 @@ class FlashScript(object):
         """Generate code, to indicate start of an activity."""
 
         self.script.append('if test "x$verbose" = "x"; then\n')
-        self.echo("'%-40.40s'" % activity, nl=False)
+        self.echo("'%-55.55s'" % activity, nl=False)
         self.script.append('else\n')
         self.echo("'%s %s Started'" % ("#" * 40, activity), verbose=True)
         self.script.append('fi\n')
@@ -790,6 +790,23 @@ class Pack(object):
 
     def __gen_flash_script_wififw_ubi_volume_qcn9224_v1(self, entries, fw_filename, wifi_fw_type, script):
 
+	machid_list = []
+	for section in entries:
+
+	    wififw_type = section.find('.//wififw_type')
+	    if wififw_type == None:
+		continue
+            wififw_type = str(section.find(".//wififw_type").text)
+
+            if str(1) == str(wififw_type):
+                continue
+
+	    machid = int(section.find(".//machid").text, 0)
+	    machid = "%x" % machid
+
+	    machid_list.append(machid)
+
+        script.start_if_or("machid", machid_list)
         script.append("setenv qcn9224_version 1 && detect_qcn9224", fatal=False)
         script.append('if test "$qcn9224_version" = "1"; then\n', fatal=False)
 
@@ -814,6 +831,8 @@ class Pack(object):
 	"""
 
 	script.finish_activity()
+        script.end_if()
+
         script.end_if()
 
 	return 1
@@ -922,7 +941,23 @@ class Pack(object):
 
     def __gen_flash_script_wififw_qcn9224_v1(self, entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check):
 
-	img_size = self.__get_img_size(filename)
+	machid_list = []
+	for section in entries:
+
+	    wififw_type = section.find('.//wififw_type')
+	    if wififw_type == None:
+		continue
+            wififw_type = str(section.find(".//wififw_type").text)
+
+            if str(1) == str(wififw_type):
+                continue
+
+	    machid = int(section.find(".//machid").text, 0)
+	    machid = "%x" % machid
+
+	    machid_list.append(machid)
+
+        img_size = self.__get_img_size(filename)
 	part_info = self.__get_part_info(partition)
 
 	section_label = partition.split(":")
@@ -976,6 +1011,7 @@ class Pack(object):
 	    print "Flash type is norplusemmc"
 	    return 1
 
+        script.start_if_or("machid", machid_list)
         script.append("setenv qcn9224_version 1 && detect_qcn9224", fatal=False)
         script.append('if test "$qcn9224_version" = "1"; then\n', fatal=False)
 
@@ -1004,6 +1040,8 @@ class Pack(object):
 		script.nand_write(offset, part_info.length, img_size, spi_nand)
 
         script.finish_activity()
+        script.end_if()
+
         script.end_if()
 
         return 1
@@ -1548,7 +1586,9 @@ class Pack(object):
                    for fw_type in range(int(wifi_fw_type_min), int(wifi_fw_type_max) + 1):
 
 			if image_type == "all" or section.attrib['image_type'] == image_type:
-			   filename = section.attrib['filename_img' + str(fw_type)]
+                           if 'filename_img' + str(fw_type) in section.attrib:
+			      filename = section.attrib['filename_img' + str(fw_type)]
+
 			   if filename == "":
 				continue
 			   wifi_fw_type = str(fw_type)
@@ -1561,6 +1601,7 @@ class Pack(object):
                                 if ret == 0:
                                     return 0
 			   wifi_fw_type = ""
+                           filename = ""
 
 		   wifi_fw_type_min = ""
 		   wifi_fw_type_max = "" # Clear for next partition
@@ -2036,7 +2077,8 @@ class Pack(object):
 
 		    for fw_type in range(int(wifi_fw_type_min), int(wifi_fw_type_max) + 1):
 			if image_type == "all" or section.attrib['image_type'] == image_type:
-			    filename = section.attrib['filename_img' + str(fw_type)]
+                            if 'filename_img' + str(fw_type) in section.attrib:
+			       filename = section.attrib['filename_img' + str(fw_type)]
 			if filename == "":
 			    continue
 			if 'optional' in section.attrib:
@@ -2045,6 +2087,7 @@ class Pack(object):
 			wifi_fw_type = str(fw_type)
 			self.__gen_script_append_images(filename, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
 			wifi_fw_type = ""
+                        filename = ""
 
 		    wifi_fw_type_min = ""
 		    wifi_fw_type_max = "" # Clean for next partition
