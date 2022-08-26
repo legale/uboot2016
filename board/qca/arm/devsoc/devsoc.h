@@ -104,8 +104,6 @@ extern const add_node_t add_fdt_node[];
 /*
  * weak function
  */
-__weak void aquantia_phy_reset_init_done(void) {}
-__weak void aquantia_phy_reset_init(void) {}
 __weak void qgic_init(void) {}
 __weak void handle_noc_err(void) {}
 __weak void board_pcie_clock_init(int id) {}
@@ -144,6 +142,27 @@ enum pcie_port_lane_mode_t{
 #define PCIE_0_CLOCK_DISABLE_BIT		11
 #define PCIE_1_CLOCK_DISABLE_BIT		12
 #define PCIE_2_CLOCK_DISABLE_BIT		10
+
+/*
+ * GPIO functional configs
+ */
+#define GPIO_DRV_2_MA				0x0 << 6
+#define GPIO_DRV_4_MA				0x1 << 6
+#define GPIO_DRV_6_MA				0x2 << 6
+#define GPIO_DRV_8_MA				0x3 << 6
+#define GPIO_DRV_10_MA				0x4 << 6
+#define GPIO_DRV_12_MA				0x5 << 6
+#define GPIO_DRV_14_MA				0x6 << 6
+#define GPIO_DRV_16_MA				0x7 << 6
+
+#define GPIO_OE					0x1 << 9
+
+#define GPIO_NO_PULL				0x0
+#define GPIO_PULL_DOWN				0x1
+#define GPIO_KEEPER				0x2
+#define GPIO_PULL_UP				0x3
+
+#define MDC_MDIO_FUNC_SEL			0x1 << 2
 
 /*
  * SMEM

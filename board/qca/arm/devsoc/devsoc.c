@@ -39,6 +39,7 @@
 #define FLASH_SEL_BIT	7
 DECLARE_GLOBAL_DATA_PTR;
 
+static int aq_phy_initialised = 0;
 extern int devsoc_edma_init(void *cfg);
 extern int ipq_spi_init(u16);
 
@@ -766,9 +767,160 @@ void set_flash_secondary_type(qca_smem_flash_info_t *smem)
 };
 
 #ifdef CONFIG_DEVSOC_EDMA
+int get_mdc_mdio_gpio(int mdc_mdio_gpio[2])
+{
+	int mdc_mdio_gpio_cnt = 2, node;
+	int res = -1;
+	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
+	if (node >= 0) {
+		res = fdtdec_get_int_array(gd->fdt_blob, node, "mdc_mdio_gpio",
+					   (u32 *)mdc_mdio_gpio, mdc_mdio_gpio_cnt);
+		if (res >= 0)
+			return mdc_mdio_gpio_cnt;
+	}
+
+	return res;
+}
+
+void set_function_select_as_mdc_mdio(void)
+{
+	int mdc_mdio_gpio[2] = {-1, -1}, mdc_mdio_gpio_cnt, i;
+	unsigned int *mdc_mdio_gpio_base;
+	uint32_t cfg;
+
+	mdc_mdio_gpio_cnt = get_mdc_mdio_gpio(mdc_mdio_gpio);
+	if (mdc_mdio_gpio_cnt >= 1) {
+		for (i = 0; i < mdc_mdio_gpio_cnt; i++) {
+			if (mdc_mdio_gpio[i] >=0) {
+				mdc_mdio_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(mdc_mdio_gpio[i]);
+				if (i == 0) {
+					cfg = GPIO_DRV_8_MA | MDC_MDIO_FUNC_SEL | GPIO_NO_PULL;
+					writel(cfg, mdc_mdio_gpio_base);
+				} else {
+					cfg = GPIO_DRV_8_MA | MDC_MDIO_FUNC_SEL | GPIO_PULL_UP;
+					writel(cfg, mdc_mdio_gpio_base);
+				}
+			}
+		}
+	}
+}
+
+int get_aquantia_gpio(int aquantia_gpio[2])
+{
+	int aquantia_gpio_cnt = -1, node;
+	int res = -1;
+
+	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
+	if (node >= 0) {
+		aquantia_gpio_cnt = fdtdec_get_uint(gd->fdt_blob, node, "aquantia_gpio_cnt", -1);
+		if (aquantia_gpio_cnt >= 1) {
+			res = fdtdec_get_int_array(gd->fdt_blob, node, "aquantia_gpio",
+						  (u32 *)aquantia_gpio, aquantia_gpio_cnt);
+			if (res >= 0)
+				return aquantia_gpio_cnt;
+		}
+	}
+
+	return res;
+}
+
+int get_qca808x_gpio(int qca808x_gpio[2])
+{
+	int qca808x_gpio_cnt = -1, node;
+	int res = -1;
+
+	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
+	if (node >= 0) {
+		qca808x_gpio_cnt = fdtdec_get_uint(gd->fdt_blob, node, "qca808x_gpio_cnt", -1);
+		if (qca808x_gpio_cnt >= 1) {
+			res = fdtdec_get_int_array(gd->fdt_blob, node, "qca808x_gpio",
+						  (u32 *)qca808x_gpio, qca808x_gpio_cnt);
+			if (res >= 0)
+				return qca808x_gpio_cnt;
+		}
+	}
+
+	return res;
+}
+
+void aquantia_phy_reset_init(void)
+{
+	int aquantia_gpio[2] = {-1, -1}, aquantia_gpio_cnt, i;
+	unsigned int *aquantia_gpio_base;
+	uint32_t cfg;
+
+	if (!aq_phy_initialised) {
+		aquantia_gpio_cnt = get_aquantia_gpio(aquantia_gpio);
+		if (aquantia_gpio_cnt >= 1) {
+			for (i = 0; i < aquantia_gpio_cnt; i++) {
+				if (aquantia_gpio[i] >= 0) {
+					aquantia_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(aquantia_gpio[i]);
+					cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
+					writel(cfg, aquantia_gpio_base);
+				}
+			}
+		}
+		aq_phy_initialised = 1;
+	}
+}
+
+void qca808x_phy_reset_init(void)
+{
+	int qca808x_gpio[2] = {-1, -1}, qca808x_gpio_cnt, i;
+	unsigned int *qca808x_gpio_base;
+	uint32_t cfg;
+
+	qca808x_gpio_cnt = get_qca808x_gpio(qca808x_gpio);
+	if (qca808x_gpio_cnt >= 1) {
+		for (i = 0; i < qca808x_gpio_cnt; i++) {
+			if (qca808x_gpio[i] >= 0) {
+				qca808x_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(qca808x_gpio[i]);
+				cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
+				writel(cfg, qca808x_gpio_base);
+			}
+		}
+	}
+}
+
+void aquantia_phy_reset_init_done(void)
+{
+	int aquantia_gpio[2] = {-1, -1}, aquantia_gpio_cnt, i;
+
+	aquantia_gpio_cnt = get_aquantia_gpio(aquantia_gpio);
+	if (aquantia_gpio_cnt >= 1) {
+		for (i = 0; i < aquantia_gpio_cnt; i++)
+			gpio_set_value(aquantia_gpio[i], 0x1);
+	}
+}
+
+void qca808x_phy_reset_init_done(void)
+{
+	int qca808x_gpio[2] = {-1, -1}, qca808x_gpio_cnt, i;
+
+	qca808x_gpio_cnt = get_qca808x_gpio(qca808x_gpio);
+	if (qca808x_gpio_cnt >= 1) {
+		for (i = 0; i < qca808x_gpio_cnt; i++)
+			gpio_set_value(qca808x_gpio[i], 0x1);
+	}
+}
+
+void bring_phy_out_of_reset(void)
+{
+	aquantia_phy_reset_init();
+	qca808x_phy_reset_init();
+	mdelay(500);
+	aquantia_phy_reset_init_done();
+	qca808x_phy_reset_init_done();
+	mdelay(500);
+}
+
 void devsoc_eth_initialize(void)
 {
 	eth_clock_init();
+
+	set_function_select_as_mdc_mdio();
+
+	bring_phy_out_of_reset();
 }
 
 int board_eth_init(bd_t *bis)
