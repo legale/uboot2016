@@ -26,7 +26,7 @@ extern const char *del_node[];
 extern const add_node_t add_fdt_node[];
 
 #define KERNEL_AUTH_CMD				0x1E
-#define SCM_CMD_SEC_AUTH			0x15
+#define SCM_CMD_SEC_AUTH			0x1F
 
 #define PSCI_RESET_SMC_ID			0x84000009
 
