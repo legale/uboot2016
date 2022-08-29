@@ -471,7 +471,7 @@ static int do_dumpqca_data(unsigned int dump_level)
 	int indx;
 	int ebi_indx = 0;
 	int ret = CMD_RET_FAILURE;
-#ifdef CONFIG_IPQ5018
+#if defined(CONFIG_IPQ5018) && !defined(CONFIG_DISABLE_SIGNED_BOOT)
 	char buf = 1;
 #endif
 	struct dumpinfo_t *dumpinfo = dumpinfo_n;
@@ -557,7 +557,7 @@ static int do_dumpqca_data(unsigned int dump_level)
 #endif
 	}
 
-#ifdef CONFIG_IPQ5018
+#if defined(CONFIG_IPQ5018) && !defined(CONFIG_DISABLE_SIGNED_BOOT)
 	ret = qca_scm_call(SCM_SVC_FUSE,
 			   QFPROM_IS_AUTHENTICATE_CMD, &buf, sizeof(char));
 	if (ret == 0 && buf == 1) {
@@ -613,11 +613,13 @@ static int do_dumpqca_data(unsigned int dump_level)
 					dumpinfo[indx].size = gd->ram_size / 2;
 					comp_addr = memaddr;
 				}
+#ifndef CONFIG_DISABLE_SIGNED_BOOT
 				snprintf(temp, sizeof(temp), "%sEBICS_S2", dump_prefix);
 				if (!strncmp(dumpinfo[indx].name, temp, strlen(temp))) {
 					dumpinfo[indx].size = gd->ram_size - (dumpinfo[indx].start - CONFIG_SYS_SDRAM_BASE);
 					comp_addr = memaddr;
 				}
+#endif
 				snprintf(temp, sizeof(temp), "%sEBICS1", dump_prefix);
 				if (!strncmp(dumpinfo[indx].name, temp, strlen(temp))) {
 					dumpinfo[indx].size = (gd->ram_size / 2)
@@ -629,12 +631,14 @@ static int do_dumpqca_data(unsigned int dump_level)
 				if (!strncmp(dumpinfo[indx].name,
 					     temp, strlen(temp)))
 					dumpinfo[indx].size = gd->ram_size;
+#ifndef CONFIG_DISABLE_SIGNED_BOOT
 				snprintf(temp, sizeof(temp), "%sEBICS_S1", dump_prefix);
 				if (!strncmp(dumpinfo[indx].name,
 					     temp, strlen(temp)))
 					dumpinfo[indx].size = gd->ram_size
 							      - dumpinfo[indx - 1].size
 							      - CONFIG_TZ_SIZE;
+#endif
 			}
 
 			if (is_compress == 1 && (dumpinfo[indx].to_compress == 1)) {

@@ -447,12 +447,13 @@ extern loff_t board_env_size;
 #define CONFIG_DISABLE_CMD_SF_UPDATE
 #define CONFIG_DISABLE_CMD_SF_PROTECT
 #define CONFIG_DISABLE_CMD_SF_BULKERASE
+#else
+#define CONFIG_IPQ_ELF_AUTH
 #endif
 
 /*
  * ELF authentication
  */
-#define CONFIG_IPQ_ELF_AUTH
 #define CONFIG_VERSION_ROLLBACK_PARTITION_INFO
 
 #undef CONFIG_BOOTM_NETBSD
