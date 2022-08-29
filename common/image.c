@@ -46,8 +46,10 @@ extern int do_bdinfo(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]);
 DECLARE_GLOBAL_DATA_PTR;
 
 #if defined(CONFIG_IMAGE_FORMAT_LEGACY)
+#ifndef CONFIG_DISABLE_RAMDISK
 static const image_header_t *image_get_ramdisk(ulong rd_addr, uint8_t arch,
 						int verify);
+#endif
 #endif
 #else
 #include "mkimage.h"
@@ -351,6 +353,7 @@ void image_print_contents(const void *ptr)
 
 #ifndef USE_HOSTCC
 #if defined(CONFIG_IMAGE_FORMAT_LEGACY)
+#ifndef CONFIG_DISABLE_RAMDISK
 /**
  * image_get_ramdisk - get and verify ramdisk image
  * @rd_addr: ramdisk image start address
@@ -412,6 +415,7 @@ static const image_header_t *image_get_ramdisk(ulong rd_addr, uint8_t arch,
 
 	return rd_hdr;
 }
+#endif
 #endif
 #endif /* !USE_HOSTCC */
 
@@ -866,6 +870,7 @@ int genimg_has_config(bootm_headers_t *images)
 	return 0;
 }
 
+#ifndef CONFIG_DISABLE_RAMDISK
 /**
  * boot_get_ramdisk - main ramdisk handling routine
  * @argc: command argument count
@@ -1077,6 +1082,7 @@ int boot_get_ramdisk(int argc, char * const argv[], bootm_headers_t *images,
 
 	return 0;
 }
+#endif
 
 #ifdef CONFIG_SYS_BOOT_RAMDISK_HIGH
 /**
