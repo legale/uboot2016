@@ -123,6 +123,7 @@ extern int scm_call(u32 svc_id, u32 cmd_id, const void *cmd_buf, size_t cmd_len,
 		void *resp_buf, size_t resp_len);
 extern int qca_scm_call(u32 svc_id, u32 cmd_id, void *buf, size_t len);
 
+int qca_scm_dpr(u32, u32, void *, size_t);
 int qca_scm_usb_mode_write(u32, u32);
 int qca_scm_call_write(u32, u32, u32 *, u32);
 int qca_scm_call_read(u32, u32, u32 *, u32*);

@@ -47,4 +47,7 @@ config QCA8033_PHY
 
 config QCA8081_PHY
 	bool "Enable QCA8081 PHY support"
+
+config DPR_EXECUTE
+	bool "Enable DPR support"
 endif
