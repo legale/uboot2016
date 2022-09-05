@@ -32,6 +32,8 @@ extern struct sdhci_host mmc_host;
 #endif
 
 #define SMEM_PTN_NAME_MAX     16
+#define GPT_PART_NAME "0:GPT"
+#define GPT_BACKUP_PART_NAME "0:GPTBACKUP"
 
 int write_to_flash(int flash_type, uint32_t address, uint32_t offset,
 uint32_t part_size, uint32_t file_size, char *layout)
@@ -279,15 +281,31 @@ char * const argv[])
 		blk_dev = mmc_get_dev(mmc_host.dev_num);
 		if (blk_dev != NULL) {
 
-			ret = get_partition_info_efi_by_name(blk_dev,
-			part_name, &disk_info);
-			if (ret)
-				return retn;
+			if (strncmp(GPT_PART_NAME,
+					(const char *)part_name,
+					sizeof(GPT_PART_NAME))  == 0) {
+				file_size = file_size / blk_dev->blksz;
+				offset = 0;
+				part_size = (ulong) file_size;
+			}
+			else if (strncmp(GPT_BACKUP_PART_NAME,
+					(const char *)part_name,
+					sizeof(GPT_BACKUP_PART_NAME)) == 0) {
+				file_size = file_size / blk_dev->blksz;
+				offset = (ulong) blk_dev->lba - file_size;
+				part_size = (ulong) file_size;
+			}
+			else
+			{
+				ret = get_partition_info_efi_by_name(blk_dev,
+				part_name, &disk_info);
+				if (ret)
+					return retn;
 
-			offset = (ulong)disk_info.start;
-			part_size = (ulong)disk_info.size;
+				offset = (ulong)disk_info.start;
+				part_size = (ulong)disk_info.size;
+			}
 		}
-
 #endif
 	} else if (sfi->flash_type == SMEM_BOOT_SPI_FLASH) {
 
@@ -323,13 +341,30 @@ char * const argv[])
 			blk_dev = mmc_get_dev(mmc_host.dev_num);
 			if (blk_dev != NULL) {
 
-				ret = get_partition_info_efi_by_name(blk_dev,
+				if (strncmp(GPT_PART_NAME,
+					(const char *)part_name,
+					sizeof(GPT_PART_NAME))  == 0) {
+					file_size = file_size / blk_dev->blksz;
+					offset = 0;
+					part_size = (ulong) file_size;
+				}
+				else if (strncmp(GPT_BACKUP_PART_NAME,
+					(const char *)part_name,
+					sizeof(GPT_BACKUP_PART_NAME)) == 0) {
+					file_size = file_size / blk_dev->blksz;
+					offset = (ulong) blk_dev->lba - file_size;
+					part_size = (ulong) file_size;
+				}
+				else
+				{
+					ret = get_partition_info_efi_by_name(blk_dev,
 							part_name, &disk_info);
-				if (ret)
-					return retn;
+					if (ret)
+						return retn;
 
-				offset = (ulong)disk_info.start;
-				part_size = (ulong)disk_info.size;
+					offset = (ulong)disk_info.start;
+					part_size = (ulong)disk_info.size;
+				}
 			}
 #endif
 		} else {
