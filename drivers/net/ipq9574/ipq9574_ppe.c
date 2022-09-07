@@ -339,11 +339,16 @@ int phy_status_get_from_ppe(int port_id)
 {
 	uint32_t reg_field = 0;
 
-	ipq9574_ppe_reg_read(PORT_PHY_STATUS_ADDRESS, &reg_field);
-	if (port_id == (PORT5 - PPE_UNIPHY_INSTANCE1))
-		reg_field >>= PORT_PHY_STATUS_PORT5_1_OFFSET;
-	else
-		reg_field >>= PORT_PHY_STATUS_PORT6_OFFSET;
+	if (port_id == 0) {
+		ipq9574_ppe_reg_read(PORT_PHY_STATUS0_ADDRESS, &reg_field);
+	} else {
+		ipq9574_ppe_reg_read(PORT_PHY_STATUS_ADDRESS, &reg_field);
+
+		if (port_id == (PORT5 - PPE_UNIPHY_INSTANCE1))
+			reg_field >>= PORT_PHY_STATUS_PORT5_1_OFFSET;
+		else
+			reg_field >>= PORT_PHY_STATUS_PORT6_OFFSET;
+	}
 
 	return ((reg_field >> 7) & 0x1) ? 0 : 1;
 }
@@ -466,15 +471,22 @@ void ipq9574_10g_r_speed_set(int port, int status)
 void ipq9574_uxsgmii_speed_set(int port, int speed, int duplex,
 				int status)
 {
-	uint32_t uniphy_index;
+	uint32_t uniphy_index = 0;
 
-	/* Setting the speed only for PORT5 and PORT6 */
-	if (port == (PORT5 - PPE_UNIPHY_INSTANCE1))
-		uniphy_index = PPE_UNIPHY_INSTANCE1;
-	else if (port == (PORT6 - PPE_UNIPHY_INSTANCE1))
-		uniphy_index = PPE_UNIPHY_INSTANCE2;
-	else
+	switch(port) {
+	case 0:
 		uniphy_index = PPE_UNIPHY_INSTANCE0;
+	break;
+	case 4:
+		uniphy_index = PPE_UNIPHY_INSTANCE1;
+	break;
+	case 5:
+		uniphy_index = PPE_UNIPHY_INSTANCE2;
+	break;
+	default:
+		printf("Invalid port id , using UNIPHY0 as default \n");
+	break;
+	}
 
 	ppe_uniphy_usxgmii_autoneg_completed(uniphy_index);
 	ppe_uniphy_usxgmii_speed_set(uniphy_index, port + 1, speed);
@@ -646,6 +658,128 @@ static void ipq9574_ppe_tdm_configuration(void)
 	ipq9574_ppe_reg_write(0xb000, 0x80000076);
 }
 
+static void ipq9574_ppe_tdm1_configuration(void)
+{
+	ipq9574_ppe_reg_write(0xc000, 0x26);
+	ipq9574_ppe_reg_write(0xc010, 0x36);
+	ipq9574_ppe_reg_write(0xc020, 0x20);
+	ipq9574_ppe_reg_write(0xc030, 0x30);
+	ipq9574_ppe_reg_write(0xc040, 0x25);
+	ipq9574_ppe_reg_write(0xc050, 0x35);
+	ipq9574_ppe_reg_write(0xc060, 0x21);
+	ipq9574_ppe_reg_write(0xc070, 0x31);
+	ipq9574_ppe_reg_write(0xc080, 0x22);
+	ipq9574_ppe_reg_write(0xc090, 0x32);
+	ipq9574_ppe_reg_write(0xc0a0, 0x20);
+	ipq9574_ppe_reg_write(0xc0b0, 0x30);
+	ipq9574_ppe_reg_write(0xc0c0, 0x26);
+	ipq9574_ppe_reg_write(0xc0d0, 0x36);
+	ipq9574_ppe_reg_write(0xc0e0, 0x23);
+	ipq9574_ppe_reg_write(0xc0f0, 0x33);
+	ipq9574_ppe_reg_write(0xc100, 0x25);
+	ipq9574_ppe_reg_write(0xc110, 0x35);
+	ipq9574_ppe_reg_write(0xc120, 0x21);
+	ipq9574_ppe_reg_write(0xc130, 0x31);
+	ipq9574_ppe_reg_write(0xc140, 0x20);
+	ipq9574_ppe_reg_write(0xc150, 0x30);
+	ipq9574_ppe_reg_write(0xc160, 0x24);
+	ipq9574_ppe_reg_write(0xc170, 0x34);
+	ipq9574_ppe_reg_write(0xc180, 0x26);
+	ipq9574_ppe_reg_write(0xc190, 0x36);
+	ipq9574_ppe_reg_write(0xc1a0, 0x25);
+	ipq9574_ppe_reg_write(0xc1b0, 0x35);
+	ipq9574_ppe_reg_write(0xc1c0, 0x20);
+	ipq9574_ppe_reg_write(0xc1d0, 0x30);
+	ipq9574_ppe_reg_write(0xc1e0, 0x21);
+	ipq9574_ppe_reg_write(0xc1f0, 0x31);
+	ipq9574_ppe_reg_write(0xc200, 0x27);
+	ipq9574_ppe_reg_write(0xc210, 0x37);
+	ipq9574_ppe_reg_write(0xc220, 0x22);
+	ipq9574_ppe_reg_write(0xc230, 0x32);
+	ipq9574_ppe_reg_write(0xc240, 0x26);
+	ipq9574_ppe_reg_write(0xc250, 0x36);
+	ipq9574_ppe_reg_write(0xc260, 0x20);
+	ipq9574_ppe_reg_write(0xc270, 0x30);
+	ipq9574_ppe_reg_write(0xc280, 0x25);
+	ipq9574_ppe_reg_write(0xc290, 0x35);
+	ipq9574_ppe_reg_write(0xc2a0, 0x21);
+	ipq9574_ppe_reg_write(0xc2b0, 0x31);
+	ipq9574_ppe_reg_write(0xc2c0, 0x23);
+	ipq9574_ppe_reg_write(0xc2d0, 0x33);
+	ipq9574_ppe_reg_write(0xc2e0, 0x20);
+	ipq9574_ppe_reg_write(0xc2f0, 0x30);
+	ipq9574_ppe_reg_write(0xc300, 0x26);
+	ipq9574_ppe_reg_write(0xc310, 0x36);
+	ipq9574_ppe_reg_write(0xc320, 0x24);
+	ipq9574_ppe_reg_write(0xc330, 0x34);
+	ipq9574_ppe_reg_write(0xc340, 0x25);
+	ipq9574_ppe_reg_write(0xc350, 0x35);
+	ipq9574_ppe_reg_write(0xc360, 0x21);
+	ipq9574_ppe_reg_write(0xc370, 0x31);
+	ipq9574_ppe_reg_write(0xc380, 0x20);
+	ipq9574_ppe_reg_write(0xc390, 0x30);
+	ipq9574_ppe_reg_write(0xc3a0, 0x27);
+	ipq9574_ppe_reg_write(0xc3b0, 0x37);
+	ipq9574_ppe_reg_write(0xc3c0, 0x26);
+	ipq9574_ppe_reg_write(0xc3d0, 0x36);
+	ipq9574_ppe_reg_write(0xc3e0, 0x22);
+	ipq9574_ppe_reg_write(0xc3f0, 0x32);
+	ipq9574_ppe_reg_write(0xc400, 0x25);
+	ipq9574_ppe_reg_write(0xc410, 0x35);
+	ipq9574_ppe_reg_write(0xc420, 0x20);
+	ipq9574_ppe_reg_write(0xc430, 0x30);
+	ipq9574_ppe_reg_write(0xc440, 0x21);
+	ipq9574_ppe_reg_write(0xc450, 0x31);
+	ipq9574_ppe_reg_write(0xc460, 0x23);
+	ipq9574_ppe_reg_write(0xc470, 0x33);
+	ipq9574_ppe_reg_write(0xc480, 0x26);
+	ipq9574_ppe_reg_write(0xc490, 0x36);
+	ipq9574_ppe_reg_write(0xc4a0, 0x25);
+	ipq9574_ppe_reg_write(0xc4b0, 0x35);
+	ipq9574_ppe_reg_write(0xc4c0, 0x20);
+	ipq9574_ppe_reg_write(0xc4d0, 0x30);
+	ipq9574_ppe_reg_write(0xc4e0, 0x21);
+	ipq9574_ppe_reg_write(0xc4f0, 0x31);
+	ipq9574_ppe_reg_write(0xc500, 0x24);
+	ipq9574_ppe_reg_write(0xc510, 0x34);
+	ipq9574_ppe_reg_write(0xc520, 0x26);
+	ipq9574_ppe_reg_write(0xc530, 0x36);
+	ipq9574_ppe_reg_write(0xc540, 0x20);
+	ipq9574_ppe_reg_write(0xc550, 0x30);
+	ipq9574_ppe_reg_write(0xc560, 0x25);
+	ipq9574_ppe_reg_write(0xc570, 0x35);
+	ipq9574_ppe_reg_write(0xc580, 0x27);
+	ipq9574_ppe_reg_write(0xc590, 0x37);
+	ipq9574_ppe_reg_write(0xc5a0, 0x21);
+	ipq9574_ppe_reg_write(0xc5b0, 0x31);
+	ipq9574_ppe_reg_write(0xc5c0, 0x22);
+	ipq9574_ppe_reg_write(0xc5d0, 0x32);
+	ipq9574_ppe_reg_write(0xc5e0, 0x20);
+	ipq9574_ppe_reg_write(0xc5f0, 0x30);
+	ipq9574_ppe_reg_write(0xc600, 0x26);
+	ipq9574_ppe_reg_write(0xc610, 0x36);
+	ipq9574_ppe_reg_write(0xc620, 0x25);
+	ipq9574_ppe_reg_write(0xc630, 0x35);
+	ipq9574_ppe_reg_write(0xc640, 0x23);
+	ipq9574_ppe_reg_write(0xc650, 0x33);
+	ipq9574_ppe_reg_write(0xc660, 0x21);
+	ipq9574_ppe_reg_write(0xc670, 0x31);
+	ipq9574_ppe_reg_write(0xc680, 0x20);
+	ipq9574_ppe_reg_write(0xc690, 0x30);
+	ipq9574_ppe_reg_write(0xc6a0, 0x24);
+	ipq9574_ppe_reg_write(0xc6b0, 0x34);
+	ipq9574_ppe_reg_write(0xc6c0, 0x27);
+	ipq9574_ppe_reg_write(0xc6d0, 0x37);
+	ipq9574_ppe_reg_write(0xc6e0, 0x25);
+	ipq9574_ppe_reg_write(0xc6f0, 0x35);
+	ipq9574_ppe_reg_write(0xc700, 0x26);
+	ipq9574_ppe_reg_write(0xc710, 0x36);
+	ipq9574_ppe_reg_write(0xc720, 0x20);
+	ipq9574_ppe_reg_write(0xc730, 0x30);
+	ipq9574_ppe_reg_write(0xc740, 0x21);
+	ipq9574_ppe_reg_write(0xc750, 0x31);
+	ipq9574_ppe_reg_write(0xb000, 0x80000076);
+}
 /*
  * ipq9574_ppe_queue_ac_enable
  */
@@ -908,9 +1042,24 @@ void ipq9574_ppe_provision_init(void)
 {
 	int i;
 	uint32_t queue;
+	int node, tdm_mode = 0;
+
+	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
+	if (node < 0) {
+		printf("\nError: ess-switch not specified in dts");
+		return;
+	}
+
+	tdm_mode = fdtdec_get_uint(gd->fdt_blob, node, "tdm_mode", 0);
+	if (tdm_mode < 0) {
+		printf("\nError:tdm mode not specified in dts assume tdm 0");
+	}
 
 	/* tdm/sched configuration */
-	ipq9574_ppe_tdm_configuration();
+	if (tdm_mode == 1)
+		ipq9574_ppe_tdm1_configuration();
+	else
+		ipq9574_ppe_tdm_configuration();
 
 #ifdef CONFIG_IPQ9574_BRIDGED_MODE
 	/* Add CPU port 0 to VSI 2 */

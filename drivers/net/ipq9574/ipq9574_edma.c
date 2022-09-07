@@ -883,10 +883,11 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 	int linkup = 0;
 	int clk[4] = {0};
 	int phy_addr = -1, node = -1;
-	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
-	int sfp_port[2] = {-1, -1}, sfp_port_cnt = -1;
+	int aquantia_port[3] = {-1, -1, -1}, aquantia_port_cnt = -1;
+	int sfp_port[3] = {-1, -1, -1}, sfp_port_cnt = -1;
 	int sgmii_mode = -1, sfp_mode = -1, sgmii_fiber = -1;
 	int phy_node = -1, res = -1;
+	int uniphy_index = 0;
 	char *active_port = NULL;
 
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
@@ -951,11 +952,13 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 		}
 		if(phy_info[i]->phy_type == UNUSED_PHY_TYPE)
 			continue;
-		if (i == sfp_port[0] || i == sfp_port[1]) {
+		if (i == sfp_port[0] || i == sfp_port[1] || i == sfp_port[2]) {
 			status = phy_status_get_from_ppe(i);
 			duplex = FAL_FULL_DUPLEX;
-			/* SFP Port can be enabled in USXGMII0 or USXGMII1 i.e
-			 * SFP Port can be port5 or port6 (with port id - 4 or 5).
+			/* SFP Port can be enabled in USXGMIIx x=0-2i.e
+			 * SFP Port can be port5 or port6 or port0
+			 * (with port id - 0, 4 or 5).
+			 * Port0 (port id - 0) -> Serdes0
 			 * Port5 (port id - 4) -> Serdes1
 			 * Port6 (port id - 5) -> Serdes2
 			 */
@@ -972,8 +975,13 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 					return sfp_mode;
 				}
 			} else {
-				printf("Error: SFP Port can be enabled in USXGMII0 or USXGMII1 (Port5 or Port6) only in ipq9574 platform\n");
+				sfp_mode = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode0", -1);
+				if (sfp_mode < 0) {
+					printf("Error: switch_mac_mode0 not specified in dts\n");
+					return sfp_mode;
+				}
 			}
+
 			if (sfp_mode == EPORT_WRAPPER_SGMII_FIBER) {
 				sgmii_fiber = 1;
 				curr_speed[i] = FAL_SPEED_1000;
@@ -1056,7 +1064,9 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 				clk[1] = 0x9;
 				clk[2] = 0x309;
 				clk[3] = 0x9;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
+				if (i == aquantia_port[0] ||
+					i == aquantia_port[1] ||
+					i == aquantia_port[2]) {
 					clk[1] = 0x18;
 					clk[3] = 0x18;
 					if (i == 4) {
@@ -1093,7 +1103,9 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 				clk[1] = 0x0;
 				clk[2] = 0x309;
 				clk[3] = 0x0;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
+				if (i == aquantia_port[0] ||
+						i == aquantia_port[1] ||
+						i == aquantia_port[2] ) {
 					clk[1] = 0x4;
 					clk[3] = 0x4;
 					if (i == 4) {
@@ -1127,7 +1139,9 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 				clk[1] = 0x0;
 				clk[2] = 0x301;
 				clk[3] = 0x0;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
+				if (i == aquantia_port[0] ||
+						i == aquantia_port[1] ||
+						i == aquantia_port[2] ) {
 					if (i == 4) {
 						clk[0] = 0x404;
 						clk[2] = 0x504;
@@ -1135,7 +1149,8 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 						clk[0] = 0x204;
 						clk[2] = 0x304;
 					}
-				} else if (i == sfp_port[0] || i == sfp_port[1]) {
+				} else if (i == sfp_port[0] || i == sfp_port[1]
+						|| i == sfp_port[2]) {
 					if (i == 4) {
 						clk[0] = 0x401;
 						clk[2] = 0x501;
@@ -1162,7 +1177,9 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 			case FAL_SPEED_2500:
 				clk[1] = 0x0;
 				clk[3] = 0x0;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
+				if (i == aquantia_port[0] ||
+						i == aquantia_port[1] ||
+						i == aquantia_port[2] ) {
 					mac_speed = 0x4;
 					if (i == 4) {
 						clk[0] = 0x407;
@@ -1171,7 +1188,8 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 						clk[0] = 0x207;
 						clk[2] = 0x307;
 					}
-				} else if (i == sfp_port[0] || i == sfp_port[1]) {
+				} else if (i == sfp_port[0] || i == sfp_port[1]
+						|| i == sfp_port[2]) {
 					mac_speed = 0x2;
 					if (i == 4) {
 						clk[0] = 0x401;
@@ -1257,27 +1275,33 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 				}
 			}
 		}
-
-		if (i == sfp_port[0] || i == sfp_port[1]) {
+		if (i == sfp_port[0] || i == sfp_port[1] || i == sfp_port[2]) {
+			switch(i) {
+			case 0:
+				uniphy_index = 0;
+			break;
+			case 4:
+				uniphy_index = 0x1;
+			break;
+			case 5:
+				uniphy_index = 0x2;
+			break;
+			}
 			if (sgmii_fiber) { /* SGMII Fiber mode */
 				ppe_port_bridge_txmac_set(i + 1, 1);
-				if (i == 4)
-					ppe_uniphy_mode_set(0x1, EPORT_WRAPPER_SGMII_FIBER);
-				else
-					ppe_uniphy_mode_set(0x2, EPORT_WRAPPER_SGMII_FIBER);
-				ppe_port_mux_mac_type_set(i + 1, EPORT_WRAPPER_SGMII_FIBER);
+				ppe_uniphy_mode_set(uniphy_index,
+					EPORT_WRAPPER_SGMII_FIBER);
+				ppe_port_mux_mac_type_set(i + 1,
+					EPORT_WRAPPER_SGMII_FIBER);
 			} else if (sfp_mode == EPORT_WRAPPER_10GBASE_R) { /* 10GBASE_R mode */
-				if (i == 4)
-					ppe_uniphy_mode_set(0x1, EPORT_WRAPPER_10GBASE_R);
-				else
-					ppe_uniphy_mode_set(0x2, EPORT_WRAPPER_10GBASE_R);
-				ppe_port_mux_mac_type_set(i + 1, EPORT_WRAPPER_10GBASE_R);
+				ppe_uniphy_mode_set(uniphy_index,
+					EPORT_WRAPPER_10GBASE_R);
+				ppe_port_mux_mac_type_set(i + 1,
+					EPORT_WRAPPER_10GBASE_R);
 			} else { /* SGMII Plus Mode */
 				ppe_port_bridge_txmac_set(i + 1, 1);
-				if (i == 4)
-					ppe_uniphy_mode_set(0x1, EPORT_WRAPPER_SGMII_PLUS);
-				else if (i == 5)
-					ppe_uniphy_mode_set(0x2, EPORT_WRAPPER_SGMII_PLUS);
+				ppe_uniphy_mode_set(uniphy_index,
+					EPORT_WRAPPER_SGMII_PLUS);
 			}
 		}
 
@@ -1292,10 +1316,12 @@ static int ipq9574_eth_init(struct eth_device *eth_dev, bd_t *this)
 		ipq9574_port_mac_clock_reset(i);
 
 		if (i == aquantia_port[0] || i == aquantia_port[1] ||
-				((phy_info[i]->phy_type == QCA8084_PHY_TYPE) && (!qca8084_swt_enb))) {
+			i == aquantia_port[2] ||
+			((phy_info[i]->phy_type == QCA8084_PHY_TYPE) &&
+			(!qca8084_swt_enb))) {
 			ipq9574_uxsgmii_speed_set(i, mac_speed, duplex, status);
 		}
-		else if ((i == sfp_port[0] || i == sfp_port[1]) && sgmii_fiber == 0)
+		else if ((i == sfp_port[0] || i == sfp_port[1] || i == sfp_port[2]) && sgmii_fiber == 0)
 			ipq9574_10g_r_speed_set(i, status);
 		else
 			ipq9574_pqsgmii_speed_set(i, mac_speed, status);
@@ -1909,7 +1935,7 @@ int ipq9574_edma_init(void *edma_board_cfg)
 #endif /* CONFIG_QCA8084_SWT_MODE */
 #endif
 	int node, phy_addr, mode, phy_node = -1, res = -1;
-	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
+	int aquantia_port[3] = {-1, -1, -1}, aquantia_port_cnt = -1;
 
 	/*
 	 * Init non cache buffer
@@ -2063,7 +2089,9 @@ int ipq9574_edma_init(void *edma_board_cfg)
 			phy_chip_id1 = ipq_mdio_read(phy_addr, QCA_PHY_ID1, NULL);
 			phy_chip_id2 = ipq_mdio_read(phy_addr, QCA_PHY_ID2, NULL);
 			phy_chip_id = (phy_chip_id1 << 16) | phy_chip_id2;
-			if (phy_id == aquantia_port[0] || phy_id == aquantia_port[1]) {
+			if (phy_id == aquantia_port[0] ||
+				phy_id == aquantia_port[1] ||
+				phy_id == aquantia_port[2]) {
 				phy_chip_id1 = ipq_mdio_read(phy_addr, (1<<30) |(1<<16) | QCA_PHY_ID1, NULL);
 				phy_chip_id2 = ipq_mdio_read(phy_addr, (1<<30) |(1<<16) | QCA_PHY_ID2, NULL);
 				phy_chip_id = (phy_chip_id1 << 16) | phy_chip_id2;
