@@ -338,7 +338,8 @@ typedef struct {
 #define CONFIG_OF_BOARD_SETUP		1
 
 #ifdef CONFIG_OF_BOARD_SETUP
-#define DLOAD_DISABLE			1
+#define DLOAD_DISABLE		(~BIT(4))
+#define DLOAD_ENABLE		BIT(4)
 #define BOOT_VERSION			0
 #define TZ_VERSION			1
 #endif

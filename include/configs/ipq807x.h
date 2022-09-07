@@ -256,8 +256,11 @@ extern loff_t board_env_size;
 
 #define CONFIG_OF_BOARD_SETUP
 
+#define TCSR_BOOT_MISC_REG	((u32 *)0x193D100)
+
 #ifdef CONFIG_OF_BOARD_SETUP
-#define DLOAD_DISABLE		0x1
+#define DLOAD_DISABLE		(~BIT(4))
+#define DLOAD_ENABLE		BIT(4)
 #define RESERVE_ADDRESS_START	0x4AB00000 /*TZAPPS, SMEM and TZ Regions */
 #define RESERVE_ADDRESS_SIZE	0x5500000
 

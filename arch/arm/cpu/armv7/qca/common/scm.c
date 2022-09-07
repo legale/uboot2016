@@ -836,10 +836,11 @@ int qca_scm_crypto(int cmd_id, void *req_ptr, uint32_t req_size)
 int qca_scm_dload(unsigned int magic_cookie)
 {
 	int ret;
-        if (is_scm_armv8())
+
+	if (is_scm_armv8())
 	{
 		ret = qca_scm_call_write(SCM_SVC_IO, SCM_IO_WRITE,
-					 (u32 *)0x193D100, magic_cookie);
+					 TCSR_BOOT_MISC_REG, magic_cookie);
 	}
 	else
 	{

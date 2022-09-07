@@ -134,9 +134,12 @@ void qca_serial_init(struct ipq_serial_platdata *plat)
 
 void reset_crashdump(void)
 {
-	unsigned int magic_cookie = CLEAR_MAGIC;
+	unsigned int magic_cookie;
 	unsigned int clear_info[] =
 		{ 1 /* Disable wdog debug */, 0 /* SDI enable*/, };
+
+	magic_cookie = ipq_read_tcsr_boot_misc();
+	magic_cookie &= DLOAD_DISABLE;
         scm_call(SCM_SVC_BOOT, SCM_CMD_TZ_CONFIG_HW_FOR_RAM_DUMP_ID,
 		 (const void *)&clear_info, sizeof(clear_info), NULL, 0);
         scm_call(SCM_SVC_BOOT, SCM_CMD_TZ_FORCE_DLOAD_ID, &magic_cookie,
@@ -545,11 +548,17 @@ void set_flash_secondary_type(qca_smem_flash_info_t * smem)
 	return;
 }
 
+int ipq_read_tcsr_boot_misc(void)
+{
+	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	return *dmagic;
+}
+
 int apps_iscrashed(void)
 {
-	u32 *dmagic = (u32 *)0x193D100;
+	u32 *dmagic = TCSR_BOOT_MISC_REG;
 
-	if (*dmagic == DLOAD_MAGIC_COOKIE)
+	if (*dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
 
 	return 0;

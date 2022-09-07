@@ -379,8 +379,11 @@ extern loff_t board_env_size;
  */
 #define CONFIG_OF_BOARD_SETUP
 
+#define TCSR_BOOT_MISC_REG	((u32 *)0x193D100)
+
 #ifdef CONFIG_OF_BOARD_SETUP
-#define DLOAD_DISABLE				0x1
+#define DLOAD_DISABLE		(~BIT(4))
+#define DLOAD_ENABLE		BIT(4)
 #define SET_MAGIC				0x1
 #define CLEAR_MAGIC				0x0
 #define SCM_CMD_TZ_CONFIG_HW_FOR_RAM_DUMP_ID	0x9
@@ -394,7 +397,6 @@ extern loff_t board_env_size;
  * CRASH DUMP ENABLE
  */
 #define CONFIG_QCA_APPSBL_DLOAD
-#define CONFIG_IPQ5018_DMAGIC_ADDR		0x193D100
 #ifdef CONFIG_QCA_APPSBL_DLOAD
 
 #undef CONFIG_NET_RETRY_COUNT

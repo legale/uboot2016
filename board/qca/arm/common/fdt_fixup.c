@@ -356,9 +356,10 @@ void ipq_fdt_fixup_mtdparts(void *blob, struct flash_node_info *ni)
 
 void ipq_fdt_mem_rsvd_fixup(void *blob)
 {
-	u32 dload;
+	u32 dload = 1;
 	int parentoff, nodeoff, ret, i;
-	dload = htonl(DLOAD_DISABLE);
+
+	dload = htonl(dload);
 
 	/* Reserve only the TZ and SMEM memory region and free the rest */
 	parentoff = fdt_path_offset(blob, rsvd_node);

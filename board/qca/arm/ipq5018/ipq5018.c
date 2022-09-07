@@ -50,7 +50,7 @@
 #include <linux/compat.h>
 #endif
 
-#define DLOAD_MAGIC_COOKIE	0x10
+#define DLOAD_MAGIC_COOKIE	BIT(4)
 
 #define TCSR_SOC_HW_VERSION_REG 0x194D000
 
@@ -426,11 +426,17 @@ __weak int ipq_get_tz_version(char *version_name, int buf_size)
 	return 1;
 }
 
+int ipq_read_tcsr_boot_misc(void)
+{
+	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	return *dmagic;
+}
+
 int apps_iscrashed(void)
 {
-	u32 *dmagic = (u32 *)CONFIG_IPQ5018_DMAGIC_ADDR;
+	u32 *dmagic = TCSR_BOOT_MISC_REG;
 
-	if (*dmagic == DLOAD_MAGIC_COOKIE)
+	if (*dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
 
 	return 0;
@@ -646,8 +652,13 @@ void fdt_fixup_bt_running(void *blob)
 void reset_crashdump(void)
 {
 	unsigned int ret = 0;
+	unsigned int cookie = 0;
+
 	qca_scm_sdi();
-	ret = qca_scm_dload(CLEAR_MAGIC);
+
+	cookie = ipq_read_tcsr_boot_misc();
+	cookie &= DLOAD_DISABLE;
+	ret = qca_scm_dload(cookie);
 	if (ret)
 		printf ("Error in reseting the Magic cookie\n");
 	return;

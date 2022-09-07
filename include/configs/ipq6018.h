@@ -289,8 +289,11 @@ extern loff_t board_env_size;
 #define CONFIG_FDT_FIXUP_PARTITIONS
 #define CONFIG_OF_BOARD_SETUP
 
+#define TCSR_BOOT_MISC_REG	((u32 *)0x193D100)
+
 #ifdef CONFIG_OF_BOARD_SETUP
-#define DLOAD_DISABLE		0x1
+#define DLOAD_DISABLE		(~BIT(4))
+#define DLOAD_ENABLE		BIT(4)
 
 #ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
 #define CONFIG_HW_WATCHDOG
@@ -342,7 +345,6 @@ extern loff_t board_env_size;
  * CRASH DUMP ENABLE
  */
 #define CONFIG_QCA_APPSBL_DLOAD
-#define CONFIG_IPQ6018_DMAGIC_ADDR	0x193D100
 #ifdef CONFIG_QCA_APPSBL_DLOAD
 #define CONFIG_CMD_TFTPPUT
 /* We will be uploading very big files */

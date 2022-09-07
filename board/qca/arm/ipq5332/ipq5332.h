@@ -41,7 +41,6 @@ extern const add_node_t add_fdt_node[];
 
 #define USB30_GUCTL				0x8A0C12C
 
-#define CONFIG_IPQ5332_DMAGIC_ADDR		0x193D100
 #define DLOAD_MAGIC_COOKIE			0x10
 #define DLOAD_DISABLED				0x40
 #define DLOAD_BITS				0xFF

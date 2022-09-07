@@ -397,8 +397,13 @@ unsigned long timer_read_counter(void)
 void reset_crashdump(void)
 {
 	unsigned int ret = 0;
+	unsigned int cookie = 0;
+
 	qca_scm_sdi();
-	ret = qca_scm_dload(CLEAR_MAGIC);
+
+	cookie = ipq_read_tcsr_boot_misc();
+	cookie &= DLOAD_DISABLE;
+	ret = qca_scm_dload(cookie);
 	if (ret)
 		printf ("Error in reseting the Magic cookie\n");
 	return;
@@ -1759,11 +1764,17 @@ unsigned int get_smem_spi_addr_len(void)
 	return spi_flash_addr_len;
 }
 
+int ipq_read_tcsr_boot_misc(void)
+{
+	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	return *dmagic;
+}
+
 int apps_iscrashed(void)
 {
-	u32 *dmagic = (u32 *)0x193D100;
+	u32 *dmagic = TCSR_BOOT_MISC_REG;
 
-	if (*dmagic == DLOAD_MAGIC_COOKIE)
+	if (*dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
 
 	return 0;
