@@ -55,6 +55,9 @@ struct version_entry
 
 unsigned int smem_get_board_platform_type(void);
 int smem_ptable_init(void);
+#ifdef CONFIG_IPQ_MIBIB_RELOAD
+int mibib_ptable_init(unsigned int* load_addr);
+#endif
 int smem_get_boot_flash(uint32_t *flash_type,
 			uint32_t *flash_index,
 			uint32_t *flash_chip_select,

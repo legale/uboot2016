@@ -490,6 +490,30 @@ int smem_ptable_init(void)
 	return 0;
 }
 
+/**
+ * mibib_ptable_init - initializes SMEM partition table
+ *
+ * Initialize partition table from MIBIB.
+ */
+#ifdef CONFIG_IPQ_MIBIB_RELOAD
+int mibib_ptable_init(unsigned int* addr)
+{
+	struct smem_ptable* ptable;
+
+	ptable = (struct smem_ptable*) addr;
+	if (ptable->magic[0] != _SMEM_PTABLE_MAGIC_1 ||
+		ptable->magic[1] != _SMEM_PTABLE_MAGIC_2)
+		return -ENOMSG;
+
+	debug("smem ptable found: ver: %d len: %d\n",
+	      smem_ptable.version, smem_ptable.len);
+
+	memcpy(&smem_ptable, addr, sizeof(smem_ptable));
+
+	return 0;
+}
+#endif
+
 /*
  * smem_bootconfig_info - retrieve bootconfig flags
  */

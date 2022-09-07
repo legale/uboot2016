@@ -49,6 +49,11 @@
 #define CONFIG_ENV_SIZE_MAX			(256 << 10) /* 256 KB */
 
 /*
+ * Enable MIBIB reload
+ */
+#define CONFIG_IPQ_MIBIB_RELOAD
+
+/*
  * Enable Flashwrite command
  */
 #define CONFIG_CMD_FLASHWRITE

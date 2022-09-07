@@ -35,6 +35,17 @@ extern struct sdhci_host mmc_host;
 #define GPT_PART_NAME "0:GPT"
 #define GPT_BACKUP_PART_NAME "0:GPTBACKUP"
 
+#ifdef CONFIG_IPQ_MIBIB_RELOAD
+#define HEADER_MAGIC1 0xFE569FAC
+#define HEADER_MAGIC2 0xCD7F127A
+#define HEADER_VERSION 4
+
+struct header {
+	unsigned magic[2];
+	unsigned version;
+} __attribute__ ((__packed__));
+#endif
+
 int write_to_flash(int flash_type, uint32_t address, uint32_t offset,
 uint32_t part_size, uint32_t file_size, char *layout)
 {
@@ -418,6 +429,77 @@ char * const argv[])
 return ret;
 }
 
+#ifdef CONFIG_IPQ_MIBIB_RELOAD
+static int do_mibib_reload(cmd_tbl_t *cmdtp, int flag, int argc,
+char * const argv[])
+{
+	uint32_t load_addr, file_size;
+	uint32_t page_size = 256;
+	uint8_t flash_type = 0;
+	struct header* mibib_hdr;
+	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
+	int nand_dev = 0;
+
+	nand_dev = nand_dev;
+	if (argc == 4) {
+		flash_type = simple_strtoul(argv[1], NULL, 16);
+		load_addr = simple_strtoul(argv[2], NULL, 16);
+		file_size = simple_strtoul(argv[3], NULL, 16);
+	} else
+		return CMD_RET_USAGE;
+
+	if (flash_type > 1 ) {
+		printf("Invalid flash type \n");
+		return CMD_RET_FAILURE;
+	}
+
+	if (flash_type == 0) {
+		/*NAND 2K or 4K*/
+		nand_dev = CONFIG_NAND_FLASH_INFO_IDX;
+#ifdef CONFIG_QPIC_SERIAL
+		sfi->flash_type = SMEM_BOOT_QSPI_NAND_FLASH;
+#else
+		sfi->flash_type = SMEM_BOOT_NAND_FLASH;
+#endif
+	} else {
+		/* NOR*/
+		nand_dev = CONFIG_SPI_FLASH_INFO_IDX;
+		sfi->flash_type = SMEM_BOOT_SPI_FLASH;
+	}
+
+#ifdef CONFIG_CMD_NAND
+	nand_info_t *nand = &nand_info[nand_dev];
+	sfi->flash_block_size = nand->erasesize;
+	sfi->flash_density = nand->size;
+	page_size = nand->writesize;
+#endif
+
+	if (file_size < 2 * page_size) {
+		printf("Invalid filesize \n");
+		return CMD_RET_FAILURE;
+	}
+
+	mibib_hdr = (struct header*) load_addr;
+	if (mibib_hdr->magic[0] == HEADER_MAGIC1 &&
+		mibib_hdr->magic[1] == HEADER_MAGIC2 &&
+		mibib_hdr->version == HEADER_VERSION) {
+
+		load_addr += page_size;
+	}
+	else {
+		printf("Header magic/version is invalid\n");
+		return CMD_RET_FAILURE;
+	}
+
+	if (mibib_ptable_init((unsigned int*) load_addr)) {
+		printf("Table magic is invalid\n");
+		return CMD_RET_FAILURE;
+	}
+
+	return CMD_RET_SUCCESS;
+}
+#endif
+
 U_BOOT_CMD(
 	flash,       4,      0,      do_flash,
 	"flash part_name \n"
@@ -430,3 +512,11 @@ U_BOOT_CMD(
 	"flerase part_name \n",
 	"erases on flash the given partition \n"
 );
+
+#ifdef CONFIG_IPQ_MIBIB_RELOAD
+U_BOOT_CMD(
+	mibib_reload,       4,      0,      do_mibib_reload,
+	"mibib_reload flash_type [fileaddr] [filesize]\n",
+	"reloads the smem partition info from mibib \n"
+);
+#endif
