@@ -249,7 +249,6 @@ uint32_t ipq9574_edma_clean_rx(struct ipq9574_edma_common_info *c_info,
 	int pkt_length;
 	int rx = CONFIG_SYS_RX_ETH_BUFFER;
 	u16 cleaned_count = 0;
-	struct ipq9574_edma_hw *ehw = &c_info->hw;
 
 	pr_debug("%s: rxdesc_ring->id = %d\n", __func__, rxdesc_ring->id);
 	/*
@@ -322,7 +321,6 @@ next_rx_desc:
 	}
 
 	if (cleaned_count) {
-		ipq9574_edma_alloc_rx_buffer(ehw, rxdesc_ring->rxfill);
 		ipq9574_edma_reg_write(IPQ9574_EDMA_REG_RXDESC_CONS_IDX(
 						rxdesc_ring->id), cons_idx);
 	}
