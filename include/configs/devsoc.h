@@ -121,6 +121,21 @@
 #define CONFIG_QCA_UBOOT_OFFSET			0xA100000
 #define CONFIG_UBOOT_END_ADDR			0x4A500000
 
+
+#define CONFIG_SMP_CMD_SUPPORT
+
+#ifdef CONFIG_SMP_CMD_SUPPORT
+#define NR_CPUS				4
+
+#define ARM_PSCI_TZ_FN_BASE			0x84000000
+#define ARM_PSCI_TZ_FN(n)			(ARM_PSCI_TZ_FN_BASE + (n))
+
+#define ARM_PSCI_TZ_FN_CPU_OFF			ARM_PSCI_TZ_FN(2)
+#define ARM_PSCI_TZ_FN_CPU_ON			ARM_PSCI_TZ_FN(3)
+#define ARM_PSCI_TZ_FN_AFFINITY_INFO		ARM_PSCI_TZ_FN(4)
+
+#endif
+
 /*
 * IPQ_TFTP_MIN_ADDR: Starting address of Linux HLOS region.
 * CONFIG_TZ_END_ADDR: Ending address of Trust Zone and starting

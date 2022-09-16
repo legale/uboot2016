@@ -95,6 +95,32 @@ __weak void sdi_disable(void)
 	return;
 }
 
+#ifdef CONFIG_SMP_CMD_SUPPORT
+__weak int is_secondary_core_off(unsigned int cpuid)
+{
+	return __invoke_psci_fn_smc(ARM_PSCI_TZ_FN_AFFINITY_INFO, cpuid, 0, 0);
+}
+
+__weak void bring_secondary_core_down(unsigned int state)
+{
+	__invoke_psci_fn_smc(ARM_PSCI_TZ_FN_CPU_OFF, state, 0, 0);
+}
+
+__weak int bring_sec_core_up(unsigned int cpuid, unsigned int entry, unsigned int arg)
+{
+	int err;
+
+	err = __invoke_psci_fn_smc(ARM_PSCI_TZ_FN_CPU_ON, cpuid, entry, arg);
+	if (err) {
+		printf("Enabling CPU%d via psci failed!\n", cpuid);
+		return CMD_RET_FAILURE;
+	}
+
+	printf("Enabled CPU%d via psci successfully!\n", cpuid);
+	return CMD_RET_SUCCESS;
+}
+#endif
+
 int board_init(void)
 {
 	int ret;
