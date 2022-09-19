@@ -99,7 +99,6 @@ soc_hw_version_ipq807x = { 0x200D0100, 0x200D0101, 0x200D0102, 0x200D0200 };
 soc_hw_version_ipq6018 = { 0x20170100 };
 soc_hw_version_ipq5018 = { 0x20180100, 0x20180101 };
 soc_hw_version_ipq9574 = { 0x20190100 };
-soc_hw_version_ipq5332 = { 0x201A0100 };
 
 #
 # Python 2.6 and earlier did not have OrderedDict use the backport
@@ -382,7 +381,7 @@ class FlashScript(object):
         """Generate code, to indicate start of an activity."""
 
         self.script.append('if test "x$verbose" = "x"; then\n')
-        self.echo("'%-55.55s'" % activity, nl=False)
+        self.echo("'%-40.40s'" % activity, nl=False)
         self.script.append('else\n')
         self.echo("'%s %s Started'" % ("#" * 40, activity), verbose=True)
         self.script.append('fi\n')
@@ -789,56 +788,7 @@ class Pack(object):
 
 	return 1
 
-    def __gen_flash_script_wififw_ubi_volume_qcn9224_v1(self, entries, fw_filename, wifi_fw_type, script):
-
-	machid_list = []
-	for section in entries:
-
-	    wififw_type = section.find('.//wififw_type')
-	    if wififw_type == None:
-		continue
-            wififw_type = str(section.find(".//wififw_type").text)
-
-            if str(1) == str(wififw_type):
-                continue
-
-	    machid = int(section.find(".//machid").text, 0)
-	    machid = "%x" % machid
-
-	    machid_list.append(machid)
-
-        script.start_if_or("machid", machid_list)
-        script.append("setenv qcn9224_version 1 && detect_qcn9224", fatal=False)
-        script.append('if test "$qcn9224_version" = "1"; then\n', fatal=False)
-
-        script.start_activity("Flashing " + fw_filename[:-13] + ":")
-	script.imxtract(fw_filename[:-13] + "-" + sha1(fw_filename))
-
-	rootfs_info = self.__get_part_info("rootfs")
-	rootfs_offset = rootfs_info.offset
-	rootfs_len = rootfs_info.length
-
-	wifi_fw_cmd = "setenv mtdids nand0=nand0\n"
-	wifi_fw_cmd += "setenv mtdparts mtdparts=nand0:0x%x@0x%x(rootfs)\n" % (rootfs_len,rootfs_offset)
-	wifi_fw_cmd += "ubi part rootfs\n"
-	img_size = self.__get_img_size(fw_filename)
-	wifi_fw_cmd += "ubi write $fileaddr wifi_fw %x" % img_size
-	script.append(wifi_fw_cmd, fatal=False)
-
-	#Enable the below lines for debugging purpose
-	"""
-	script.append("mtdparts", fatal=False)
-	script.append("ubi info layout", fatal=False)
-	"""
-
-	script.finish_activity()
-        script.end_if()
-
-        script.end_if()
-
-	return 1
-
-    def __gen_flash_script_wififw(self, entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check):
+    def __gen_flash_script_wififw(self, entries, partition, filename, wifi_fw_type, flinfo, script):
 
 	machid_list = []
 	for section in entries:
@@ -897,14 +847,11 @@ class Pack(object):
 		print "img size is larger than part. len in '%s'" % section_conf
 		return 0
 	else:
-            if (skip_size_check == "" or wifi_fw_type < skip_size_check):
-	        if part_info != None:
-		    if (img_size > 0):
-                        if img_size > (part_info.length * self.flinfo.blocksize):
-			    print "img size is larger than part. len in '%s'" % section_conf
-			    return 0
-            else:
-                print "EMMC: size check skipped for '%s'" % filename
+	    if part_info != None:
+		if (img_size > 0):
+		    if img_size > (part_info.length * self.flinfo.blocksize):
+			print "img size is larger than part. len in '%s'" % section_conf
+			return 0
 
 	if part_info == None and self.flinfo.type != 'norplusnand':
 	    print "Flash type is norplusemmc"
@@ -937,113 +884,6 @@ class Pack(object):
 
 	script.finish_activity()
 	script.end_if()
-
-        return 1
-
-    def __gen_flash_script_wififw_qcn9224_v1(self, entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check):
-
-	machid_list = []
-	for section in entries:
-
-	    wififw_type = section.find('.//wififw_type')
-	    if wififw_type == None:
-		continue
-            wififw_type = str(section.find(".//wififw_type").text)
-
-            if str(1) == str(wififw_type):
-                continue
-
-	    machid = int(section.find(".//machid").text, 0)
-	    machid = "%x" % machid
-
-	    machid_list.append(machid)
-
-        img_size = self.__get_img_size(filename)
-	part_info = self.__get_part_info(partition)
-
-	section_label = partition.split(":")
-        if len(section_label) != 1:
-	    section_conf = section_label[1]
-	else:
-	    section_conf = section_label[0]
-	section_conf = section_conf.lower()
-
-	if self.flinfo.type == 'nand':
-	    size = roundup(img_size, flinfo.pagesize)
-	    tr = ' | tr \"\\000\" \"\\377\"'
-
-	if self.flinfo.type == 'emmc':
-	    size = roundup(img_size, flinfo.blocksize)
-	    tr = ''
-
-	if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-	    pad_size = size - img_size
-	    filename_abs = os.path.join(self.images_dname, filename)
-	    filename_abs_pad = filename_abs + ".padded"
-	    cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
-	    ret = subprocess.call(cmd, shell=True)
-	    if ret != 0:
-		error("failed to copy image")
-	    cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
-	    cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
-	    ret = subprocess.call(cmd, shell=True)
-	    if ret != 0:
-		error("failed to create padded image from script")
-
-	if self.flinfo.type != "emmc":
-	    if part_info == None:
-		if self.flinfo.type == 'norplusnand':
-		    if count > 2:
-			error("More than 2 NAND images for NOR+NAND is not allowed")
-	    elif img_size > part_info.length:
-		print "img size is larger than part. len in '%s'" % section_conf
-		return 0
-	else:
-            if (skip_size_check == "" or wifi_fw_type < skip_size_check):
-	        if part_info != None:
-		    if (img_size > 0):
-                        if img_size > (part_info.length * self.flinfo.blocksize):
-			    print "img size is larger than part. len in '%s'" % section_conf
-			    return 0
-            else:
-                print "EMMC: size check skipped for '%s'" % filename
-
-	if part_info == None and self.flinfo.type != 'norplusnand':
-	    print "Flash type is norplusemmc"
-	    return 1
-
-        script.start_if_or("machid", machid_list)
-        script.append("setenv qcn9224_version 1 && detect_qcn9224", fatal=False)
-        script.append('if test "$qcn9224_version" = "1"; then\n', fatal=False)
-
-	script.start_activity("Flashing %s:" % ( filename[:-13] ))
-
-	if img_size > 0:
-	    filename_pad = filename + ".padded"
-	    if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-		script.imxtract(filename[:-13] + "-" + sha1(filename_pad))
-	    else:
-		script.imxtract(filename[:-13] + "-" + sha1(filename))
-
-	part_size = Pack.norplusnand_rootfs_img_size
-	if part_info == None:
-	    if self.flinfo.type == 'norplusnand':
-		offset = count * Pack.norplusnand_rootfs_img_size
-		script.nand_write(offset, part_size, img_size, spi_nand)
-		count = count + 1
-	else:
-	    if part_info.which_flash == 0:
-		offset = part_info.offset
-		script.erase(offset, part_info.length)
-		script.write(offset, img_size)
-	    else:
-		offset = part_info.offset
-		script.nand_write(offset, part_info.length, img_size, spi_nand)
-
-        script.finish_activity()
-        script.end_if()
-
-        script.end_if()
 
         return 1
 
@@ -1152,7 +992,6 @@ class Pack(object):
     def __gen_flash_script_image(self, filename, soc_version, file_exists, machid, partition, flinfo, script):
 
 	    global IF_QCN9000
-	    global IF_QCN9224
 
 	    img_size = 0
 	    if file_exists == 1:
@@ -1214,12 +1053,6 @@ class Pack(object):
 
             if section_conf == "mibib" and IF_QCN9000:
                 section_conf = "mibib_qcn9000"
-            if section_conf == "mibib" and IF_QCN9224:
-                section_conf = "mibib_qcn9224"
-            if section_conf == "gpt" and IF_QCN9224:
-                section_conf = "gpt_qcn9224"
-            if section_conf == "gptbackup" and IF_QCN9224:
-                section_conf = "gptbackup_qcn9224"
             if section_conf == "qsee":
                 section_conf = "tz"
             elif section_conf == "appsbl":
@@ -1269,11 +1102,11 @@ class Pack(object):
                 if part_info.which_flash == 0:
                     offset = part_info.offset
                     script.erase(offset, part_info.length)
-                    if ARCH_NAME in ["ipq5018", "ipq5018_64", "ipq9574", "ipq9574_64"]:
+                    if ARCH_NAME in ["ipq9574", "ipq9574_64"]:
                         if self.flash_type == "nand-4k" and section_conf == "sbl1":
                                 script.switch_layout_qpic("sbl")
                     script.write(offset, img_size)
-                    if ARCH_NAME in ["ipq5018", "ipq5018_64", "ipq9574", "ipq9574_64"]:
+                    if ARCH_NAME in ["ipq9574", "ipq9574_64"]:
                         if self.flash_type == "nand-4k" and section_conf == "sbl1":
                                 script.switch_layout_qpic("linux")
                 else:
@@ -1300,7 +1133,6 @@ class Pack(object):
 	global SRC_DIR
 	global ARCH_NAME
 	global IF_QCN9000
-	global IF_QCN9224
 
 	diff_files = ""
         count = 0
@@ -1310,15 +1142,12 @@ class Pack(object):
 	wifi_fw_type = ""
 	wifi_fw_type_min = ""
 	wifi_fw_type_max = ""
-        skip_size_check = ""
 
         if self.flash_type == "norplusemmc" and flinfo.type == "emmc":
             srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
         else:
             if IF_QCN9000:
                 srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition-qcn9000.xml"
-            elif IF_QCN9224 and flinfo.type != "emmc":
-                srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition-qcn9224.xml"
             else:
                 srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition.xml"
 
@@ -1326,15 +1155,9 @@ class Pack(object):
         if self.flash_type != "emmc" and flinfo.type != "emmc":
             parts = root_part.findall(".//partitions/partition")
         elif self.flash_type != "emmc" and flinfo.type == "emmc":
-            if IF_QCN9224:
-               parts = root_part.findall(".//physical_partition[@ref='norplusemmc_qcn9224']/partition")
-            else:
-               parts = root_part.findall(".//physical_partition[@ref='norplusemmc']/partition")
+            parts = root_part.findall(".//physical_partition[@ref='norplusemmc']/partition")
         else:
-            if IF_QCN9224:
-               parts = root_part.findall(".//physical_partition[@ref='emmc_qcn9224']/partition")
-            else:
-               parts = root_part.findall(".//physical_partition[@ref='emmc']/partition")
+            parts = root_part.findall(".//physical_partition[@ref='emmc']/partition")
         if flinfo.type == "emmc" and image_type == "all":
             parts_length = len(parts) + 2
         else:
@@ -1352,8 +1175,6 @@ class Pack(object):
             soc_hw_versions = soc_hw_version_ipq5018
 	if ARCH_NAME == "ipq9574" or ARCH_NAME == "ipq9574_64":
             soc_hw_versions = soc_hw_version_ipq9574
-	if ARCH_NAME == "ipq5332" or ARCH_NAME == "ipq5332_64":
-            soc_hw_versions = soc_hw_version_ipq5332
 
         chip_count = 0
         for soc_hw_version in soc_hw_versions:
@@ -1410,11 +1231,6 @@ class Pack(object):
                     part_info = root.find(".//data[@type='EMMC_PARAMETER']")
                 part_fname = part_info.find(".//partition_mbn")
                 filename = part_fname.text
-		if IF_QCN9224 and flinfo.type == "emmc":
-			if self.flash_type == "emmc":
-				filename = filename[:-5] + "2.bin"
-			elif self.flash_type == "norplusemmc":
-				filename = filename[:-5] + "3.bin"
                 partition = "0:GPT"
                 first = False
 
@@ -1425,11 +1241,6 @@ class Pack(object):
                     part_info = root.find(".//data[@type='EMMC_PARAMETER']")
                 part_fname = part_info.find(".//partition_mbn_backup")
                 filename = part_fname.text
-		if IF_QCN9224 and flinfo.type == "emmc":
-			if self.flash_type == "emmc":
-				filename = filename[:-5] + "2.bin"
-			elif self.flash_type == "norplusemmc":
-				filename = filename[:-5] + "3.bin"
                 partition = "0:GPTBACKUP"
 
             else:
@@ -1540,7 +1351,7 @@ class Pack(object):
 				if not os.path.exists(os.path.join(self.images_dname, filename)):
 				    continue
 			    wifi_fw_type = img.get('wififw_type')
-			    ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script, "")
+			    ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script)
 			    if ret == 0:
 				return 0
 			    wifi_fw_type = ""
@@ -1581,28 +1392,16 @@ class Pack(object):
 		if wifi_fw_type_min:
 		   partition = section.attrib['label']
 
-                   if 'skip_size_check' in section.attrib:
-                       skip_size_check = section.attrib['skip_size_check']
-
-                   for fw_type in range(int(wifi_fw_type_min), int(wifi_fw_type_max) + 1):
-
+		   for fw_type in range(int(wifi_fw_type_min), int(wifi_fw_type_max) + 1):
 			if image_type == "all" or section.attrib['image_type'] == image_type:
-                           if 'filename_img' + str(fw_type) in section.attrib:
-			      filename = section.attrib['filename_img' + str(fw_type)]
-
+			   filename = section.attrib['filename_img' + str(fw_type)]
 			   if filename == "":
 				continue
 			   wifi_fw_type = str(fw_type)
-                           if wifi_fw_type < "7":
-			        ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
-			        if ret == 0:
-			            return 0
-                           elif wifi_fw_type == "7":
-                                ret = self.__gen_flash_script_wififw_qcn9224_v1(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
-                                if ret == 0:
-                                    return 0
+			   ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script)
+			   if ret == 0:
+				return 0
 			   wifi_fw_type = ""
-                           filename = ""
 
 		   wifi_fw_type_min = ""
 		   wifi_fw_type_max = "" # Clear for next partition
@@ -1645,19 +1444,13 @@ class Pack(object):
 		fw_imgs = section.findall('img_name')
 		for fw_img in fw_imgs:
 		    wifi_fw_type = fw_img.get('wififw_type')
-		    if wifi_fw_type != None and wifi_fw_type < "7":
+		    if wifi_fw_type != None:
 			fw_filename = fw_img.text
 			if fw_filename != "":
 			    ret = self.__gen_flash_script_wififw_ubi_volume(entries, fw_filename, wifi_fw_type, script)
 			    if ret == 0:
 				return 0
-                    if wifi_fw_type == "7":
-                         fw_filename = fw_img.text
-                         if fw_filename != "":
-                             ret = self.__gen_flash_script_wififw_ubi_volume_qcn9224_v1(entries, fw_filename, wifi_fw_type, script)
-                             if ret == 0:
-                                return 0
-		    wifi_fw_type = ""
+			wifi_fw_type = ""
 		continue
 
         return 1
@@ -1759,7 +1552,6 @@ class Pack(object):
     def __gen_script_append_images(self, filename, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition):
 
         global QCN9000
-        global QCN9224
 
 	part_info = self.__get_part_info(partition)
 	if part_info == None and self.flinfo.type != 'norplusnand':
@@ -1818,7 +1610,6 @@ class Pack(object):
 	global MODE
 	global SRC_DIR
 	global QCN9000
-	global QCN9224
 
 	soc_version = 0
 	diff_soc_ver_files = 0
@@ -1834,8 +1625,6 @@ class Pack(object):
 
         if QCN9000:
             script.end_if() #end if started for hk+pine
-        if QCN9224:
-            script.end_if() #end if started for al+waikiki
 
         if (self.flash_type == "norplusemmc" and flinfo.type == "emmc") or (self.flash_type != "norplusemmc"):
             if flinfo.type == "emmc":
@@ -1991,22 +1780,6 @@ class Pack(object):
                 except KeyError, e:
                     continue
 
-            if section_conf == "gpt" and QCN9224:
-		if self.flash_type == "emmc":
-			filename_qcn9224 = filename[:-5] + "2.bin"
-		elif self.flash_type == "norplusemmc":
-			filename_qcn9224 = filename[:-5] + "3.bin"
-		section_conf_qcn9224 = section_conf + "_qcn9224"
-		self.__gen_script_append_images(filename_qcn9224, soc_version, wifi_fw_type, images, flinfo, root, section_conf_qcn9224, partition)
-
-            if section_conf == "gptbackup" and QCN9224:
-		if self.flash_type == "emmc":
-			filename_qcn9224 = filename[:-5] + "2.bin"
-		elif self.flash_type == "norplusemmc":
-			filename_qcn9224 = filename[:-5] + "3.bin"
-		section_conf_qcn9224 = section_conf + "_qcn9224"
-		self.__gen_script_append_images(filename_qcn9224, soc_version, wifi_fw_type, images, flinfo, root, section_conf_qcn9224, partition)
-
             if flinfo.type != "emmc":
 
 		img = section.find('img_name')
@@ -2066,20 +1839,13 @@ class Pack(object):
                     filename_qcn9000 = img.text[:-4] + "-qcn9000.bin"
                     section_conf_qcn9000 = section_conf + "_qcn9000"
                     self.__gen_script_append_images(filename_qcn9000, soc_version, wifi_fw_type, images, flinfo, root, section_conf_qcn9000, partition)
-                # system-partition specific for AL+WAIKIKI
-                if section_conf == "mibib" and QCN9224:
-                    img = section.find('img_name')
-                    filename_qcn9224 = img.text[:-4] + "-qcn9224.bin"
-                    section_conf_qcn9224 = section_conf + "_qcn9224"
-                    self.__gen_script_append_images(filename_qcn9224, soc_version, wifi_fw_type, images, flinfo, root, section_conf_qcn9224, partition)
             else:
 		# wififw images specific for RDP based on machid
 		if wifi_fw_type_min:
 
 		    for fw_type in range(int(wifi_fw_type_min), int(wifi_fw_type_max) + 1):
 			if image_type == "all" or section.attrib['image_type'] == image_type:
-                            if 'filename_img' + str(fw_type) in section.attrib:
-			       filename = section.attrib['filename_img' + str(fw_type)]
+			    filename = section.attrib['filename_img' + str(fw_type)]
 			if filename == "":
 			    continue
 			if 'optional' in section.attrib:
@@ -2088,7 +1854,6 @@ class Pack(object):
 			wifi_fw_type = str(fw_type)
 			self.__gen_script_append_images(filename, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
 			wifi_fw_type = ""
-                        filename = ""
 
 		    wifi_fw_type_min = ""
 		    wifi_fw_type_max = "" # Clean for next partition
@@ -2188,8 +1953,6 @@ class Pack(object):
 	global ARCH_NAME
 	global QCN9000
 	global IF_QCN9000
-	global QCN9224
-	global IF_QCN9224
 
         """Generate the flashing script for one board.
 
@@ -2201,7 +1964,6 @@ class Pack(object):
         images -- list of ImageInfo, append images used by the board here
         """
         IF_QCN9000 = False
-        IF_QCN9224 = False
         script_fp = open(self.scr_fname, "a")
         self.flinfo = flinfo
 
@@ -2249,51 +2011,15 @@ class Pack(object):
                 script.append('else', fatal=False)
                 self.partitions = {}
                 IF_QCN9000 = False
-            # system-partition specific for ALDER+WAIKIKI
-            if QCN9224:
-                IF_QCN9224 = True
-                part_fname_qcn9224 = part_fname[:-4] + "-qcn9224.bin"
-                mibib_qcn9224 = MIBIB(part_fname_qcn9224, flinfo.pagesize, flinfo.blocksize,
-                                   flinfo.chipsize, blocksize, chipsize, root_part)
-                self.partitions = mibib_qcn9224.get_parts()
-
-                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701" || test "$machid" = "8050801" || test "$machid" = "8050901" || test "$machid" = "8050a01" || test "$machid" = "8050b01" || test "$machid" = "8050c01" || test "$machid" = "8050d01" || test "$machid" = "8050e01" || test "$machid" = "8050f01" || test "$machid" = "8050002" || test "$machid" = "8050102"; then\n', fatal=False)
-                ret = self.__gen_flash_script(script, flinfo, root, True)
-                if ret == 0:
-                    return 0 #Issue in packing al+wkk single-image
-
-                script.append('else', fatal=False)
-                self.partitions = {}
-                IF_QCN9224 = False
 
             mibib = MIBIB(part_fname, flinfo.pagesize, flinfo.blocksize,
                           flinfo.chipsize, blocksize, chipsize, root_part)
             self.partitions = mibib.get_parts()
 
         else:
-            script = Flash_Script(flinfo)
-
-            # system-partition specific for ALDER+WAIKIKI
-            if QCN9224:
-		IF_QCN9224 = True
-		if self.flash_type == "emmc":
-			part_fname_qcn9224 = part_fname[:-5] + "2.bin"
-		elif self.flash_type == "norplusemmc":
-			part_fname_qcn9224 = part_fname[:-5] + "3.bin"
-		gpt = GPT(part_fname_qcn9224, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
-		self.partitions = gpt.get_parts()
-
-                script.append('if test "$machid" = "8050301" || test "$machid" = "8050501"  || test "$machid" = "8050601" || test "$machid" = "8050701" || test "$machid" = "8050801" || test "$machid" = "8050901" || test "$machid" = "8050a01" || test "$machid" = "8050b01" || test "$machid" = "8050c01" || test "$machid" = "8050d01" || test "$machid" = "8050e01" || test "$machid" = "8050f01" || test "$machid" = "8050002" || test "$machid" = "8050102"; then\n', fatal=False)
-		ret = self.__gen_flash_script(script, flinfo, root, True)
-		if ret == 0:
-			return 0 #Issue in packing al+wkk single-image
-
-		script.append('else', fatal=False)
-		self.partitions = {}
-		IF_QCN9224 = False
-
             gpt = GPT(part_fname, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
             self.partitions = gpt.get_parts()
+            script = Flash_Script(flinfo)
 
         ret = self.__gen_script(script_fp, script, images, flinfo, root)
 	if ret == 0:
@@ -2301,8 +2027,6 @@ class Pack(object):
 
 	if QCN9000:
 	    QCN9000 = False
-	if QCN9224:
-	    QCN9224 = False
 
         try:
             script_fp.write(script.dumps())
@@ -2320,17 +2044,12 @@ class Pack(object):
         machid -- string, board machine ID in hex format
         images -- list of ImageInfo, append images used by the board here
         """
-        global QCN9224
 
         try:
             part_info = root.find(".//data[@type='" + self.flash_type.upper() + "_PARAMETER']")
             part_fname = part_info.find(".//partition_mbn")
             part_fname = part_fname.text
             part_fname = os.path.join(self.images_dname, part_fname)
-
-            if ARCH_NAME == "ipq9574":
-                QCN9224 = True
-
             if ftype == "norplusemmc":
                 part_info = root.find(".//data[@type='NORPLUSEMMC_PARAMETER']")
                 pagesize = int(part_info.find(".//page_size_flash").text)
@@ -2358,7 +2077,6 @@ class Pack(object):
 	global ARCH_NAME
 	global MODE
 	global QCN9000
-	global QCN9224
 
         try:
             if ftype == "tiny-nor" or ftype == "tiny-nor-debug":
@@ -2380,7 +2098,7 @@ class Pack(object):
             else:
                 part_info = root.find(".//data[@type='" + ftype.upper() + "_PARAMETER']")
 
-            if ARCH_NAME in ["ipq6018", "ipq5018", "ipq807x", "ipq9574", "ipq5332"]:
+            if ARCH_NAME in ["ipq6018", "ipq5018", "ipq807x", "ipq9574"]:
                 MODE_APPEND = "_64" if MODE == "64" else ""
 
                 if ftype in ["nand-audio", "nand-audio-4k"]:
@@ -2438,8 +2156,6 @@ class Pack(object):
 
             if ARCH_NAME == "ipq807x" and (ftype == "norplusnand" or ftype == "nand"):
                 QCN9000 = True
-            if ARCH_NAME == "ipq9574" and (ftype in ["norplusnand", "nand", "norplusemmc", "norplusnand-4k", "nand-4k"]):
-                QCN9224 = True
 
             if ftype in ["tiny-nor", "norplusnand", "norplusnand-4k", "norplusemmc", "tiny-nor-debug"]:
                 ftype = "nor"
@@ -2460,10 +2176,8 @@ class Pack(object):
     def __process_board(self, images, root):
 
         global QCN9000
-        global QCN9224
 
         QCN9000 = False
-        QCN9224 = False
         try:
             if self.flash_type in [ "nand", "nand-4k", "nand-audio", "nand-audio-4k", "nor", "tiny-nor", "norplusnand", "norplusnand-4k", "tiny-nor-debug" ]:
                 ret = self.__process_board_flash(self.flash_type, images, root)
@@ -2582,12 +2296,12 @@ class ArgParser(object):
 #Verify Arguments passed by user
 
 # Verify arch type
-	    if ARCH_NAME not in ["ipq40xx", "ipq806x", "ipq807x", "ipq807x_64", "ipq6018", "ipq6018_64", "ipq5018", "ipq5018_64", "ipq9574", "ipq9574_64", "ipq5332", "ipq5332_64"]:
+	    if ARCH_NAME not in ["ipq40xx", "ipq806x", "ipq807x", "ipq807x_64", "ipq6018", "ipq6018_64", "ipq5018", "ipq5018_64", "ipq9574", "ipq9574_64"]:
 		raise UsageError("Invalid arch type '%s'" % arch)
 
-	    if ARCH_NAME == "ipq807x" or ARCH_NAME == "ipq5018" or ARCH_NAME == "ipq9574" or ARCH_NAME == "ipq5332":
+	    if ARCH_NAME == "ipq807x" or ARCH_NAME == "ipq5018" or ARCH_NAME == "ipq9574":
 		MODE = "32"
-	    elif ARCH_NAME == "ipq807x_64" or ARCH_NAME == "ipq5018_64" or ARCH_NAME == "ipq9574_64" or ARCH_NAME == "ipq5332_64":
+	    elif ARCH_NAME == "ipq807x_64" or ARCH_NAME == "ipq5018_64" or ARCH_NAME == "ipq9574_64":
 		MODE = "64"
 		ARCH_NAME = ARCH_NAME[:-3]
 
@@ -2627,7 +2341,7 @@ class ArgParser(object):
 	print "python pack_hk.py [options] [Value] ..."
 	print
         print "options:"
-        print "  --arch \tARCH_TYPE [ipq40xx/ipq806x/ipq807x/ipq807x_64/ipq6018/ipq6018_64/ipq5018/ipq5018_64/ipq9574/ipq9574_64/ipq5332/ipq5332_64]"
+        print "  --arch \tARCH_TYPE [ipq40xx/ipq806x/ipq807x/ipq807x_64/ipq6018/ipq6018_64/ipq5018/ipq5018_64/ipq9574/ipq9574_64]"
 	print
 	print "  --fltype \tFlash Type [nor/tiny-nor/nand/emmc/norplusnand/norplusemmc/tiny-nor-debug]"
         print " \t\tMultiple flashtypes can be passed by a comma separated string"
