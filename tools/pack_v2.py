@@ -63,6 +63,8 @@ generated flashing script to work.
   * CONFIG_CMD_NAND -- NAND Flash commands support
   * CONFIG_CMD_NAND_YAFFS -- NAND YAFFS2 write support
   * CONFIG_CMD_SF -- SPI Flash commands support
+  * CONFIG_IPQ_MIBIB_RELOAD -- reloading part info from mibib support
+  * CONFIG_IPQ_XTRACT_N_FLASH -- xtract_n_flash cmd support
 """
 
 from os.path import getsize
@@ -91,11 +93,9 @@ skip_4k_nand = "false"
 atf = "false"
 tiny_16m = "false"
 multi_wifi_fw = "false"
-
-soc_hw_version_ipq807x = { 0x200D0100, 0x200D0101, 0x200D0102, 0x200D0200 };
-soc_hw_version_ipq6018 = { 0x20170100 };
-soc_hw_version_ipq5018 = { 0x20180100, 0x20180101 };
-soc_hw_version_ipq9574 = { 0x20190100 };
+supported_arch = ["ipq5332", "ipq5332_64"]
+soc_hw_versions = {}
+soc_hw_versions["ipq5332"] = { 0x201A0100 };
 
 #
 # Python 2.6 and earlier did not have OrderedDict use the backport
@@ -127,11 +127,6 @@ def error(msg, ex=None):
 FlashInfo = namedtuple("FlashInfo", "type pagesize blocksize chipsize")
 ImageInfo = namedtuple("ProgInfo", "name filename type")
 PartInfo = namedtuple("PartInfo", "name offset length which_flash")
-
-def roundup(value, roundto):
-    """Return the next largest multiple of 'roundto'."""
-
-    return ((value + roundto - 1) // roundto) * roundto
 
 class GPT(object):
     GPTheader = namedtuple("GPTheader", "signature revision header_size"
@@ -324,12 +319,6 @@ class FlashScript(object):
         self.activity = None
         self.flash_type = flinfo.type
 
-        self.script.append('if test "x$verbose" = "x"; then\n')
-        self.script.append("failedmsg='[failed]'\n")
-        self.script.append('else\n')
-        self.script.append("failedmsg='%s Failed'\n" % ("#" * 40))
-        self.script.append('fi\n')
-
     def append(self, cmd, fatal=True):
         """Add a command to the script.
 
@@ -338,22 +327,7 @@ class FlashScript(object):
         """
 
         if fatal:
-            """Check cmd strings to display reason for failure."""
-
-            if "imxtract" in cmd:
-                self.script.append("failreason='error: failed on image extraction'\n")
-            elif "erase" in cmd:
-                self.script.append("failreason='error: failed on partition erase'\n")
-            elif "write" in cmd:
-                self.script.append("failreason='error: failed on partition write'\n")
-            else:
-                pass
-
-            self.script.append(cmd
-                               + ' || setenv stdout serial'
-                               + ' && echo "$failedmsg"'
-                               + ' && echo "$failreason"'
-                               + ' && exit 1\n')
+            self.script.append(cmd + ' || exit 1\n')
         else:
             self.script.append(cmd + "\n")
 
@@ -370,36 +344,14 @@ class FlashScript(object):
         self.append("setenv stdout %s" % dev, fatal=False)
         self.curr_stdout = dev
 
-    def start_activity(self, activity):
-        """Generate code, to indicate start of an activity."""
-
-        self.script.append('if test "x$verbose" = "x"; then\n')
-        self.echo("'%-40.40s'" % activity, nl=False)
-        self.script.append('else\n')
-        self.echo("'%s %s Started'" % ("#" * 40, activity), verbose=True)
-        self.script.append('fi\n')
-        self.activity = activity
-
-    def finish_activity(self):
-        """Generate code, to indicate end of an activity."""
-
-        self.script.append('if test "x$verbose" = "x"; then\n')
-        self.echo("'[ done ]'")
-        self.redirect("serial")
-        self.script.append('else\n')
-        self.echo("'%s %s Done'" % ("#" * 40, self.activity), verbose=True)
-        self.script.append('fi\n')
-
-    def imxtract(self, part):
-        """Generate code, to extract image location, from a multi-image blob.
+    def imxtract_n_flash(self, part, part_name):
+        """Generate code, to extract image location, from a multi-image blob
+        and flash it.
 
         part -- string, name of the sub-image
-
-        Sets the $fileaddr environment variable, to point to the
-        location of the sub-image.
+        part_name -- string, partition name
         """
-
-        self.append("imxtract $imgaddr %s" % part)
+        self.append("xtract_n_flash $imgaddr %s %s" % (part, part_name))
 
     def echo(self, msg, nl=True, verbose=False):
         """Generate code, to print a message.
@@ -458,78 +410,6 @@ class FlashScript(object):
 
         self.append('fi\n', fatal=False)
 
-class Flash_Script(FlashScript):
-    """Class for creating NAND flash scripts."""
-
-    def __init__(self, *args):
-        FlashScript.__init__(self, args[0])
-        if args[0].type == "nand":
-            self.ipq_nand = args[1]
-        elif args[0].type == "nor" or args[0].type == "norplusnand":
-            self.nand_pagesize = args[1]
-
-    def erase(self, offset, size):
-        """Generate code, to erase the specified partition."""
-
-        if self.flash_type != "emmc":
-            size = roundup(size, self.blocksize)
-
-        if self.flash_type == "nand":
-                self.append("nand device 0 && nand erase 0x%08x 0x%08x" % (offset, size))
-        elif self.flash_type == "nor":
-            self.append("sf erase 0x%08x +0x%08x" % (offset, size))
-        elif self.flash_type == "emmc":
-            self.append("mmc erase 0x%08x %x" % (offset, size))
-
-    def nand_write(self, offset, part_size, img_size, spi_nand):
-       """Handle the NOR + NAND case
-          All binaries upto HLOS will go to NOR and Root FS will go to NAND
-          Assumed all nand page sizes are less than are equal to 8KB
-          """
-
-       if spi_nand == "true":
-           self.append("nand device 1 && nand erase 0x%08x 0x%08x" % (offset, part_size))
-       else:
-           self.append("nand device 0 && nand erase 0x%08x 0x%08x" % (offset, part_size))
-
-       if img_size > 0:
-            self.append("nand write $fileaddr 0x%08x 0x%08x" % (offset, img_size))
-
-    def write(self, offset, size):
-        """Generate code, to write to a partition."""
-
-        if self.flash_type == "nand":
-            if size > 0:
-                size = roundup(size, self.pagesize)
-                self.append("nand write $fileaddr 0x%08x 0x%08x" % (offset, size))
-
-        elif self.flash_type == "nor":
-            if size > 0:
-                self.append("sf write $fileaddr 0x%08x 0x%08x" % (offset, size))
-
-        elif self.flash_type == "emmc":
-            if size > 0:
-               size = roundup(size, self.blocksize)
-               blk_cnt = size / self.blocksize
-               self.append("mmc write $fileaddr 0x%08x %x" % (offset, blk_cnt))
-
-    def probe(self):
-        if self.flash_type == "nand":
-            pass
-        elif self.flash_type == "nor":
-            self.append("sf probe")
-        else:
-            pass
-
-    def switch_layout(self, layout):
-        if self.flash_type == "nand":
-            self.append("ipq_nand %s" % layout)
-        else:
-            pass
-
-    def switch_layout_qpic(self, layout):
-        self.append("qpic_nand %s" % layout)
-
 its_tmpl = Template("""
 /dts-v1/;
 
@@ -565,13 +445,10 @@ class Pack(object):
     Combine multiple images present in a directory, and generate a
     U-Boot script to flash the images.
     """
-    # The maximum rootfs size is 64MB
-    norplusnand_rootfs_img_size = (64 * 1024 * 1024)
 
     def __init__(self):
         self.flinfo = None
         self.images_dname = None
-        self.ipq_nand = None
         self.partitions = {}
 
         self.fconf_fname = None
@@ -624,7 +501,6 @@ class Pack(object):
             machid = int(section.find(".//machid").text, 0)
             machid = "%x" % machid
             board = section.find(".//board").text
-            spi_nand = section.find(".//spi_nand").text
 
             try:
                 memory = section.find(".//memory").text
@@ -645,28 +521,6 @@ class Pack(object):
                 section_conf = section_label[0]
 
             section_conf = section_conf.lower()
-
-            if self.flinfo.type == 'nand':
-                size = roundup(img_size, flinfo.pagesize)
-                tr = ' | tr \"\\000\" \"\\377\"'
-
-            if self.flinfo.type == 'emmc':
-                size = roundup(img_size, flinfo.blocksize)
-                tr = ''
-
-            if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-                pad_size = size - img_size
-                filename_abs = os.path.join(self.images_dname, filename)
-                filename_abs_pad = filename_abs + ".padded"
-                cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
-                ret = subprocess.call(cmd, shell=True)
-                if ret != 0:
-                    error("failed to copy image")
-                cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
-                cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
-                ret = subprocess.call(cmd, shell=True)
-                if ret != 0:
-                    error("failed to create padded image from script")
 
             if self.flinfo.type != "emmc":
                if part_info == None:
@@ -690,33 +544,8 @@ class Pack(object):
             if machid:
                 script.start_if("machid", machid)
 
-            script.start_activity("Flashing ddr-%s_%s:" % ( board, memory ))
             if img_size > 0:
-                filename_pad = filename + ".padded"
-                if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-                    script.imxtract("ddr-" + board + "_" + memory + "-" + sha1(filename_pad))
-                else:
-                    script.imxtract("ddr-" + board + "_" + memory + "-" + sha1(filename))
-                    """ script.imxtract("cdt-" + board + "_" + memory + ".bin-" + sha1(filename_pad))
-            else:
-                    script.imxtract("cdt-" + board + "_" + memory + ".bin-" + sha1(filename)) """
-
-            part_size = Pack.norplusnand_rootfs_img_size
-            if part_info == None:
-                if self.flinfo.type == 'norplusnand':
-                    offset = count * Pack.norplusnand_rootfs_img_size
-                    script.nand_write(offset, part_size, img_size, spi_nand)
-                    count = count + 1
-            else:
-                if part_info.which_flash == 0:
-                    offset = part_info.offset
-                    script.erase(offset, part_info.length)
-                    script.write(offset, img_size)
-                else:
-                    offset = part_info.offset
-                    script.nand_write(offset, part_info.length, img_size, spi_nand)
-
-            script.finish_activity()
+                script.imxtract_n_flash("ddr-" + board + "_" + memory + "-" + sha1(filename), part_info.name)
 
             if machid:
                 script.end_if()
@@ -741,27 +570,8 @@ class Pack(object):
 	    machid_list.append(machid)
 
 	script.start_if_or("machid", machid_list)
-	script.start_activity("Flashing " + fw_filename[:-13] + ":")
-	script.imxtract(fw_filename[:-13] + "-" + sha1(fw_filename))
+	script.imxtract_n_flash(fw_filename[:-13] + "-" + sha1(fw_filename), "wifi_fw")
 
-	rootfs_info = self.__get_part_info("rootfs")
-	rootfs_offset = rootfs_info.offset
-	rootfs_len = rootfs_info.length
-
-	wifi_fw_cmd = "setenv mtdids nand0=nand0\n"
-	wifi_fw_cmd += "setenv mtdparts mtdparts=nand0:0x%x@0x%x(rootfs)\n" % (rootfs_len,rootfs_offset)
-	wifi_fw_cmd += "ubi part rootfs\n"
-	img_size = self.__get_img_size(fw_filename)
-	wifi_fw_cmd += "ubi write $fileaddr wifi_fw %x" % img_size
-	script.append(wifi_fw_cmd, fatal=False)
-
-	#Enable the below lines for debugging purpose
-	"""
-	script.append("mtdparts", fatal=False)
-	script.append("ubi info layout", fatal=False)
-	"""
-
-	script.finish_activity()
 	script.end_if()
 
 	return 1
@@ -794,28 +604,6 @@ class Pack(object):
 	    section_conf = section_label[0]
 	section_conf = section_conf.lower()
 
-	if self.flinfo.type == 'nand':
-	    size = roundup(img_size, flinfo.pagesize)
-	    tr = ' | tr \"\\000\" \"\\377\"'
-
-	if self.flinfo.type == 'emmc':
-	    size = roundup(img_size, flinfo.blocksize)
-	    tr = ''
-
-	if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-	    pad_size = size - img_size
-	    filename_abs = os.path.join(self.images_dname, filename)
-	    filename_abs_pad = filename_abs + ".padded"
-	    cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
-	    ret = subprocess.call(cmd, shell=True)
-	    if ret != 0:
-		error("failed to copy image")
-	    cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
-	    cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
-	    ret = subprocess.call(cmd, shell=True)
-	    if ret != 0:
-		error("failed to create padded image from script")
-
 	if self.flinfo.type != "emmc":
 	    if part_info == None:
 		if self.flinfo.type == 'norplusnand':
@@ -836,31 +624,10 @@ class Pack(object):
 	    return 1
 
 	script.start_if_or("machid", machid_list)
-	script.start_activity("Flashing %s:" % ( filename[:-13] ))
 
 	if img_size > 0:
-	    filename_pad = filename + ".padded"
-	    if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-		script.imxtract(filename[:-13] + "-" + sha1(filename_pad))
-	    else:
-		script.imxtract(filename[:-13] + "-" + sha1(filename))
+		script.imxtract_n_flash(filename[:-13] + "-" + sha1(filename), part_info.name)
 
-	part_size = Pack.norplusnand_rootfs_img_size
-	if part_info == None:
-	    if self.flinfo.type == 'norplusnand':
-		offset = count * Pack.norplusnand_rootfs_img_size
-		script.nand_write(offset, part_size, img_size, spi_nand)
-		count = count + 1
-	else:
-	    if part_info.which_flash == 0:
-		offset = part_info.offset
-		script.erase(offset, part_info.length)
-		script.write(offset, img_size)
-	    else:
-		offset = part_info.offset
-		script.nand_write(offset, part_info.length, img_size, spi_nand)
-
-	script.finish_activity()
 	script.end_if()
 
         return 1
@@ -893,28 +660,6 @@ class Pack(object):
 
             section_conf = section_conf.lower()
 
-            if self.flinfo.type == 'nand':
-                size = roundup(img_size, flinfo.pagesize)
-                tr = ' | tr \"\\000\" \"\\377\"'
-
-            if self.flinfo.type == 'emmc':
-                size = roundup(img_size, flinfo.blocksize)
-                tr = ''
-
-            if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-                pad_size = size - img_size
-                filename_abs = os.path.join(self.images_dname, filename)
-                filename_abs_pad = filename_abs + ".padded"
-                cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
-                ret = subprocess.call(cmd, shell=True)
-                if ret != 0:
-                    error("failed to copy image")
-                cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
-                cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
-                ret = subprocess.call(cmd, shell=True)
-                if ret != 0:
-                    error("failed to create padded image from script")
-
             if self.flinfo.type != "emmc":
                if part_info == None:
                    if self.flinfo.type == 'norplusnand':
@@ -937,33 +682,33 @@ class Pack(object):
             if machid:
                 script.start_if("machid", machid)
 
-            script.start_activity("Flashing bootldr1-%s_%s:" % ( board, memory ))
             if img_size > 0:
-                filename_pad = filename + ".padded"
-                if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-                    script.imxtract("bootldr1_" + board + "_" + memory + "-" + sha1(filename_pad))
-                else:
-                    script.imxtract("bootldr1_" + board + "_" + memory + "-" + sha1(filename))
-
-            part_size = Pack.norplusnand_rootfs_img_size
-            if part_info == None:
-                if self.flinfo.type == 'norplusnand':
-                    offset = count * Pack.norplusnand_rootfs_img_size
-                    script.nand_write(offset, part_size, img_size, spi_nand)
-                    count = count + 1
-            else:
-                if part_info.which_flash == 0:
-                    offset = part_info.offset
-                    script.erase(offset, part_info.length)
-                    script.write(offset, img_size)
-                else:
-                    offset = part_info.offset
-                    script.nand_write(offset, part_info.length, img_size, spi_nand)
-
-            script.finish_activity()
+                script.imxtract_n_flash("bootldr1_" + board + "_" + memory + "-" + sha1(filename), part_info.name)
 
             if machid:
                 script.end_if()
+
+        return 1
+
+    def mibib_reload(self, filename, partition, flinfo, script):
+
+        img_size = self.__get_img_size(filename)
+        part_info = self.__get_part_info(partition)
+
+        section_label = partition.split(":")
+        if len(section_label) != 1:
+            section_conf = section_label[1]
+        else:
+            section_conf = section_label[0]
+
+        section_conf = section_conf.lower()
+
+        if img_size > 0:
+            script.append("imxtract $imgaddr %s" % (section_conf + "-" + sha1(filename)))
+
+        fl_type = 0 if self.flinfo.type == 'nand' else 1
+        script.append("mibib_reload %x %x %x %x" % (fl_type, flinfo.pagesize, flinfo.blocksize,
+                          flinfo.chipsize))
 
         return 1
 
@@ -981,29 +726,6 @@ class Pack(object):
                 section_conf = section_label[0]
 
             section_conf = section_conf.lower()
-            spi_nand = False
-
-            if self.flinfo.type == 'nand':
-                size = roundup(img_size, flinfo.pagesize)
-                tr = ' | tr \"\\000\" \"\\377\"'
-
-            if self.flinfo.type == 'emmc':
-                size = roundup(img_size, flinfo.blocksize)
-                tr = ''
-
-            if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-                pad_size = size - img_size
-                filename_abs = os.path.join(self.images_dname, filename)
-                filename_abs_pad = filename_abs + ".padded"
-                cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
-                ret = subprocess.call(cmd, shell=True)
-                if ret != 0:
-                    error("failed to copy image")
-                cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
-                cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
-                ret = subprocess.call(cmd, shell=True)
-                if ret != 0:
-                    error("failed to create padded image from script")
 
             if self.flinfo.type != "emmc":
                 if part_info == None:
@@ -1043,7 +765,6 @@ class Pack(object):
 		else:
 		    script.start_if("soc_version_major", soc_version)
 
-            script.start_activity("Flashing %s:" % section_conf)
 
 	    if file_exists == 0:
 		script.append('setenv stdout serial && echo "error: binary image not found" && exit 1', fatal=False)
@@ -1052,35 +773,7 @@ class Pack(object):
 		return 1
 
             if img_size > 0:
-                filename_pad = filename + ".padded"
-                if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-                    script.imxtract(section_conf + "-" + sha1(filename_pad))
-                else:
-                    script.imxtract(section_conf + "-" + sha1(filename))
-
-            part_size = Pack.norplusnand_rootfs_img_size
-            if part_info == None:
-                if self.flinfo.type == 'norplusnand':
-                    offset = count * Pack.norplusnand_rootfs_img_size
-                    img_size = Pack.norplusnand_rootfs_img_size
-                    script.nand_write(offset, part_size, img_size, spi_nand)
-                    count = count + 1
-            else:
-                if part_info.which_flash == 0:
-                    offset = part_info.offset
-                    script.erase(offset, part_info.length)
-                    if ARCH_NAME in ["ipq9574", "ipq9574_64"]:
-                        if self.flash_type == "nand-4k" and section_conf == "sbl1":
-                                script.switch_layout_qpic("sbl")
-                    script.write(offset, img_size)
-                    if ARCH_NAME in ["ipq9574", "ipq9574_64"]:
-                        if self.flash_type == "nand-4k" and section_conf == "sbl1":
-                                script.switch_layout_qpic("linux")
-                else:
-                    offset = part_info.offset
-                    script.nand_write(offset, part_info.length, img_size, spi_nand)
-
-            script.finish_activity()
+                script.imxtract_n_flash(section_conf + "-" + sha1(filename), part_info.name)
 
 	    if soc_version:
 		script.end_if()
@@ -1127,17 +820,9 @@ class Pack(object):
             parts_length = len(parts)
         entries = root.findall(".//data[@type='MACH_ID_BOARD_MAP']/entry")
 
-	if ARCH_NAME == "ipq807x" or ARCH_NAME == "ipq807x_64":
-            soc_hw_versions = soc_hw_version_ipq807x
-	if ARCH_NAME == "ipq6018" or ARCH_NAME == "ipq6018_64":
-            soc_hw_versions = soc_hw_version_ipq6018
-	if ARCH_NAME == "ipq5018" or ARCH_NAME == "ipq5018_64":
-            soc_hw_versions = soc_hw_version_ipq5018
-	if ARCH_NAME == "ipq9574" or ARCH_NAME == "ipq9574_64":
-            soc_hw_versions = soc_hw_version_ipq9574
 
         chip_count = 0
-        for soc_hw_version in soc_hw_versions:
+        for soc_hw_version in soc_hw_versions[ARCH_NAME]:
             chip_count = chip_count + 1
             if chip_count == 1:
                 script.script.append('if test -n $soc_hw_version')
@@ -1179,6 +864,14 @@ class Pack(object):
 
         if flinfo.type == "emmc" and image_type == "all":
             first = True
+
+        section = parts[1]
+        imgs = section.findall('img_name')
+        pnames = section.findall('name')
+        for img, pname in zip(imgs,pnames):
+            if pname.text == "0:MIBIB":
+                filename = img.text
+                self.mibib_reload(filename, pname.text, flinfo, script)
 
         for index in range(parts_length):
 
@@ -1406,7 +1099,6 @@ class Pack(object):
         for section in entries:
 
             board = section.find(".//board").text
-
             try:
                 memory = section.find(".//memory").text
             except AttributeError, e:
@@ -1423,16 +1115,6 @@ class Pack(object):
             if part_info == None and self.flinfo.type != 'norplusnand':
                 continue
 
-            if self.flinfo.type == 'nand':
-                img_size = self.__get_img_size(filename)
-                size = roundup(img_size, flinfo.pagesize)
-                if ( size != img_size ):
-                    filename = filename + ".padded"
-            if self.flinfo.type == 'emmc':
-                img_size = self.__get_img_size(filename)
-                size = roundup(img_size, flinfo.blocksize)
-                if ( size != img_size ):
-                    filename = filename + ".padded"
             image_info = ImageInfo(file_info + "-" + sha1(filename),
                                    filename, "firmware")
             if filename.lower() != "none":
@@ -1468,16 +1150,6 @@ class Pack(object):
             if part_info == None and self.flinfo.type != 'norplusnand':
                 continue
 
-            if self.flinfo.type == 'nand':
-                img_size = self.__get_img_size(filename)
-                size = roundup(img_size, flinfo.pagesize)
-                if ( size != img_size ):
-                    filename = filename + ".padded"
-            if self.flinfo.type == 'emmc':
-                img_size = self.__get_img_size(filename)
-                size = roundup(img_size, flinfo.blocksize)
-                if ( size != img_size ):
-                    filename = filename + ".padded"
             image_info = ImageInfo(file_info + "-" + sha1(filename),
                                    filename, "firmware")
             if filename.lower() != "none":
@@ -1491,16 +1163,6 @@ class Pack(object):
 	if part_info == None and self.flinfo.type != 'norplusnand':
 	    return
 
-	if self.flinfo.type == 'nand':
-	    img_size = self.__get_img_size(filename)
-	    size = roundup(img_size, flinfo.pagesize)
-	    if ( size != img_size ):
-		filename = filename + ".padded"
-	if self.flinfo.type == 'emmc':
-	    img_size = self.__get_img_size(filename)
-	    size = roundup(img_size, flinfo.blocksize)
-	    if ( size != img_size ):
-		filename = filename + ".padded"
 	if section_conf == "qsee":
 	    section_conf = "tz"
 	elif section_conf == "appsbl":
@@ -1554,17 +1216,6 @@ class Pack(object):
             return 0 #Stop packing this single-image
 
         if (self.flash_type == "norplusemmc" and flinfo.type == "emmc") or (self.flash_type != "norplusemmc"):
-            if flinfo.type == "emmc":
-                srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
-                rpart = ET.parse(srcDir_part)
-                parts = rpart.findall(".//physical_partition[@ref='emmc']/partition")
-                for index in range(len(parts)):
-                        section = parts[index]
-                        if section.attrib['label'] == "rootfs_data":
-                            script.start_activity("Flashing rootfs_data:")
-                            part_info = self.partitions["rootfs_data"]
-                            script.erase(part_info.offset, part_info.length)
-                            script.finish_activity()
             script.end()
 
         if self.flash_type == "norplusemmc" and flinfo.type == "emmc":
@@ -1891,21 +1542,15 @@ class Pack(object):
             srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
             root_part = ET.parse(srcDir_part)
 
-            if flinfo.type == "nand":
-                script = Flash_Script(flinfo, self.ipq_nand)
-            elif flinfo.type == "nor":
-                script = Flash_Script(flinfo, pagesize)
-
-            script.probe()
-
+            script = FlashScript(flinfo)
             mibib = MIBIB(part_fname, flinfo.pagesize, flinfo.blocksize,
                           flinfo.chipsize, blocksize, chipsize, root_part)
             self.partitions = mibib.get_parts()
 
         else:
+            script = FlashScript(flinfo)
             gpt = GPT(part_fname, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
             self.partitions = gpt.get_parts()
-            script = Flash_Script(flinfo)
 
         ret = self.__gen_script(script_fp, script, images, flinfo, root)
 	if ret == 0:
@@ -1976,46 +1621,45 @@ class Pack(object):
             else:
                 part_info = root.find(".//data[@type='" + ftype.upper() + "_PARAMETER']")
 
-            if ARCH_NAME in ["ipq6018", "ipq5018", "ipq807x", "ipq9574"]:
-                MODE_APPEND = "_64" if MODE == "64" else ""
+            MODE_APPEND = "_64" if MODE == "64" else ""
 
-                UBINIZE_CFG_NAME = ARCH_NAME + "-ubinize" + MODE_APPEND + ".cfg"
+            UBINIZE_CFG_NAME = ARCH_NAME + "-ubinize" + MODE_APPEND + ".cfg"
 
-                f1 = open(SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + UBINIZE_CFG_NAME, 'r')
-                UBINIZE_CFG_NAME = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/tmp-" + UBINIZE_CFG_NAME
-                f2 = open(UBINIZE_CFG_NAME, 'w')
-                for line in f1:
-                    f2.write(line.replace('image=', "image=" + SRC_DIR + "/"))
-                f1.close()
-                f2.close()
+            f1 = open(SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + UBINIZE_CFG_NAME, 'r')
+            UBINIZE_CFG_NAME = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/tmp-" + UBINIZE_CFG_NAME
+            f2 = open(UBINIZE_CFG_NAME, 'w')
+            for line in f1:
+                f2.write(line.replace('image=', "image=" + SRC_DIR + "/"))
+            f1.close()
+            f2.close()
 
-                part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition.xml"
-                parts = ET.parse(part_file).findall('.//partitions/partition')
-                for index in range(len(parts)):
-                        section = parts[index]
-                        if section[0].text == "rootfs":
-                            rootfs_pos = 9 if MODE == "64" else 8
-                            UBI_IMG_NAME = section[rootfs_pos].text
+            part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition.xml"
+            parts = ET.parse(part_file).findall('.//partitions/partition')
+            for index in range(len(parts)):
+                    section = parts[index]
+                    if section[0].text == "rootfs":
+                        rootfs_pos = 9 if MODE == "64" else 8
+                        UBI_IMG_NAME = section[rootfs_pos].text
 
-                if ftype in ["nand-4k", "norplusnand-4k"]:
-                    cmd = '%s -m 4096 -p 256KiB -o root.ubi %s' % ((SRC_DIR + "/ubinize") ,UBINIZE_CFG_NAME)
-                    ret = subprocess.call(cmd, shell=True)
-                    if ret != 0:
-                         error("ubinization got failed")
-                    cmd = 'dd if=root.ubi of=%s bs=4k conv=sync' % (SRC_DIR + "/" + UBI_IMG_NAME)
-                    ret = subprocess.call(cmd, shell=True)
-                    if ret != 0:
-                         error("ubi image copy operation failed")
+            if ftype in ["nand-4k", "norplusnand-4k"]:
+                cmd = '%s -m 4096 -p 256KiB -o root.ubi %s' % ((SRC_DIR + "/ubinize") ,UBINIZE_CFG_NAME)
+                ret = subprocess.call(cmd, shell=True)
+                if ret != 0:
+                     error("ubinization got failed")
+                cmd = 'dd if=root.ubi of=%s bs=4k conv=sync' % (SRC_DIR + "/" + UBI_IMG_NAME)
+                ret = subprocess.call(cmd, shell=True)
+                if ret != 0:
+                     error("ubi image copy operation failed")
 
-                elif ftype in ["nand", "norplusnand"]:
-                    cmd = '%s -m 2048 -p 128KiB -o root.ubi %s' % ((SRC_DIR + "/ubinize") ,UBINIZE_CFG_NAME)
-                    ret = subprocess.call(cmd, shell=True)
-                    if ret != 0:
-                         error("ubinization got failed")
-                    cmd = 'dd if=root.ubi of=%s bs=2k conv=sync' % (SRC_DIR + "/" + UBI_IMG_NAME)
-                    ret = subprocess.call(cmd, shell=True)
-                    if ret != 0:
-                         error("ubi image copy operation failed")
+            elif ftype in ["nand", "norplusnand"]:
+                cmd = '%s -m 2048 -p 128KiB -o root.ubi %s' % ((SRC_DIR + "/ubinize") ,UBINIZE_CFG_NAME)
+                ret = subprocess.call(cmd, shell=True)
+                if ret != 0:
+                     error("ubinization got failed")
+                cmd = 'dd if=root.ubi of=%s bs=2k conv=sync' % (SRC_DIR + "/" + UBI_IMG_NAME)
+                ret = subprocess.call(cmd, shell=True)
+                if ret != 0:
+                     error("ubi image copy operation failed")
 
             part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition.xml"
             part_xml = ET.parse(part_file)
@@ -2120,7 +1764,7 @@ class ArgParser(object):
 	cdir = os.path.abspath(os.path.dirname(""))
         if len(sys.argv) > 1:
             try:
-                opts, args = getopt(sys.argv[1:], "", ["arch=", "fltype=", "srcPath=", "inImage=", "outImage=", "image_type=", "memory=", "skip_4k_nand", "atf", "qcn6122", "multi_wifi_fw"])
+                opts, args = getopt(sys.argv[1:], "", ["arch=", "fltype=", "srcPath=", "inImage=", "outImage=", "image_type=", "memory=", "skip_4k_nand", "atf", "multi_wifi_fw"])
             except GetoptError, e:
 		raise UsageError(e.msg)
 
@@ -2152,29 +1796,19 @@ class ArgParser(object):
                 elif option =="--skip_4k_nand":
                     skip_4k_nand = "true"
 
-                elif option == "--qcn6122":
-                    multi_wifi_fw = "true"
-
                 elif option == "--multi_wifi_fw":
                     multi_wifi_fw = "true"
 
 #Verify Arguments passed by user
 
 # Verify arch type
-	    if ARCH_NAME not in ["ipq807x", "ipq807x_64", "ipq6018", "ipq6018_64", "ipq5018", "ipq5018_64", "ipq9574", "ipq9574_64"]:
+	    if ARCH_NAME not in supported_arch:
 		raise UsageError("Invalid arch type '%s'" % arch)
 
-	    if ARCH_NAME == "ipq807x" or ARCH_NAME == "ipq5018" or ARCH_NAME == "ipq9574":
-		MODE = "32"
-	    elif ARCH_NAME == "ipq807x_64" or ARCH_NAME == "ipq5018_64" or ARCH_NAME == "ipq9574_64":
+	    MODE = "32"
+	    if ARCH_NAME[-3:] == "_64":
 		MODE = "64"
-		ARCH_NAME = ARCH_NAME[:-3]
-
-	    if ARCH_NAME == "ipq6018":
-		MODE = "32"
-	    elif ARCH_NAME == "ipq6018_64":
-		MODE = "64"
-		ARCH_NAME = "ipq6018"
+                ARCH_NAME = ARCH_NAME[:-3]
 
 # Set flash type to default type (nand) if not given by user
 	    if self.flash_type == None:
@@ -2206,8 +1840,7 @@ class ArgParser(object):
 	print "python pack_hk.py [options] [Value] ..."
 	print
         print "options:"
-        print "  --arch \tARCH_TYPE [ipq807x/ipq807x_64/ipq6018/ipq6018_64/ipq5018/ipq5018_64/ipq9574/ipq9574_64]"
-	print
+        print "  --arch \tARCH_TYPE [" + '/'.join(supported_arch) + "]"
 	print "  --fltype \tFlash Type [nor/tiny-nor/nand/emmc/norplusnand/norplusemmc/tiny-nor-debug]"
         print " \t\tMultiple flashtypes can be passed by a comma separated string"
         print " \t\tDefault is all. i.e If \"--fltype\" is not passed image for all the flash-type will be created.\n"
@@ -2262,23 +1895,18 @@ def main():
 # Format the output image name from Arch, flash type and mode
     for flash_type in parser.flash_type.split(","):
 
-	if ARCH_NAME == "ipq5018" and (flash_type == "tiny-nor" or flash_type == "tiny-nor-debug"):
+	if (flash_type == "tiny-nor" or flash_type == "tiny-nor-debug"):
 	    tiny_16m = "true"
 	else:
 	    tiny_16m = "false"
 
+        MODE_APPEND = "_64" if MODE == "64" else ""
         if image_type == "hlos":
-            if MODE == "64":
-                parser.out_fname = flash_type + "-" + ARCH_NAME + "_" + MODE + "-apps.img"
-            else:
-                parser.out_fname = flash_type + "-" + ARCH_NAME + "-apps.img"
+            suffix = "-apps.img"
         else:
             suffix = "-single.img"
 
-            if MODE == "64":
-                parser.out_fname = flash_type + "-" + ARCH_NAME + "_" + MODE + suffix
-            else:
-                parser.out_fname = flash_type + "-" + ARCH_NAME + suffix
+        parser.out_fname = flash_type + "-" + ARCH_NAME + MODE_APPEND + suffix
 
         parser.out_fname = os.path.join(parser.out_dname, parser.out_fname)
 
