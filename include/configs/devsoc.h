@@ -52,6 +52,7 @@
  * Enable MIBIB reload
  */
 #define CONFIG_IPQ_MIBIB_RELOAD
+#define CONFIG_IPQ_XTRACT_N_FLASH
 
 /*
  * Enable Flashwrite command
