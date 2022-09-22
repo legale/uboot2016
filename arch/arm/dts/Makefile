@@ -94,7 +94,9 @@ endif
 dtb-$(CONFIG_ARCH_DEVSOC) += devsoc-emulation.dtb \
 				devsoc-01.1.dtb \
 				devsoc-01.2.dtb \
-				devsoc-01.4.dtb
+				devsoc-01.4.dtb \
+				devsoc-01.6.dtb \
+				devsoc-01.7.dtb
 
 dtb-$(CONFIG_ARCH_IPQ6018) += ipq6018-cp01-c1.dtb \
 			ipq6018-cp02-c1.dtb \
