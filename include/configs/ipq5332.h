@@ -447,6 +447,7 @@ extern loff_t board_env_size;
 #define CONFIG_DISABLE_CMD_SF_UPDATE
 #define CONFIG_DISABLE_CMD_SF_PROTECT
 #define CONFIG_DISABLE_CMD_SF_BULKERASE
+#define CONFIG_DISABLE_CMD_UART
 #else
 #define CONFIG_IPQ_ELF_AUTH
 #endif
