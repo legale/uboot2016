@@ -408,6 +408,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #if defined(CONFIG_IPQ9574)
 #define QCN_VENDOR_ID				0x17CB
 #define QCN9224_DEVICE_ID			0x1109
+#define QCN9000_DEVICE_ID 			0x1104
 #define MAX_UNWINDOWED_ADDRESS                  0x80000
 #define WINDOW_ENABLE_BIT                       0x40000000
 #define WINDOW_SHIFT                            19
@@ -2103,5 +2104,43 @@ static int do_fuse_qcn9224(cmd_tbl_t *cmdtp, int flag,
 U_BOOT_CMD(fuse_qcn9224, 2, 1, do_fuse_qcn9224,
 	   "Fuse QCN9224 V2 fuses and argument is PCIe device ID",
 	   "If not QCN9224 V2, then fuse blow will be skipped");
+
+static struct pci_device_id pci_device[] = {
+	{QCN_VENDOR_ID, QCN9224_DEVICE_ID},
+	{QCN_VENDOR_ID, QCN9000_DEVICE_ID},
+	{}
+};
+
+static int do_list_pci(cmd_tbl_t *cmdtp, int flag,
+			    int argc, char * const argv[])
+{
+	pci_dev_t devbusfn;
+	struct pci_controller *hose;
+	int device_id;
+	u16 vendor,device;
+
+	printf(" PCIe Bus Number \t Base Address \t Device ID \n");
+	for(device_id = 0; device_id < 4; device_id++) {
+		devbusfn = pci_find_ipq_devices(pci_device, device_id);
+		if (devbusfn == -1)
+			continue;
+
+		hose = pci_bus_to_hose(PCI_BUS(devbusfn));
+		if(hose == NULL)
+			continue;
+
+		pci_read_config_word(devbusfn, PCI_VENDOR_ID, &vendor);
+		pci_read_config_word(devbusfn, PCI_DEVICE_ID, &device);
+
+		printf("\t %d\t\t  0x%x \t 0x%x \n", device_id,
+				hose->regions[0].bus_start, PCI_VENDEV(vendor,device));
+	}
+
+	return CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(list_pci, 1, 1, do_list_pci,
+	   "Print the RC's PCIe details and attached device ID",
+	   "If no attach is present, then nothing will be printed");
 
 #endif
