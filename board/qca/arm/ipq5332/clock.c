@@ -14,7 +14,7 @@
  */
 
 #include <common.h>
-#include <asm/arch-devsoc/clk.h>
+#include <asm/arch-ipq5332/clk.h>
 #include <asm/io.h>
 #include <asm/errno.h>
 
@@ -332,7 +332,7 @@ void usb_clock_deinit(void)
 }
 #endif
 
-#ifdef CONFIG_DEVSOC_EDMA
+#ifdef CONFIG_IPQ5332_EDMA
 void nssnoc_init(void){
 	unsigned int gcc_qdss_at_cmd_rcgr_addr = 0x182D004;
 

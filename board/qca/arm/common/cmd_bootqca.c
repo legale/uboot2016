@@ -890,7 +890,7 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
 	ret = qca_scm_call(SCM_SVC_FUSE, QFPROM_IS_AUTHENTICATE_CMD, &buf, sizeof(char));
 
-#if defined(CONFIG_IPQ9574_EDMA) || defined(CONFIG_DEVSOC_EDMA)
+#if defined(CONFIG_IPQ9574_EDMA) || defined(CONFIG_IPQ5332_EDMA)
 	aquantia_phy_reset_init_done();
 #endif
 	/*

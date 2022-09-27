@@ -23,7 +23,7 @@
 #define PHY_MAX		6
 #define IPQ9574_PHY_MAX	6
 #define IPQ6018_PHY_MAX 5
-#define DEVSOC_PHY_MAX	2
+#define IPQ5332_PHY_MAX	2
 
 #define QCA8084_MAX_PORTS	6
 

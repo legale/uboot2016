@@ -1,16 +1,16 @@
-if ARCH_DEVSOC
+if ARCH_IPQ5332
 
 config SYS_CPU
-       default "devsoc"
+       default "ipq5332"
 
 config SYS_BOARD
-       default "devsoc"
+       default "ipq5332"
 
 config SYS_VENDOR
        default "qca/arm"
 
 config SYS_CONFIG_NAME
-       default "devsoc"
+       default "ipq5332"
 
 config NAND_FLASH
 	bool "Enable NAND Framework"

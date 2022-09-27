@@ -14,10 +14,10 @@
  */
 
 /dts-v1/;
-#include "devsoc-soc.dtsi"
+#include "ipq5332-soc.dtsi"
 / {
 	machid = <0x8060000>;
-	config_name = "config@01.1";
+	config_name = "config@mi01.1";
 
 	aliases {
 		console = "/serial@78AF000";

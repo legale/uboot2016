@@ -59,7 +59,7 @@ extern int ipq_mdio_read(int mii_id,
 		int regnum, ushort *data);
 
 extern int ipq_sw_mdio_init(const char *);
-extern void devsoc_eth_initialize(void);
+extern void ipq5332_eth_initialize(void);
 static int program_ethphy_fw(unsigned int phy_addr,
 			 uint32_t load_addr,uint32_t file_size );
 static qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
@@ -578,7 +578,7 @@ static int do_load_fw(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		phy_addr = simple_strtoul(argv[1], NULL, 16);
 
 	miiphy_init();
-	devsoc_eth_initialize();
+	ipq5332_eth_initialize();
 	ipq_sw_mdio_init("IPQ MDIO0");
 	ipq_board_fw_download(phy_addr);
 	return 0;

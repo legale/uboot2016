@@ -14,8 +14,8 @@
  */
 
 /dts-v1/;
-#include "devsoc-01.4.dts"
+#include "ipq5332-mi01.4.dts"
 / {
 	machid = <0x8060006>;
-	config_name = "config@01.6";
+	config_name = "config@mi01.6";
 };

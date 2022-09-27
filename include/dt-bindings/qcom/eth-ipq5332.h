@@ -13,8 +13,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __DT_BINDINGS_DEVSOC_ETH_H__
-#define __DT_BINDINGS_DEVSOC_ETH_H__
+#ifndef __DT_BINDINGS_IPQ5332_ETH_H__
+#define __DT_BINDINGS_IPQ5332_ETH_H__
 
 /* ESS Switch Mac Modes */
 #define PORT_WRAPPER_PSGMII		0

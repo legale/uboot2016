@@ -12,7 +12,7 @@ obj-$(CONFIG_ARCH_IPQ807x) += qca_uart.o
 obj-$(CONFIG_ARCH_IPQ806x) += qca_uart.o
 obj-$(CONFIG_ARCH_IPQ40xx) += qca_uart.o
 obj-$(CONFIG_ARCH_IPQ5018) += qca_uart.o
-obj-$(CONFIG_ARCH_DEVSOC) += qca_uart.o
+obj-$(CONFIG_ARCH_IPQ5332) += qca_uart.o
 obj-$(CONFIG_ARCH_IPQ6018) += qca_uart.o
 obj-$(CONFIG_ARCH_IPQ9574) += qca_uart.o
 ifdef CONFIG_DM_SERIAL

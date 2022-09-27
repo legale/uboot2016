@@ -22,8 +22,8 @@
 #include <asm/arch-ipq5018/clk.h>
 #endif
 
-#ifdef CONFIG_ARCH_DEVSOC
-#include <asm/arch-devsoc/clk.h>
+#ifdef CONFIG_ARCH_IPQ5332
+#include <asm/arch-ipq5332/clk.h>
 #endif
 
 #ifdef CONFIG_ARCH_IPQ6018

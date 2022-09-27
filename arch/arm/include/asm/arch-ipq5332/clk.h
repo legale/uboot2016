@@ -13,8 +13,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _DEVSOC_CLK_H
-#define _DEVSOC_CLK_H
+#ifndef _IPQ5332_CLK_H
+#define _IPQ5332_CLK_H
 
 #include <asm/arch-qca-common/uart.h>
 
@@ -321,4 +321,4 @@ enum uniphy_clk_type {
 
 void eth_clock_init(void);
 
-#endif /*DEVSOC_CLK_H*/
+#endif /*IPQ5332_CLK_H*/

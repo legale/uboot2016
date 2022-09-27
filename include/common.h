@@ -38,8 +38,8 @@ typedef volatile unsigned char	vu_char;
 #elif defined(CONFIG_IPQ5018)
 #include <../board/qca/arm/ipq5018/ipq5018.h>
 
-#elif defined(CONFIG_DEVSOC)
-#include <../board/qca/arm/devsoc/devsoc.h>
+#elif defined(CONFIG_IPQ5332)
+#include <../board/qca/arm/ipq5332/ipq5332.h>
 
 #elif defined(CONFIG_IPQ6018)
 #include <../board/qca/arm/ipq6018/ipq6018.h>
@@ -421,7 +421,7 @@ ulong getenv_hex(const char *varname, ulong default_val);
 int getenv_yesno(const char *var);
 #if defined(CONFIG_IPQ40XX_ENV) || defined(CONFIG_IPQ807X_ENV) ||	\
 	defined(CONFIG_IPQ806X_ENV) || defined(CONFIG_IPQ5018_ENV) ||	\
-	defined(CONFIG_DEVSOC_ENV) || defined(CONFIG_IPQ6018_ENV) ||	\
+	defined(CONFIG_IPQ5332_ENV) || defined(CONFIG_IPQ6018_ENV) ||	\
 	defined(CONFIG_IPQ9574_ENV)
 extern int (*saveenv)(void);
 #else

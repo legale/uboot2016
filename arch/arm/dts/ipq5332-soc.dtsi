@@ -14,8 +14,8 @@
  */
 
 #include "skeleton.dtsi"
-#include <dt-bindings/qcom/gpio-devsoc.h>
-#include <dt-bindings/qcom/eth-devsoc.h>
+#include <dt-bindings/qcom/gpio-ipq5332.h>
+#include <dt-bindings/qcom/eth-ipq5332.h>
 
 / {
 	serial@78AF000 {
@@ -59,7 +59,7 @@
 	};
 
 	pci0: pci@20000000 {
-		compatible = "qcom,devsoc-pcie";
+		compatible = "qcom,ipq5332-pcie";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0x20000000 0xf1d
@@ -78,7 +78,7 @@
 	};
 
 	pci1: pci@18000000 {
-		compatible = "qcom,devsoc-pcie";
+		compatible = "qcom,ipq5332-pcie";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0x18000000 0xf1d
@@ -97,7 +97,7 @@
 	};
 
 	pci2: pci@10000000 {
-		compatible = "qcom,devsoc-pcie";
+		compatible = "qcom,ipq5332-pcie";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0x10000000 0xf1d

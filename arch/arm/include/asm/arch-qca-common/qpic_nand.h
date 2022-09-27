@@ -32,7 +32,7 @@
 
 #if defined(CONFIG_IPQ40XX) || defined(CONFIG_IPQ_RUMI) \
 	|| defined(CONFIG_IPQ6018) || defined(CONFIG_IPQ5018) \
-	|| defined(CONFIG_DEVSOC) || defined(CONFIG_IPQ9574)
+	|| defined(CONFIG_IPQ5332) || defined(CONFIG_IPQ9574)
 #define QPIC_EBI2ND_BASE		(0x079b0000)
 #else
 #error "QPIC NAND not supported"

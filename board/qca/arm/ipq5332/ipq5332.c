@@ -23,7 +23,7 @@
 #include <asm/arch-qca-common/uart.h>
 #include <asm/arch-qca-common/scm.h>
 #include <asm/arch-qca-common/iomap.h>
-#include <devsoc.h>
+#include <ipq5332.h>
 #ifdef CONFIG_QPIC_NAND
 #include <asm/arch-qca-common/qpic_nand.h>
 #include <nand.h>
@@ -40,7 +40,7 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 static int aq_phy_initialised = 0;
-extern int devsoc_edma_init(void *cfg);
+extern int ipq5332_edma_init(void *cfg);
 extern int ipq_spi_init(u16);
 
 const char *rsvd_node = "/reserved-memory";
@@ -123,7 +123,7 @@ void fdt_fixup_flash(void *blob)
 	int node_off, ret;
 	char *flash = "/soc/nand@79b0000";
 
-	if (gd->bd->bi_arch_number == MACH_TYPE_DEVSOC_EMULATION)
+	if (gd->bd->bi_arch_number == MACH_TYPE_IPQ5332_EMULATION)
 		return;
 
 	node_off = fdt_path_offset(gd->fdt_blob, "nand");
@@ -148,7 +148,7 @@ void ipq_uboot_fdt_fixup(void)
 	void *blob = (void *)gd->fdt_blob;
 	ulong machid = gd->bd->bi_arch_number;
 
-	if (machid == MACH_TYPE_DEVSOC_EMULATION)
+	if (machid == MACH_TYPE_IPQ5332_EMULATION)
 		return;
 
 	/* fix peripherals required for basic board bring up
@@ -268,7 +268,7 @@ void sdhci_bus_pwr_off(struct sdhci_host *host)
 
 __weak void board_mmc_deinit(void)
 {
-	/*since we do not have misc register in devsoc
+	/*since we do not have misc register in ipq5332
 	 * so simply return from this function
 	 */
 	return;
@@ -653,7 +653,7 @@ __weak int ipq_get_tz_version(char *version_name, int buf_size)
 
 int apps_iscrashed_crashdump_disabled(void)
 {
-	u32 *dmagic = (u32 *)CONFIG_DEVSOC_DMAGIC_ADDR;
+	u32 *dmagic = (u32 *)CONFIG_IPQ5332_DMAGIC_ADDR;
 
 	if (*dmagic & DLOAD_DISABLED)
 		return 1;
@@ -663,7 +663,7 @@ int apps_iscrashed_crashdump_disabled(void)
 
 int apps_iscrashed(void)
 {
-	u32 *dmagic = (u32 *)CONFIG_DEVSOC_DMAGIC_ADDR;
+	u32 *dmagic = (u32 *)CONFIG_IPQ5332_DMAGIC_ADDR;
 
 	if (*dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
@@ -766,7 +766,7 @@ void set_flash_secondary_type(qca_smem_flash_info_t *smem)
 	return;
 };
 
-#ifdef CONFIG_DEVSOC_EDMA
+#ifdef CONFIG_IPQ5332_EDMA
 int get_mdc_mdio_gpio(int mdc_mdio_gpio[2])
 {
 	int mdc_mdio_gpio_cnt = 2, node;
@@ -914,7 +914,7 @@ void bring_phy_out_of_reset(void)
 	mdelay(500);
 }
 
-void devsoc_eth_initialize(void)
+void ipq5332_eth_initialize(void)
 {
 	eth_clock_init();
 
@@ -927,11 +927,11 @@ int board_eth_init(bd_t *bis)
 {
 	int ret = 0;
 
-	devsoc_eth_initialize();
+	ipq5332_eth_initialize();
 
-	ret = devsoc_edma_init(NULL);
+	ret = ipq5332_edma_init(NULL);
 	if (ret != 0)
-		printf("%s: devsoc_edma_init failed : %d\n", __func__, ret);
+		printf("%s: ipq5332_edma_init failed : %d\n", __func__, ret);
 
 	return ret;
 }

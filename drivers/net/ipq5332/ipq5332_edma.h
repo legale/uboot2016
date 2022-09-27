@@ -17,75 +17,75 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  **************************************************************************
 */
-#ifndef __DEVSOC_EDMA__
-#define __DEVSOC_EDMA__
+#ifndef __IPQ5332_EDMA__
+#define __IPQ5332_EDMA__
 
-#define DEVSOC_NSS_DP_START_PHY_PORT   1
-#define DEVSOC_NSS_DP_MAX_PHY_PORTS    2
+#define IPQ5332_NSS_DP_START_PHY_PORT   1
+#define IPQ5332_NSS_DP_MAX_PHY_PORTS    2
 
-#define DEVSOC_EDMA_DEVICE_NODE_NAME	"edma"
+#define IPQ5332_EDMA_DEVICE_NODE_NAME	"edma"
 
 /* Number of descriptors in each ring is defined with below macro */
-#define DEVSOC_EDMA_TX_RING_SIZE	128
-#define DEVSOC_EDMA_RX_RING_SIZE	128
+#define IPQ5332_EDMA_TX_RING_SIZE	128
+#define IPQ5332_EDMA_RX_RING_SIZE	128
 
 /* Number of byte in a descriptor is defined with below macros for each of
  * the rings respectively */
-#define DEVSOC_EDMA_TXDESC_DESC_SIZE	(sizeof(struct devsoc_edma_txdesc_desc))
-#define DEVSOC_EDMA_TXCMPL_DESC_SIZE	(sizeof(struct devsoc_edma_txcmpl_desc))
-#define DEVSOC_EDMA_RXDESC_DESC_SIZE	(sizeof(struct devsoc_edma_rxdesc_desc))
-#define DEVSOC_EDMA_RXFILL_DESC_SIZE	(sizeof(struct devsoc_edma_rxfill_desc))
-#define DEVSOC_EDMA_RX_SEC_DESC_SIZE	(sizeof(struct devsoc_edma_rx_sec_desc))
-#define DEVSOC_EDMA_TX_SEC_DESC_SIZE	(sizeof(struct devsoc_edma_tx_sec_desc))
+#define IPQ5332_EDMA_TXDESC_DESC_SIZE	(sizeof(struct ipq5332_edma_txdesc_desc))
+#define IPQ5332_EDMA_TXCMPL_DESC_SIZE	(sizeof(struct ipq5332_edma_txcmpl_desc))
+#define IPQ5332_EDMA_RXDESC_DESC_SIZE	(sizeof(struct ipq5332_edma_rxdesc_desc))
+#define IPQ5332_EDMA_RXFILL_DESC_SIZE	(sizeof(struct ipq5332_edma_rxfill_desc))
+#define IPQ5332_EDMA_RX_SEC_DESC_SIZE	(sizeof(struct ipq5332_edma_rx_sec_desc))
+#define IPQ5332_EDMA_TX_SEC_DESC_SIZE	(sizeof(struct ipq5332_edma_tx_sec_desc))
 
-#define DEVSOC_EDMA_START_GMACS	DEVSOC_NSS_DP_START_PHY_PORT
-#define DEVSOC_EDMA_MAX_GMACS		DEVSOC_NSS_DP_MAX_PHY_PORTS
+#define IPQ5332_EDMA_START_GMACS	IPQ5332_NSS_DP_START_PHY_PORT
+#define IPQ5332_EDMA_MAX_GMACS		IPQ5332_NSS_DP_MAX_PHY_PORTS
 
-#define DEVSOC_EDMA_TX_BUFF_SIZE	2048
-#define DEVSOC_EDMA_RX_BUFF_SIZE	2048
+#define IPQ5332_EDMA_TX_BUFF_SIZE	2048
+#define IPQ5332_EDMA_RX_BUFF_SIZE	2048
 
 /* Max number of rings of each type is defined with below macro */
-#define DEVSOC_EDMA_MAX_TXCMPL_RINGS	24	/* Max TxCmpl rings */
-#define DEVSOC_EDMA_MAX_TXDESC_RINGS	24	/* Max TxDesc rings */
-#define DEVSOC_EDMA_MAX_RXDESC_RINGS	16	/* Max RxDesc rings */
-#define DEVSOC_EDMA_MAX_RXFILL_RINGS	8	/* Max RxFill rings */
+#define IPQ5332_EDMA_MAX_TXCMPL_RINGS	24	/* Max TxCmpl rings */
+#define IPQ5332_EDMA_MAX_TXDESC_RINGS	24	/* Max TxDesc rings */
+#define IPQ5332_EDMA_MAX_RXDESC_RINGS	16	/* Max RxDesc rings */
+#define IPQ5332_EDMA_MAX_RXFILL_RINGS	8	/* Max RxFill rings */
 
-#define DEVSOC_EDMA_GET_DESC(R, i, type) (&(((type *)((R)->desc))[i]))
-#define DEVSOC_EDMA_RXFILL_DESC(R, i) 	DEVSOC_EDMA_GET_DESC(R, i, struct devsoc_edma_rxfill_desc)
-#define DEVSOC_EDMA_RXDESC_DESC(R, i) 	DEVSOC_EDMA_GET_DESC(R, i, struct devsoc_edma_rxdesc_desc)
-#define DEVSOC_EDMA_TXDESC_DESC(R, i) 	DEVSOC_EDMA_GET_DESC(R, i, struct devsoc_edma_txdesc_desc)
-#define DEVSOC_EDMA_TXCMPL_DESC(R, i) 	DEVSOC_EDMA_GET_DESC(R, i, struct devsoc_edma_txcmpl_desc)
+#define IPQ5332_EDMA_GET_DESC(R, i, type) (&(((type *)((R)->desc))[i]))
+#define IPQ5332_EDMA_RXFILL_DESC(R, i) 	IPQ5332_EDMA_GET_DESC(R, i, struct ipq5332_edma_rxfill_desc)
+#define IPQ5332_EDMA_RXDESC_DESC(R, i) 	IPQ5332_EDMA_GET_DESC(R, i, struct ipq5332_edma_rxdesc_desc)
+#define IPQ5332_EDMA_TXDESC_DESC(R, i) 	IPQ5332_EDMA_GET_DESC(R, i, struct ipq5332_edma_txdesc_desc)
+#define IPQ5332_EDMA_TXCMPL_DESC(R, i) 	IPQ5332_EDMA_GET_DESC(R, i, struct ipq5332_edma_txcmpl_desc)
 
-#define DEVSOC_EDMA_DEV		1
+#define IPQ5332_EDMA_DEV		1
 
 /* Only 1 ring of each type will be used in U-Boot which is defined with
  * below macros */
-#define DEVSOC_EDMA_TX_DESC_RING_START	23
-#define DEVSOC_EDMA_TX_DESC_RING_NOS	1
-#define DEVSOC_EDMA_TX_DESC_RING_SIZE	\
-(DEVSOC_EDMA_TX_DESC_RING_START + DEVSOC_EDMA_TX_DESC_RING_NOS)
+#define IPQ5332_EDMA_TX_DESC_RING_START	23
+#define IPQ5332_EDMA_TX_DESC_RING_NOS	1
+#define IPQ5332_EDMA_TX_DESC_RING_SIZE	\
+(IPQ5332_EDMA_TX_DESC_RING_START + IPQ5332_EDMA_TX_DESC_RING_NOS)
 
-#define DEVSOC_EDMA_TX_CMPL_RING_START	23
-#define DEVSOC_EDMA_TX_CMPL_RING_NOS	1
-#define DEVSOC_EDMA_TX_CMPL_RING_SIZE	\
-(DEVSOC_EDMA_TX_CMPL_RING_START + DEVSOC_EDMA_TX_CMPL_RING_NOS)
+#define IPQ5332_EDMA_TX_CMPL_RING_START	23
+#define IPQ5332_EDMA_TX_CMPL_RING_NOS	1
+#define IPQ5332_EDMA_TX_CMPL_RING_SIZE	\
+(IPQ5332_EDMA_TX_CMPL_RING_START + IPQ5332_EDMA_TX_CMPL_RING_NOS)
 
-#define DEVSOC_EDMA_RX_DESC_RING_START	15
-#define DEVSOC_EDMA_RX_DESC_RING_NOS	1
-#define DEVSOC_EDMA_RX_DESC_RING_SIZE	\
-(DEVSOC_EDMA_RX_DESC_RING_START + DEVSOC_EDMA_RX_DESC_RING_NOS)
+#define IPQ5332_EDMA_RX_DESC_RING_START	15
+#define IPQ5332_EDMA_RX_DESC_RING_NOS	1
+#define IPQ5332_EDMA_RX_DESC_RING_SIZE	\
+(IPQ5332_EDMA_RX_DESC_RING_START + IPQ5332_EDMA_RX_DESC_RING_NOS)
 
-#define DEVSOC_EDMA_RX_FILL_RING_START	7
-#define DEVSOC_EDMA_RX_FILL_RING_NOS	1
-#define DEVSOC_EDMA_RX_FILL_RING_SIZE	\
-(DEVSOC_EDMA_RX_FILL_RING_START + DEVSOC_EDMA_RX_FILL_RING_NOS)
+#define IPQ5332_EDMA_RX_FILL_RING_START	7
+#define IPQ5332_EDMA_RX_FILL_RING_NOS	1
+#define IPQ5332_EDMA_RX_FILL_RING_SIZE	\
+(IPQ5332_EDMA_RX_FILL_RING_START + IPQ5332_EDMA_RX_FILL_RING_NOS)
 
 #define NETDEV_TX_BUSY	1
 
 /*
  * RxDesc descriptor
  */
-struct devsoc_edma_rxdesc_desc {
+struct ipq5332_edma_rxdesc_desc {
 	uint32_t rdes0; /* Contains buffer address */
 	uint32_t rdes1; /* Contains more bit, priority bit, service code */
 	uint32_t rdes2; /* Contains opaque */
@@ -99,7 +99,7 @@ struct devsoc_edma_rxdesc_desc {
 /*
  * EDMA Rx Secondary Descriptor
  */
-struct devsoc_edma_rx_sec_desc {
+struct ipq5332_edma_rx_sec_desc {
 	uint32_t rx_sec0; /* Contains timestamp */
 	uint32_t rx_sec1; /* Contains secondary checksum status */
 	uint32_t rx_sec2; /* Contains QoS tag */
@@ -113,7 +113,7 @@ struct devsoc_edma_rx_sec_desc {
 /*
  * RxFill descriptor
  */
-struct devsoc_edma_rxfill_desc {
+struct ipq5332_edma_rxfill_desc {
 	uint32_t rdes0; /* Contains buffer address */
 	uint32_t rdes1; /* Contains buffer size */
 	uint32_t rdes2; /* Contains opaque */
@@ -123,7 +123,7 @@ struct devsoc_edma_rxfill_desc {
 /*
  * TxDesc descriptor
  */
-struct devsoc_edma_txdesc_desc {
+struct ipq5332_edma_txdesc_desc {
 	uint32_t tdes0; /* Low 32-bit of buffer address */
 	uint32_t tdes1; /* Buffer recycling, PTP tag flag, PRI valid flag */
 	uint32_t tdes2; /* Low 32-bit of opaque value */
@@ -137,7 +137,7 @@ struct devsoc_edma_txdesc_desc {
 /*
  * EDMA Tx Secondary Descriptor
  */
-struct devsoc_edma_tx_sec_desc {
+struct ipq5332_edma_tx_sec_desc {
 	uint32_t tx_sec0; /* Reserved */
 	uint32_t tx_sec1; /* Custom csum offset, payload offset, TTL/NAT action */
 	uint32_t rx_sec2; /* NAPT translated port, DSCP value, TTL value */
@@ -151,7 +151,7 @@ struct devsoc_edma_tx_sec_desc {
 /*
  * TxCmpl descriptor
  */
-struct devsoc_edma_txcmpl_desc {
+struct ipq5332_edma_txcmpl_desc {
 	uint32_t tdes0; /* Low 32-bit opaque value */
 	uint32_t tdes1; /* High 32-bit opaque value */
 	uint32_t tdes2; /* More fragment, transmit ring id, pool id */
@@ -161,13 +161,13 @@ struct devsoc_edma_txcmpl_desc {
 /*
  * Tx descriptor ring
  */
-struct devsoc_edma_txdesc_ring {
+struct ipq5332_edma_txdesc_ring {
 	uint32_t prod_idx;		/* Producer index */
 	uint32_t avail_desc;		/* Number of available descriptor to process */
 	uint32_t id;			/* TXDESC ring number */
-	struct devsoc_edma_txdesc_desc *desc;	/* descriptor ring virtual address */
+	struct ipq5332_edma_txdesc_desc *desc;	/* descriptor ring virtual address */
 	dma_addr_t dma;			/* descriptor ring physical address */
-	struct devsoc_edma_tx_sec_desc *sdesc; /* Secondary descriptor ring virtual addr */
+	struct ipq5332_edma_tx_sec_desc *sdesc; /* Secondary descriptor ring virtual addr */
 	dma_addr_t sdma;		/* Secondary descriptor ring physical address */
 	uint16_t count;			/* number of descriptors */
 };
@@ -175,10 +175,10 @@ struct devsoc_edma_txdesc_ring {
 /*
  * TxCmpl ring
  */
-struct devsoc_edma_txcmpl_ring {
+struct ipq5332_edma_txcmpl_ring {
 	uint32_t cons_idx;		/* Consumer index */
 	uint32_t avail_pkt;		/* Number of available packets to process */
-	struct devsoc_edma_txcmpl_desc *desc; /* descriptor ring virtual address */
+	struct ipq5332_edma_txcmpl_desc *desc; /* descriptor ring virtual address */
 	uint32_t id;			/* TXCMPL ring number */
 	dma_addr_t dma;			/* descriptor ring physical address */
 	uint32_t count;			/* Number of descriptors in the ring */
@@ -187,29 +187,29 @@ struct devsoc_edma_txcmpl_ring {
 /*
  * RxFill ring
  */
-struct devsoc_edma_rxfill_ring {
+struct ipq5332_edma_rxfill_ring {
 	uint32_t id;			/* RXFILL ring number */
 	uint32_t count;			/* number of descriptors in the ring */
 	uint32_t prod_idx;		/* Ring producer index */
-	struct devsoc_edma_rxfill_desc *desc;  /* descriptor ring virtual address */
+	struct ipq5332_edma_rxfill_desc *desc;  /* descriptor ring virtual address */
 	dma_addr_t dma;			/* descriptor ring physical address */
 };
 
 /*
  * RxDesc ring
  */
-struct devsoc_edma_rxdesc_ring {
+struct ipq5332_edma_rxdesc_ring {
 	uint32_t id;			/* RXDESC ring number */
 	uint32_t count;			/* number of descriptors in the ring */
 	uint32_t cons_idx;		/* Ring consumer index */
-	struct devsoc_edma_rxdesc_desc *desc; /* Primary descriptor ring virtual addr */
-	struct devsoc_edma_sec_rxdesc_ring *sdesc; /* Secondary desc ring VA */
-	struct devsoc_edma_rxfill_ring *rxfill;	/* RXFILL ring used */
+	struct ipq5332_edma_rxdesc_desc *desc; /* Primary descriptor ring virtual addr */
+	struct ipq5332_edma_sec_rxdesc_ring *sdesc; /* Secondary desc ring VA */
+	struct ipq5332_edma_rxfill_ring *rxfill;	/* RXFILL ring used */
 	dma_addr_t dma;			/* Primary descriptor ring physical address */
 	dma_addr_t sdma;		/* Secondary descriptor ring physical address */
 };
 
-enum devsoc_edma_tx {
+enum ipq5332_edma_tx {
 	EDMA_TX_OK = 0,		/* Tx success */
 	EDMA_TX_DESC = 1,	/* Not enough descriptors */
 	EDMA_TX_FAIL = 2,	/* Tx failure */
@@ -224,11 +224,11 @@ struct queue_per_cpu_info {
 	u32 rx_status; /* rx interrupt status */
 	u32 tx_start; /* tx queue start */
 	u32 rx_start; /* rx queue start */
-	struct devsoc_edma_common_info *c_info; /* edma common info */
+	struct ipq5332_edma_common_info *c_info; /* edma common info */
 };
 
 /* edma hw specific data */
-struct devsoc_edma_hw {
+struct ipq5332_edma_hw {
 	unsigned long  __iomem *hw_addr; /* inner register address */
 	u8 intr_clear_type; /* interrupt clear */
 	u8 intr_sw_idx_w; /* To do chk type interrupt software index */
@@ -237,10 +237,10 @@ struct devsoc_edma_hw {
 	uint16_t rx_payload_offset; /* start of the payload offset */
 	uint32_t flags; /* internal flags */
 	int active; /* status */
-	struct devsoc_edma_txdesc_ring *txdesc_ring; /* Tx Descriptor Ring, SW is producer */
-	struct devsoc_edma_txcmpl_ring *txcmpl_ring; /* Tx Completion Ring, SW is consumer */
-	struct devsoc_edma_rxdesc_ring *rxdesc_ring; /* Rx Descriptor Ring, SW is consumer */
-	struct devsoc_edma_rxfill_ring *rxfill_ring; /* Rx Fill Ring, SW is producer */
+	struct ipq5332_edma_txdesc_ring *txdesc_ring; /* Tx Descriptor Ring, SW is producer */
+	struct ipq5332_edma_txcmpl_ring *txcmpl_ring; /* Tx Completion Ring, SW is consumer */
+	struct ipq5332_edma_rxdesc_ring *rxdesc_ring; /* Rx Descriptor Ring, SW is consumer */
+	struct ipq5332_edma_rxfill_ring *rxfill_ring; /* Rx Fill Ring, SW is producer */
 	uint32_t txdesc_rings; /* Number of TxDesc rings */
 	uint32_t txdesc_ring_start; /* Id of first TXDESC ring */
 	uint32_t txdesc_ring_end; /* Id of the last TXDESC ring */
@@ -261,12 +261,12 @@ struct devsoc_edma_hw {
 	uint32_t misc_intr_mask; /* misc interrupt interrupt mask */
 };
 
-struct devsoc_edma_common_info {
-	struct devsoc_edma_hw hw;
+struct ipq5332_edma_common_info {
+	struct ipq5332_edma_hw hw;
 };
 
 #define MAX_PHY 6
-struct devsoc_eth_dev {
+struct ipq5332_eth_dev {
 	u8 *phy_address;
 	uint no_of_phys;
 	uint interface;
@@ -278,12 +278,12 @@ struct devsoc_eth_dev {
 	int link_printed;
 	u32 padding;
 	struct eth_device *dev;
-	struct devsoc_edma_common_info *c_info;
+	struct ipq5332_edma_common_info *c_info;
 	struct phy_ops *ops[MAX_PHY];
 	const char phy_name[MDIO_NAME_LEN];
 } __attribute__ ((aligned(8)));
 
-static inline void* devsoc_alloc_mem(u32 size)
+static inline void* ipq5332_alloc_mem(u32 size)
 {
 	void *p = malloc(size);
 	if (p != NULL)
@@ -291,7 +291,7 @@ static inline void* devsoc_alloc_mem(u32 size)
 	return p;
 }
 
-static inline void* devsoc_alloc_memalign(u32 size)
+static inline void* ipq5332_alloc_memalign(u32 size)
 {
 	void *p = memalign(CONFIG_SYS_CACHELINE_SIZE, size);
 	if (p != NULL)
@@ -299,14 +299,14 @@ static inline void* devsoc_alloc_memalign(u32 size)
 	return p;
 }
 
-static inline void devsoc_free_mem(void *ptr)
+static inline void ipq5332_free_mem(void *ptr)
 {
 	if (ptr)
 		free(ptr);
 }
 
-uint32_t devsoc_edma_reg_read(uint32_t reg_off);
-void devsoc_edma_reg_write(uint32_t reg_off, uint32_t val);
+uint32_t ipq5332_edma_reg_read(uint32_t reg_off);
+void ipq5332_edma_reg_write(uint32_t reg_off, uint32_t val);
 
 
 extern int get_eth_mac_address(uchar *enetaddr, uint no_of_macs);
@@ -314,28 +314,28 @@ extern int get_eth_mac_address(uchar *enetaddr, uint no_of_macs);
 typedef struct {
 	uint count;
 	u8 addr[7];
-} devsoc_edma_phy_addr_t;
+} ipq5332_edma_phy_addr_t;
 
-/* devsoc edma Paramaters */
+/* ipq5332 edma Paramaters */
 typedef struct {
 	uint base;
 	int unit;
 	uint mac_conn_to_phy;
 	phy_interface_t phy;
-	devsoc_edma_phy_addr_t phy_addr;
+	ipq5332_edma_phy_addr_t phy_addr;
 	char phy_name[MDIO_NAME_LEN];
-} devsoc_edma_board_cfg_t;
+} ipq5332_edma_board_cfg_t;
 
-extern void devsoc_ppe_provision_init(void);
-extern void devsoc_port_mac_clock_reset(int port);
-extern void devsoc_speed_clock_set(int port, int clk[4]);
-extern void devsoc_pqsgmii_speed_set(int port, int speed, int status);
-extern void devsoc_uxsgmii_speed_set(int port, int speed, int duplex, int status);
+extern void ipq5332_ppe_provision_init(void);
+extern void ipq5332_port_mac_clock_reset(int port);
+extern void ipq5332_speed_clock_set(int port, int clk[4]);
+extern void ipq5332_pqsgmii_speed_set(int port, int speed, int status);
+extern void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex, int status);
 extern void ppe_port_mux_mac_type_set(int port_id, int mode);
 extern void ppe_port_bridge_txmac_set(int port, int status);
-extern void devsoc_10g_r_speed_set(int port, int status);
+extern void ipq5332_10g_r_speed_set(int port, int status);
 extern int phy_status_get_from_ppe(int port_id);
 
-extern void devsoc_ppe_acl_set(int rule_id, int rule_type, int pkt_type, int l4_port_no, int l4_port_mask, int permit, int deny);
+extern void ipq5332_ppe_acl_set(int rule_id, int rule_type, int pkt_type, int l4_port_no, int l4_port_mask, int permit, int deny);
 extern void ppe_uniphy_mode_set(uint32_t uniphy_index, uint32_t mode);
-#endif /* ___DEVSOC_EDMA__ */
+#endif /* ___IPQ5332_EDMA__ */

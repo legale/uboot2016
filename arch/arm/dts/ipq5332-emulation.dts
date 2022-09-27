@@ -14,10 +14,10 @@
  */
 
 /dts-v1/;
-#include "devsoc-soc.dtsi"
+#include "ipq5332-soc.dtsi"
 / {
-	model ="QCA, DEVSOC-EMULATION";
-	compatible = "qca,devsoc", "qca,devsoc-emulation";
+	model ="QCA, IPQ5332-EMULATION";
+	compatible = "qca,ipq5332", "qca,ipq5332-emulation";
 	machid = <0xF060000>;
 	config_name = "config@emulation-fbc";
 

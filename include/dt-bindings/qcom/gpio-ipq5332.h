@@ -13,8 +13,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __DT_BINDINGS_DEVSOC_GPIO_H__
-#define __DT_BINDINGS_DEVSOC_GPIO_H__
+#ifndef __DT_BINDINGS_IPQ5332_GPIO_H__
+#define __DT_BINDINGS_IPQ5332_GPIO_H__
 
 /* GPIO TLMM: Direction */
 #define GPIO_INPUT              0

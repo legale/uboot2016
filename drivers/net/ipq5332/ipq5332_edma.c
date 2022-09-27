@@ -24,10 +24,10 @@
 #include <phy.h>
 #include <net.h>
 #include <miiphy.h>
-#include <asm/arch-devsoc/edma_regs.h>
+#include <asm/arch-ipq5332/edma_regs.h>
 #include <asm/global_data.h>
 #include <fdtdec.h>
-#include "devsoc_edma.h"
+#include "ipq5332_edma.h"
 #include "ipq_phy.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -40,25 +40,25 @@ DECLARE_GLOBAL_DATA_PTR;
 #define pr_info(fmt, args...) printf(fmt, ##args);
 #define pr_warn(fmt, args...) printf(fmt, ##args);
 
-#ifndef CONFIG_DEVSOC_BRIDGED_MODE
-#define DEVSOC_EDMA_MAC_PORT_NO	3
+#ifndef CONFIG_IPQ5332_BRIDGED_MODE
+#define IPQ5332_EDMA_MAC_PORT_NO	3
 #endif
 
-static struct devsoc_eth_dev *devsoc_edma_dev[DEVSOC_EDMA_DEV];
+static struct ipq5332_eth_dev *ipq5332_edma_dev[IPQ5332_EDMA_DEV];
 
-uchar devsoc_def_enetaddr[6] = {0x00, 0x03, 0x7F, 0xBA, 0xDB, 0xAD};
-phy_info_t *phy_info[DEVSOC_PHY_MAX] = {0};
+uchar ipq5332_def_enetaddr[6] = {0x00, 0x03, 0x7F, 0xBA, 0xDB, 0xAD};
+phy_info_t *phy_info[IPQ5332_PHY_MAX] = {0};
 phy_info_t *swt_info[QCA8084_MAX_PORTS] = {0};
 int sgmii_mode[2] = {0};
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 extern void ipq_phy_addr_fixup(void);
 extern void ipq_clock_init(void);
 extern int ipq_sw_mdio_init(const char *);
 extern int ipq_mdio_read(int mii_id, int regnum, ushort *data);
-extern void devsoc_qca8075_phy_map_ops(struct phy_ops **ops);
-extern int devsoc_qca8075_phy_init(struct phy_ops **ops, u32 phy_id);
-extern void devsoc_qca8075_phy_interface_set_mode(uint32_t phy_id, uint32_t mode);
+extern void ipq5332_qca8075_phy_map_ops(struct phy_ops **ops);
+extern int ipq5332_qca8075_phy_init(struct phy_ops **ops, u32 phy_id);
+extern void ipq5332_qca8075_phy_interface_set_mode(uint32_t phy_id, uint32_t mode);
 extern int ipq_qca8033_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca8081_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca_aquantia_phy_init(struct phy_ops **ops, u32 phy_id);
@@ -78,7 +78,7 @@ ipq_s17c_swt_cfg_t s17c_swt_cfg;
 #endif
 
 static int tftp_acl_our_port;
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 #ifdef CONFIG_QCA8084_SWT_MODE
 static int qca8084_swt_enb = 0;
 static int qca8084_chip_detect = 0;
@@ -88,53 +88,53 @@ static int qca8084_chip_detect = 0;
 /*
  * EDMA hardware instance
  */
-static u32 devsoc_edma_hw_addr;
+static u32 ipq5332_edma_hw_addr;
 
 /*
- * devsoc_edma_reg_read()
+ * ipq5332_edma_reg_read()
  *	Read EDMA register
  */
-uint32_t devsoc_edma_reg_read(uint32_t reg_off)
+uint32_t ipq5332_edma_reg_read(uint32_t reg_off)
 {
-	return (uint32_t)readl(devsoc_edma_hw_addr + reg_off);
+	return (uint32_t)readl(ipq5332_edma_hw_addr + reg_off);
 }
 
 /*
- * devsoc_edma_reg_write()
+ * ipq5332_edma_reg_write()
  *	Write EDMA register
  */
-void devsoc_edma_reg_write(uint32_t reg_off, uint32_t val)
+void ipq5332_edma_reg_write(uint32_t reg_off, uint32_t val)
 {
-	writel(val, (devsoc_edma_hw_addr + reg_off));
+	writel(val, (ipq5332_edma_hw_addr + reg_off));
 }
 
 /*
- * devsoc_edma_alloc_rx_buffer()
+ * ipq5332_edma_alloc_rx_buffer()
  *	Alloc Rx buffers for one RxFill ring
  */
-int devsoc_edma_alloc_rx_buffer(struct devsoc_edma_hw *ehw,
-		struct devsoc_edma_rxfill_ring *rxfill_ring)
+int ipq5332_edma_alloc_rx_buffer(struct ipq5332_edma_hw *ehw,
+		struct ipq5332_edma_rxfill_ring *rxfill_ring)
 {
 	uint16_t num_alloc = 0;
 	uint16_t cons, next, counter;
-	struct devsoc_edma_rxfill_desc *rxfill_desc;
+	struct ipq5332_edma_rxfill_desc *rxfill_desc;
 	uint32_t reg_data;
 
 	/*
 	 * Read RXFILL ring producer index
 	 */
-	reg_data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXFILL_PROD_IDX(
+	reg_data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXFILL_PROD_IDX(
 					rxfill_ring->id));
 
-	next = reg_data & DEVSOC_EDMA_RXFILL_PROD_IDX_MASK & (rxfill_ring->count - 1);
+	next = reg_data & IPQ5332_EDMA_RXFILL_PROD_IDX_MASK & (rxfill_ring->count - 1);
 
 	/*
 	 * Read RXFILL ring consumer index
 	 */
-	reg_data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXFILL_CONS_IDX(
+	reg_data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXFILL_CONS_IDX(
 					rxfill_ring->id));
 
-	cons = reg_data & DEVSOC_EDMA_RXFILL_CONS_IDX_MASK;
+	cons = reg_data & IPQ5332_EDMA_RXFILL_CONS_IDX_MASK;
 
 	while (1) {
 		counter = next;
@@ -148,7 +148,7 @@ int devsoc_edma_alloc_rx_buffer(struct devsoc_edma_hw *ehw,
 		/*
 		 * Get RXFILL descriptor
 		 */
-		rxfill_desc = DEVSOC_EDMA_RXFILL_DESC(rxfill_ring, next);
+		rxfill_desc = IPQ5332_EDMA_RXFILL_DESC(rxfill_ring, next);
 
 		/*
 		 * Fill the opaque value
@@ -158,9 +158,9 @@ int devsoc_edma_alloc_rx_buffer(struct devsoc_edma_hw *ehw,
 		/*
 		 * Save buffer size in RXFILL descriptor
 		 */
-		rxfill_desc->rdes1 |= cpu_to_le32((DEVSOC_EDMA_RX_BUFF_SIZE <<
-				       DEVSOC_EDMA_RXFILL_BUF_SIZE_SHIFT) &
-				       DEVSOC_EDMA_RXFILL_BUF_SIZE_MASK);
+		rxfill_desc->rdes1 |= cpu_to_le32((IPQ5332_EDMA_RX_BUFF_SIZE <<
+				       IPQ5332_EDMA_RXFILL_BUF_SIZE_SHIFT) &
+				       IPQ5332_EDMA_RXFILL_BUF_SIZE_MASK);
 		num_alloc++;
 		next = counter;
 	}
@@ -169,13 +169,13 @@ int devsoc_edma_alloc_rx_buffer(struct devsoc_edma_hw *ehw,
 		/*
 		 * Update RXFILL ring producer index
 		 */
-		reg_data = next & DEVSOC_EDMA_RXFILL_PROD_IDX_MASK;
+		reg_data = next & IPQ5332_EDMA_RXFILL_PROD_IDX_MASK;
 
 		/*
 		 * make sure the producer index updated before
 		 * updating the hardware
 		 */
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_PROD_IDX(
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_PROD_IDX(
 					rxfill_ring->id), reg_data);
 
 		pr_debug("%s: num_alloc = %d\n", __func__, num_alloc);
@@ -185,13 +185,13 @@ int devsoc_edma_alloc_rx_buffer(struct devsoc_edma_hw *ehw,
 }
 
 /*
- * devsoc_edma_clean_tx()
+ * ipq5332_edma_clean_tx()
  *	Reap Tx descriptors
  */
-uint32_t devsoc_edma_clean_tx(struct devsoc_edma_hw *ehw,
-			struct devsoc_edma_txcmpl_ring *txcmpl_ring)
+uint32_t ipq5332_edma_clean_tx(struct ipq5332_edma_hw *ehw,
+			struct ipq5332_edma_txcmpl_ring *txcmpl_ring)
 {
-	struct devsoc_edma_txcmpl_desc *txcmpl_desc;
+	struct ipq5332_edma_txcmpl_desc *txcmpl_desc;
 	uint16_t prod_idx, cons_idx;
 	uint32_t data;
 	uint32_t txcmpl_consumed = 0;
@@ -200,20 +200,20 @@ uint32_t devsoc_edma_clean_tx(struct devsoc_edma_hw *ehw,
 	/*
 	 * Get TXCMPL ring producer index
 	 */
-	data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXCMPL_PROD_IDX(
+	data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXCMPL_PROD_IDX(
 					txcmpl_ring->id));
-	prod_idx = data & DEVSOC_EDMA_TXCMPL_PROD_IDX_MASK;
+	prod_idx = data & IPQ5332_EDMA_TXCMPL_PROD_IDX_MASK;
 
 	/*
 	 * Get TXCMPL ring consumer index
 	 */
-	data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXCMPL_CONS_IDX(
+	data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXCMPL_CONS_IDX(
 					txcmpl_ring->id));
-	cons_idx = data & DEVSOC_EDMA_TXCMPL_CONS_IDX_MASK;
+	cons_idx = data & IPQ5332_EDMA_TXCMPL_CONS_IDX_MASK;
 
 	while (cons_idx != prod_idx) {
 
-		txcmpl_desc = DEVSOC_EDMA_TXCMPL_DESC(txcmpl_ring, cons_idx);
+		txcmpl_desc = IPQ5332_EDMA_TXCMPL_DESC(txcmpl_ring, cons_idx);
 
 		skb = (uchar *)txcmpl_desc->tdes0;
 
@@ -238,43 +238,43 @@ uint32_t devsoc_edma_clean_tx(struct devsoc_edma_hw *ehw,
 	/*
 	 * Update TXCMPL ring consumer index
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXCMPL_CONS_IDX(
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXCMPL_CONS_IDX(
 				txcmpl_ring->id), cons_idx);
 
 	return txcmpl_consumed;
 }
 
 /*
- * devsoc_edma_clean_rx()
+ * ipq5332_edma_clean_rx()
  *	Reap Rx descriptors
  */
-uint32_t devsoc_edma_clean_rx(struct devsoc_edma_common_info *c_info,
-				struct devsoc_edma_rxdesc_ring *rxdesc_ring)
+uint32_t ipq5332_edma_clean_rx(struct ipq5332_edma_common_info *c_info,
+				struct ipq5332_edma_rxdesc_ring *rxdesc_ring)
 {
 	void *skb;
-	struct devsoc_edma_rxdesc_desc *rxdesc_desc;
+	struct ipq5332_edma_rxdesc_desc *rxdesc_desc;
 	uint16_t prod_idx, cons_idx;
 	int src_port_num;
 	int pkt_length;
 	int rx = CONFIG_SYS_RX_ETH_BUFFER;
 	u16 cleaned_count = 0;
-	struct devsoc_edma_hw *ehw = &c_info->hw;
+	struct ipq5332_edma_hw *ehw = &c_info->hw;
 
 	pr_debug("%s: rxdesc_ring->id = %d\n", __func__, rxdesc_ring->id);
 	/*
 	 * Read Rx ring consumer index
 	 */
-	cons_idx = devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXDESC_CONS_IDX(
+	cons_idx = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXDESC_CONS_IDX(
 					rxdesc_ring->id)) &
-					DEVSOC_EDMA_RXDESC_CONS_IDX_MASK;
+					IPQ5332_EDMA_RXDESC_CONS_IDX_MASK;
 
 	while (rx) {
 		/*
 		 * Read Rx ring producer index
 		 */
-		prod_idx = devsoc_edma_reg_read(
-			DEVSOC_EDMA_REG_RXDESC_PROD_IDX(rxdesc_ring->id))
-			& DEVSOC_EDMA_RXDESC_PROD_IDX_MASK;
+		prod_idx = ipq5332_edma_reg_read(
+			IPQ5332_EDMA_REG_RXDESC_PROD_IDX(rxdesc_ring->id))
+			& IPQ5332_EDMA_RXDESC_PROD_IDX_MASK;
 
 		if (cons_idx == prod_idx) {
 			pr_debug("%s: cons idx = %u, prod idx = %u\n",
@@ -282,7 +282,7 @@ uint32_t devsoc_edma_clean_rx(struct devsoc_edma_common_info *c_info,
 			break;
 		}
 
-		rxdesc_desc = DEVSOC_EDMA_RXDESC_DESC(rxdesc_ring, cons_idx);
+		rxdesc_desc = IPQ5332_EDMA_RXDESC_DESC(rxdesc_ring, cons_idx);
 
 		skb = (void *)rxdesc_desc->rdes0;
 
@@ -291,13 +291,13 @@ uint32_t devsoc_edma_clean_rx(struct devsoc_edma_common_info *c_info,
 		/*
 		 * Check src_info from Rx Descriptor
 		 */
-		src_port_num = DEVSOC_EDMA_RXDESC_SRC_INFO_GET(rxdesc_desc->rdes4);
-		if ((src_port_num & DEVSOC_EDMA_RXDESC_SRCINFO_TYPE_MASK) ==
-				DEVSOC_EDMA_RXDESC_SRCINFO_TYPE_PORTID) {
-			src_port_num &= DEVSOC_EDMA_RXDESC_PORTNUM_BITS;
+		src_port_num = IPQ5332_EDMA_RXDESC_SRC_INFO_GET(rxdesc_desc->rdes4);
+		if ((src_port_num & IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_MASK) ==
+				IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_PORTID) {
+			src_port_num &= IPQ5332_EDMA_RXDESC_PORTNUM_BITS;
 		} else {
 			pr_warn("WARN: src_info_type:0x%x. Drop skb:%p\n",
-				(src_port_num & DEVSOC_EDMA_RXDESC_SRCINFO_TYPE_MASK),
+				(src_port_num & IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_MASK),
 				skb);
 			goto next_rx_desc;
 		}
@@ -306,11 +306,11 @@ uint32_t devsoc_edma_clean_rx(struct devsoc_edma_common_info *c_info,
 		 * Get packet length
 		 */
 		pkt_length = (rxdesc_desc->rdes5 &
-			      DEVSOC_EDMA_RXDESC_PKT_SIZE_MASK) >>
-			      DEVSOC_EDMA_RXDESC_PKT_SIZE_SHIFT;
+			      IPQ5332_EDMA_RXDESC_PKT_SIZE_MASK) >>
+			      IPQ5332_EDMA_RXDESC_PKT_SIZE_SHIFT;
 
-		if (unlikely((src_port_num < DEVSOC_NSS_DP_START_PHY_PORT)  ||
-			(src_port_num > DEVSOC_NSS_DP_MAX_PHY_PORTS))) {
+		if (unlikely((src_port_num < IPQ5332_NSS_DP_START_PHY_PORT)  ||
+			(src_port_num > IPQ5332_NSS_DP_MAX_PHY_PORTS))) {
 			pr_warn("WARN: Port number error :%d. Drop skb:%p\n",
 					src_port_num, skb);
 			goto next_rx_desc;
@@ -331,8 +331,8 @@ next_rx_desc:
 	}
 
 	if (cleaned_count) {
-		devsoc_edma_alloc_rx_buffer(ehw, rxdesc_ring->rxfill);
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_CONS_IDX(
+		ipq5332_edma_alloc_rx_buffer(ehw, rxdesc_ring->rxfill);
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_CONS_IDX(
 						rxdesc_ring->id), cons_idx);
 	}
 
@@ -340,30 +340,30 @@ next_rx_desc:
 }
 
 /*
- * devsoc_edma_rx_complete()
+ * ipq5332_edma_rx_complete()
  */
-static int devsoc_edma_rx_complete(struct devsoc_edma_common_info *c_info)
+static int ipq5332_edma_rx_complete(struct ipq5332_edma_common_info *c_info)
 {
-	struct devsoc_edma_hw *ehw = &c_info->hw;
-	struct devsoc_edma_txcmpl_ring *txcmpl_ring;
-	struct devsoc_edma_rxdesc_ring *rxdesc_ring;
-	struct devsoc_edma_rxfill_ring *rxfill_ring;
+	struct ipq5332_edma_hw *ehw = &c_info->hw;
+	struct ipq5332_edma_txcmpl_ring *txcmpl_ring;
+	struct ipq5332_edma_rxdesc_ring *rxdesc_ring;
+	struct ipq5332_edma_rxfill_ring *rxfill_ring;
 	uint32_t misc_intr_status, reg_data;
 	int i;
 
 	for (i = 0; i < ehw->rxdesc_rings; i++) {
 		rxdesc_ring = &ehw->rxdesc_ring[i];
-		devsoc_edma_clean_rx(c_info, rxdesc_ring);
+		ipq5332_edma_clean_rx(c_info, rxdesc_ring);
 	}
 
 	for (i = 0; i < ehw->txcmpl_rings; i++) {
 		txcmpl_ring = &ehw->txcmpl_ring[i];
-		devsoc_edma_clean_tx(ehw, txcmpl_ring);
+		ipq5332_edma_clean_tx(ehw, txcmpl_ring);
 	}
 
 	for (i = 0; i < ehw->rxfill_rings; i++) {
 		rxfill_ring = &ehw->rxfill_ring[i];
-		devsoc_edma_alloc_rx_buffer(ehw, rxfill_ring);
+		ipq5332_edma_alloc_rx_buffer(ehw, rxfill_ring);
 	}
 
 	/*
@@ -371,8 +371,8 @@ static int devsoc_edma_rx_complete(struct devsoc_edma_common_info *c_info)
 	 */
 	for (i = 0; i < ehw->rxdesc_rings; i++) {
 		rxdesc_ring = &ehw->rxdesc_ring[i];
-		devsoc_edma_reg_write(
-			DEVSOC_EDMA_REG_RXDESC_INT_MASK(rxdesc_ring->id),
+		ipq5332_edma_reg_write(
+			IPQ5332_EDMA_REG_RXDESC_INT_MASK(rxdesc_ring->id),
 			ehw->rxdesc_intr_mask);
 	}
 
@@ -381,7 +381,7 @@ static int devsoc_edma_rx_complete(struct devsoc_edma_common_info *c_info)
 	 */
 	for (i = 0; i < ehw->txcmpl_rings; i++) {
 		txcmpl_ring = &ehw->txcmpl_ring[i];
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_TX_INT_MASK(
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TX_INT_MASK(
 					txcmpl_ring->id),
 					ehw->txcmpl_intr_mask);
 	}
@@ -391,7 +391,7 @@ static int devsoc_edma_rx_complete(struct devsoc_edma_common_info *c_info)
 	 */
 	for (i = 0; i < ehw->rxfill_rings; i++) {
 		rxfill_ring = &ehw->rxfill_ring[i];
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_INT_MASK(
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_INT_MASK(
 					rxfill_ring->id),
 					ehw->rxfill_intr_mask);
 	}
@@ -399,30 +399,30 @@ static int devsoc_edma_rx_complete(struct devsoc_edma_common_info *c_info)
 	/*
 	 * Read Misc intr status
 	 */
-	reg_data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_MISC_INT_STAT);
+	reg_data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_MISC_INT_STAT);
 	misc_intr_status = reg_data & ehw->misc_intr_mask;
 
 	if (misc_intr_status != 0) {
 		pr_info("%s: misc_intr_status = 0x%x\n", __func__,
 			misc_intr_status);
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_MISC_INT_MASK,
-					DEVSOC_EDMA_MASK_INT_DISABLE);
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_MISC_INT_MASK,
+					IPQ5332_EDMA_MASK_INT_DISABLE);
 	}
 
 	return 0;
 }
 
 /*
- * devsoc_eth_snd()
+ * ipq5332_eth_snd()
  *	Transmit a packet using an EDMA ring
  */
-static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
+static int ipq5332_eth_snd(struct eth_device *dev, void *packet, int length)
 {
-	struct devsoc_eth_dev *priv = dev->priv;
-	struct devsoc_edma_common_info *c_info = priv->c_info;
-	struct devsoc_edma_hw *ehw = &c_info->hw;
-	struct devsoc_edma_txdesc_desc *txdesc;
-	struct devsoc_edma_txdesc_ring *txdesc_ring;
+	struct ipq5332_eth_dev *priv = dev->priv;
+	struct ipq5332_edma_common_info *c_info = priv->c_info;
+	struct ipq5332_edma_hw *ehw = &c_info->hw;
+	struct ipq5332_edma_txdesc_desc *txdesc;
+	struct ipq5332_edma_txdesc_ring *txdesc_ring;
 	uint16_t hw_next_to_use, hw_next_to_clean, chk_idx;
 	uint32_t data;
 	uchar *skb;
@@ -431,16 +431,16 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 
 	if (tftp_acl_our_port != tftp_our_port) {
 		/* Allowing tftp packets */
-		devsoc_ppe_acl_set(3, 0x4, 0x1, tftp_our_port, 0xffff, 0, 0);
+		ipq5332_ppe_acl_set(3, 0x4, 0x1, tftp_our_port, 0xffff, 0, 0);
 		tftp_acl_our_port = tftp_our_port;
 	}
 	/*
 	 * Read TXDESC ring producer index
 	 */
-	data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXDESC_PROD_IDX(
+	data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXDESC_PROD_IDX(
 					txdesc_ring->id));
 
-	hw_next_to_use = data & DEVSOC_EDMA_TXDESC_PROD_IDX_MASK;
+	hw_next_to_use = data & IPQ5332_EDMA_TXDESC_PROD_IDX_MASK;
 
 	pr_debug("%s: txdesc_ring->id = %d\n", __func__, txdesc_ring->id);
 
@@ -450,10 +450,10 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 	/*
 	 * TODO - read to local variable to optimize uncached access
 	 */
-	data = devsoc_edma_reg_read(
-			DEVSOC_EDMA_REG_TXDESC_CONS_IDX(txdesc_ring->id));
+	data = ipq5332_edma_reg_read(
+			IPQ5332_EDMA_REG_TXDESC_CONS_IDX(txdesc_ring->id));
 
-	hw_next_to_clean = data & DEVSOC_EDMA_TXDESC_CONS_IDX_MASK;
+	hw_next_to_clean = data & IPQ5332_EDMA_TXDESC_CONS_IDX_MASK;
 
 	/*
 	 * Check for available Tx descriptor
@@ -468,7 +468,7 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 	/*
 	 * Get Tx descriptor
 	 */
-	txdesc = DEVSOC_EDMA_TXDESC_DESC(txdesc_ring, hw_next_to_use);
+	txdesc = IPQ5332_EDMA_TXDESC_DESC(txdesc_ring, hw_next_to_use);
 
 	txdesc->tdes1 = 0;
 	txdesc->tdes2 = 0;
@@ -484,7 +484,7 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 			__func__, txdesc->tdes0, length,
 			hw_next_to_use, hw_next_to_clean);
 
-#ifdef CONFIG_DEVSOC_BRIDGED_MODE
+#ifdef CONFIG_IPQ5332_BRIDGED_MODE
 	/* VP 0x0 share vsi 2 with port 1-4 */
 	/* src is 0x2000, dest is 0x0 */
 	txdesc->tdes4 = 0x00002000;
@@ -498,8 +498,8 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 	 *
 	 * Currently mac port no. is fixed as 3 for the purpose of testing
 	 */
-	txdesc->tdes4 |= (DEVSOC_EDMA_DST_PORT_TYPE_SET(DEVSOC_EDMA_DST_PORT_TYPE) |
-			  DEVSOC_EDMA_DST_PORT_ID_SET(DEVSOC_EDMA_MAC_PORT_NO));
+	txdesc->tdes4 |= (IPQ5332_EDMA_DST_PORT_TYPE_SET(IPQ5332_EDMA_DST_PORT_TYPE) |
+			  IPQ5332_EDMA_DST_PORT_ID_SET(IPQ5332_EDMA_MAC_PORT_NO));
 #endif
 
 	/*
@@ -515,8 +515,8 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 	/*
 	 * Populate Tx descriptor
 	 */
-	txdesc->tdes5 |= ((length << DEVSOC_EDMA_TXDESC_DATA_LENGTH_SHIFT) &
-			  DEVSOC_EDMA_TXDESC_DATA_LENGTH_MASK);
+	txdesc->tdes5 |= ((length << IPQ5332_EDMA_TXDESC_DATA_LENGTH_SHIFT) &
+			  IPQ5332_EDMA_TXDESC_DATA_LENGTH_MASK);
 
 	/*
 	 * Update producer index
@@ -528,23 +528,23 @@ static int devsoc_eth_snd(struct eth_device *dev, void *packet, int length)
 	 * write to hardware
 	 */
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC_PROD_IDX(
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC_PROD_IDX(
 				txdesc_ring->id), hw_next_to_use &
-				 DEVSOC_EDMA_TXDESC_PROD_IDX_MASK);
+				 IPQ5332_EDMA_TXDESC_PROD_IDX_MASK);
 
 	pr_debug("%s: successfull\n", __func__);
 
 	return EDMA_TX_OK;
 }
 
-static int devsoc_eth_recv(struct eth_device *dev)
+static int ipq5332_eth_recv(struct eth_device *dev)
 {
-	struct devsoc_eth_dev *priv = dev->priv;
-	struct devsoc_edma_common_info *c_info = priv->c_info;
-	struct devsoc_edma_rxdesc_ring *rxdesc_ring;
-	struct devsoc_edma_txcmpl_ring *txcmpl_ring;
-	struct devsoc_edma_rxfill_ring *rxfill_ring;
-	struct devsoc_edma_hw *ehw = &c_info->hw;
+	struct ipq5332_eth_dev *priv = dev->priv;
+	struct ipq5332_edma_common_info *c_info = priv->c_info;
+	struct ipq5332_edma_rxdesc_ring *rxdesc_ring;
+	struct ipq5332_edma_txcmpl_ring *txcmpl_ring;
+	struct ipq5332_edma_rxfill_ring *rxfill_ring;
+	struct ipq5332_edma_hw *ehw = &c_info->hw;
 	volatile u32 reg_data;
 	u32 rxdesc_intr_status = 0, txcmpl_intr_status = 0, rxfill_intr_status = 0;
 	int i;
@@ -555,18 +555,18 @@ static int devsoc_eth_recv(struct eth_device *dev)
 	for (i = 0; i < ehw->rxdesc_rings; i++) {
 		rxdesc_ring = &ehw->rxdesc_ring[i];
 
-		reg_data = devsoc_edma_reg_read(
-				DEVSOC_EDMA_REG_RXDESC_INT_STAT(
+		reg_data = ipq5332_edma_reg_read(
+				IPQ5332_EDMA_REG_RXDESC_INT_STAT(
 					rxdesc_ring->id));
 		rxdesc_intr_status |= reg_data &
-				DEVSOC_EDMA_RXDESC_RING_INT_STATUS_MASK;
+				IPQ5332_EDMA_RXDESC_RING_INT_STATUS_MASK;
 
 		/*
 		 * Disable RxDesc intr
 		 */
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_INT_MASK(
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_INT_MASK(
 					rxdesc_ring->id),
-					DEVSOC_EDMA_MASK_INT_DISABLE);
+					IPQ5332_EDMA_MASK_INT_DISABLE);
 	}
 
 	/*
@@ -575,18 +575,18 @@ static int devsoc_eth_recv(struct eth_device *dev)
 	for (i = 0; i < ehw->txcmpl_rings; i++) {
 		txcmpl_ring = &ehw->txcmpl_ring[i];
 
-		reg_data = devsoc_edma_reg_read(
-				DEVSOC_EDMA_REG_TX_INT_STAT(
+		reg_data = ipq5332_edma_reg_read(
+				IPQ5332_EDMA_REG_TX_INT_STAT(
 					txcmpl_ring->id));
 		txcmpl_intr_status |= reg_data &
-				DEVSOC_EDMA_TXCMPL_RING_INT_STATUS_MASK;
+				IPQ5332_EDMA_TXCMPL_RING_INT_STATUS_MASK;
 
 		/*
 		 * Disable TxCmpl intr
 		 */
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_TX_INT_MASK(
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TX_INT_MASK(
 					txcmpl_ring->id),
-					DEVSOC_EDMA_MASK_INT_DISABLE);
+					IPQ5332_EDMA_MASK_INT_DISABLE);
 	}
 
 	/*
@@ -595,46 +595,46 @@ static int devsoc_eth_recv(struct eth_device *dev)
 	for (i = 0; i < ehw->rxfill_rings; i++) {
 		rxfill_ring = &ehw->rxfill_ring[i];
 
-		reg_data = devsoc_edma_reg_read(
-				DEVSOC_EDMA_REG_RXFILL_INT_STAT(
+		reg_data = ipq5332_edma_reg_read(
+				IPQ5332_EDMA_REG_RXFILL_INT_STAT(
 					rxfill_ring->id));
 		rxfill_intr_status |= reg_data &
-				DEVSOC_EDMA_RXFILL_RING_INT_STATUS_MASK;
+				IPQ5332_EDMA_RXFILL_RING_INT_STATUS_MASK;
 
 		/*
 		 * Disable RxFill intr
 		 */
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_INT_MASK(
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_INT_MASK(
 					rxfill_ring->id),
-					DEVSOC_EDMA_MASK_INT_DISABLE);
+					IPQ5332_EDMA_MASK_INT_DISABLE);
 	}
 
 	if ((rxdesc_intr_status != 0) || (txcmpl_intr_status != 0) ||
 	    (rxfill_intr_status != 0)) {
 		for (i = 0; i < ehw->rxdesc_rings; i++) {
 			rxdesc_ring = &ehw->rxdesc_ring[i];
-			devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_INT_MASK(
+			ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_INT_MASK(
 						rxdesc_ring->id),
-						DEVSOC_EDMA_MASK_INT_DISABLE);
+						IPQ5332_EDMA_MASK_INT_DISABLE);
 		}
-		devsoc_edma_rx_complete(c_info);
+		ipq5332_edma_rx_complete(c_info);
 	}
 
 	return 0;
 }
 
 /*
- * devsoc_edma_setup_ring_resources()
+ * ipq5332_edma_setup_ring_resources()
  *	Allocate/setup resources for EDMA rings
  */
-static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
+static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 {
-	struct devsoc_edma_txcmpl_ring *txcmpl_ring;
-	struct devsoc_edma_txdesc_ring *txdesc_ring;
-	struct devsoc_edma_rxfill_ring *rxfill_ring;
-	struct devsoc_edma_rxdesc_ring *rxdesc_ring;
-	struct devsoc_edma_txdesc_desc *txdesc_desc;
-	struct devsoc_edma_rxfill_desc *rxfill_desc;
+	struct ipq5332_edma_txcmpl_ring *txcmpl_ring;
+	struct ipq5332_edma_txdesc_ring *txdesc_ring;
+	struct ipq5332_edma_rxfill_ring *rxfill_ring;
+	struct ipq5332_edma_rxdesc_ring *rxdesc_ring;
+	struct ipq5332_edma_txdesc_desc *txdesc_desc;
+	struct ipq5332_edma_rxfill_desc *rxfill_desc;
 	int i, j, index;
 	void *tx_buf;
 	void *rx_buf;
@@ -644,10 +644,10 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 	 */
 	for (i = 0; i < ehw->rxfill_rings; i++) {
 		rxfill_ring = &ehw->rxfill_ring[i];
-		rxfill_ring->count = DEVSOC_EDMA_RX_RING_SIZE;
+		rxfill_ring->count = IPQ5332_EDMA_RX_RING_SIZE;
 		rxfill_ring->id = ehw->rxfill_ring_start + i;
 		rxfill_ring->desc = (void *)noncached_alloc(
-				DEVSOC_EDMA_RXFILL_DESC_SIZE * rxfill_ring->count,
+				IPQ5332_EDMA_RXFILL_DESC_SIZE * rxfill_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 
 		if (rxfill_ring->desc == NULL) {
@@ -659,7 +659,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 			rxfill_ring->id, rxfill_ring->desc, (unsigned int)
 			rxfill_ring->dma);
 
-		rx_buf = (void *)noncached_alloc(DEVSOC_EDMA_RX_BUFF_SIZE *
+		rx_buf = (void *)noncached_alloc(IPQ5332_EDMA_RX_BUFF_SIZE *
 					rxfill_ring->count,
 					CONFIG_SYS_CACHELINE_SIZE);
 
@@ -673,12 +673,12 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 		 * Allocate buffers for each of the desc
 		 */
 		for (j = 0; j < rxfill_ring->count; j++) {
-			rxfill_desc = DEVSOC_EDMA_RXFILL_DESC(rxfill_ring, j);
+			rxfill_desc = IPQ5332_EDMA_RXFILL_DESC(rxfill_ring, j);
 			rxfill_desc->rdes0 = virt_to_phys(rx_buf);
 			rxfill_desc->rdes1 = 0;
 			rxfill_desc->rdes2 = 0;
 			rxfill_desc->rdes3 = 0;
-			rx_buf += DEVSOC_EDMA_RX_BUFF_SIZE;
+			rx_buf += IPQ5332_EDMA_RX_BUFF_SIZE;
 		}
 	}
 
@@ -687,7 +687,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 	 */
 	for (i = 0; i < ehw->rxdesc_rings; i++) {
 		rxdesc_ring = &ehw->rxdesc_ring[i];
-		rxdesc_ring->count = DEVSOC_EDMA_RX_RING_SIZE;
+		rxdesc_ring->count = IPQ5332_EDMA_RX_RING_SIZE;
 		rxdesc_ring->id = ehw->rxdesc_ring_start + i;
 
 		/*
@@ -701,7 +701,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 		rxdesc_ring->rxfill = ehw->rxfill_ring;
 
 		rxdesc_ring->desc = (void *)noncached_alloc(
-				DEVSOC_EDMA_RXDESC_DESC_SIZE * rxdesc_ring->count,
+				IPQ5332_EDMA_RXDESC_DESC_SIZE * rxdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (rxdesc_ring->desc == NULL) {
 			pr_info("%s: rxdesc_ring->desc alloc error\n", __func__);
@@ -713,7 +713,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 		 * Allocate secondary Rx ring descriptors
 		 */
 		rxdesc_ring->sdesc = (void *)noncached_alloc(
-				DEVSOC_EDMA_RX_SEC_DESC_SIZE * rxdesc_ring->count,
+				IPQ5332_EDMA_RX_SEC_DESC_SIZE * rxdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (rxdesc_ring->sdesc == NULL) {
 			pr_info("%s: rxdesc_ring->sdesc alloc error\n", __func__);
@@ -727,10 +727,10 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 	 */
 	for (i = 0; i < ehw->txdesc_rings; i++) {
 		txdesc_ring = &ehw->txdesc_ring[i];
-		txdesc_ring->count = DEVSOC_EDMA_TX_RING_SIZE;
+		txdesc_ring->count = IPQ5332_EDMA_TX_RING_SIZE;
 		txdesc_ring->id = ehw->txdesc_ring_start + i;
 		txdesc_ring->desc = (void *)noncached_alloc(
-				DEVSOC_EDMA_TXDESC_DESC_SIZE * txdesc_ring->count,
+				IPQ5332_EDMA_TXDESC_DESC_SIZE * txdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (txdesc_ring->desc == NULL) {
 			pr_info("%s: txdesc_ring->desc alloc error\n", __func__);
@@ -738,7 +738,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 		}
 		txdesc_ring->dma = virt_to_phys(txdesc_ring->desc);
 
-		tx_buf = (void *)noncached_alloc(DEVSOC_EDMA_TX_BUFF_SIZE *
+		tx_buf = (void *)noncached_alloc(IPQ5332_EDMA_TX_BUFF_SIZE *
 					txdesc_ring->count,
 					CONFIG_SYS_CACHELINE_SIZE);
 		if (tx_buf == NULL) {
@@ -751,7 +751,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 		 * Allocate buffers for each of the desc
 		 */
 		for (j = 0; j < txdesc_ring->count; j++) {
-			txdesc_desc = DEVSOC_EDMA_TXDESC_DESC(txdesc_ring, j);
+			txdesc_desc = IPQ5332_EDMA_TXDESC_DESC(txdesc_ring, j);
 			txdesc_desc->tdes0 = virt_to_phys(tx_buf);
 			txdesc_desc->tdes1 = 0;
 			txdesc_desc->tdes2 = 0;
@@ -760,14 +760,14 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 			txdesc_desc->tdes5 = 0;
 			txdesc_desc->tdes6 = 0;
 			txdesc_desc->tdes7 = 0;
-			tx_buf += DEVSOC_EDMA_TX_BUFF_SIZE;
+			tx_buf += IPQ5332_EDMA_TX_BUFF_SIZE;
 		}
 
 		/*
 		 * Allocate secondary Tx ring descriptors
 		 */
 		txdesc_ring->sdesc = (void *)noncached_alloc(
-				DEVSOC_EDMA_TX_SEC_DESC_SIZE * txdesc_ring->count,
+				IPQ5332_EDMA_TX_SEC_DESC_SIZE * txdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (txdesc_ring->sdesc == NULL) {
 			pr_info("%s: txdesc_ring->sdesc alloc error\n", __func__);
@@ -781,10 +781,10 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 	 */
 	for (i = 0; i < ehw->txcmpl_rings; i++) {
 		txcmpl_ring = &ehw->txcmpl_ring[i];
-		txcmpl_ring->count = DEVSOC_EDMA_TX_RING_SIZE;
+		txcmpl_ring->count = IPQ5332_EDMA_TX_RING_SIZE;
 		txcmpl_ring->id = ehw->txcmpl_ring_start + i;
 		txcmpl_ring->desc = (void *)noncached_alloc(
-				DEVSOC_EDMA_TXCMPL_DESC_SIZE * txcmpl_ring->count,
+				IPQ5332_EDMA_TXCMPL_DESC_SIZE * txcmpl_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 
 		if (txcmpl_ring->desc == NULL) {
@@ -799,7 +799,7 @@ static int devsoc_edma_setup_ring_resources(struct devsoc_edma_hw *ehw)
 	return 0;
 }
 
-static void devsoc_edma_disable_rings(struct devsoc_edma_hw *edma_hw)
+static void ipq5332_edma_disable_rings(struct ipq5332_edma_hw *edma_hw)
 {
 	int i, desc_index;
 	u32 data;
@@ -807,60 +807,60 @@ static void devsoc_edma_disable_rings(struct devsoc_edma_hw *edma_hw)
 	/*
 	 * Disable Rx rings
 	 */
-	for (i = 0; i < DEVSOC_EDMA_MAX_RXDESC_RINGS; i++) {
-		data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXDESC_CTRL(i));
-		data &= ~DEVSOC_EDMA_RXDESC_RX_EN;
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_CTRL(i), data);
+	for (i = 0; i < IPQ5332_EDMA_MAX_RXDESC_RINGS; i++) {
+		data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXDESC_CTRL(i));
+		data &= ~IPQ5332_EDMA_RXDESC_RX_EN;
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_CTRL(i), data);
 	}
 
 	/*
 	 * Disable RxFill Rings
 	 */
-	for (i = 0; i < DEVSOC_EDMA_MAX_RXFILL_RINGS; i++) {
-		data = devsoc_edma_reg_read(
-				DEVSOC_EDMA_REG_RXFILL_RING_EN(i));
-		data &= ~DEVSOC_EDMA_RXFILL_RING_EN;
-		devsoc_edma_reg_write(
-				DEVSOC_EDMA_REG_RXFILL_RING_EN(i), data);
+	for (i = 0; i < IPQ5332_EDMA_MAX_RXFILL_RINGS; i++) {
+		data = ipq5332_edma_reg_read(
+				IPQ5332_EDMA_REG_RXFILL_RING_EN(i));
+		data &= ~IPQ5332_EDMA_RXFILL_RING_EN;
+		ipq5332_edma_reg_write(
+				IPQ5332_EDMA_REG_RXFILL_RING_EN(i), data);
 	}
 
 	/*
 	 * Disable Tx rings
 	 */
 	for (desc_index = 0; desc_index <
-			 DEVSOC_EDMA_MAX_TXDESC_RINGS; desc_index++) {
-		data = devsoc_edma_reg_read(
-				DEVSOC_EDMA_REG_TXDESC_CTRL(desc_index));
-		data &= ~DEVSOC_EDMA_TXDESC_TX_EN;
-		devsoc_edma_reg_write(
-				DEVSOC_EDMA_REG_TXDESC_CTRL(desc_index), data);
+			 IPQ5332_EDMA_MAX_TXDESC_RINGS; desc_index++) {
+		data = ipq5332_edma_reg_read(
+				IPQ5332_EDMA_REG_TXDESC_CTRL(desc_index));
+		data &= ~IPQ5332_EDMA_TXDESC_TX_EN;
+		ipq5332_edma_reg_write(
+				IPQ5332_EDMA_REG_TXDESC_CTRL(desc_index), data);
 	}
 }
 
-static void devsoc_edma_disable_intr(struct devsoc_edma_hw *ehw)
+static void ipq5332_edma_disable_intr(struct ipq5332_edma_hw *ehw)
 {
 	int i;
 
 	/*
 	 * Disable interrupts
 	 */
-	for (i = 0; i < DEVSOC_EDMA_MAX_RXDESC_RINGS; i++)
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RX_INT_CTRL(i), 0);
+	for (i = 0; i < IPQ5332_EDMA_MAX_RXDESC_RINGS; i++)
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RX_INT_CTRL(i), 0);
 
-	for (i = 0; i < DEVSOC_EDMA_MAX_RXFILL_RINGS; i++)
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_INT_MASK(i), 0);
+	for (i = 0; i < IPQ5332_EDMA_MAX_RXFILL_RINGS; i++)
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_INT_MASK(i), 0);
 
-	for (i = 0; i < DEVSOC_EDMA_MAX_TXCMPL_RINGS; i++)
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_TX_INT_MASK(i), 0);
+	for (i = 0; i < IPQ5332_EDMA_MAX_TXCMPL_RINGS; i++)
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TX_INT_MASK(i), 0);
 
 	/*
 	 * Clear MISC interrupt mask
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_MISC_INT_MASK,
-				DEVSOC_EDMA_MASK_INT_DISABLE);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_MISC_INT_MASK,
+				IPQ5332_EDMA_MASK_INT_DISABLE);
 }
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 static void set_sgmii_mode(int port_id, int sg_mode)
 {
 	if (port_id == 4)
@@ -880,16 +880,16 @@ static int get_sgmii_mode(int port_id)
 }
 #endif
 
-static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
+static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 {
 	int i;
 	u8 status = 0;
 	int mac_speed = 0x1;
-#ifndef CONFIG_DEVSOC_RUMI
-	struct devsoc_eth_dev *priv = eth_dev->priv;
+#ifndef CONFIG_IPQ5332_RUMI
+	struct ipq5332_eth_dev *priv = eth_dev->priv;
 	struct phy_ops *phy_get_ops;
-	static fal_port_speed_t old_speed[DEVSOC_PHY_MAX] = {[0 ... DEVSOC_PHY_MAX-1] = FAL_SPEED_BUTT};
-	static fal_port_speed_t curr_speed[DEVSOC_PHY_MAX];
+	static fal_port_speed_t old_speed[IPQ5332_PHY_MAX] = {[0 ... IPQ5332_PHY_MAX-1] = FAL_SPEED_BUTT};
+	static fal_port_speed_t curr_speed[IPQ5332_PHY_MAX];
 	fal_port_duplex_t duplex;
 	char *lstatus[] = {"up", "Down"};
 	char *dp[] = {"Half", "Full"};
@@ -920,8 +920,8 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 	 * we will proceed even if single link is up
 	 * else we will return with -1;
 	 */
-	for (i =  0; i < DEVSOC_PHY_MAX; i++) {
-#ifndef CONFIG_DEVSOC_RUMI
+	for (i =  0; i < IPQ5332_PHY_MAX; i++) {
+#ifndef CONFIG_IPQ5332_RUMI
 		if (phy_info[i]->phy_type == UNUSED_PHY_TYPE)
 			continue;
 #ifdef CONFIG_QCA8084_SWT_MODE
@@ -989,7 +989,7 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 		}
 #endif
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 		/*
 		 * Note: If the current port link is up and its speed is
 		 * different from its initially configured speed, only then
@@ -1123,23 +1123,23 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 			}
 		}
 
-		devsoc_speed_clock_set(i, clk);
+		ipq5332_speed_clock_set(i, clk);
 
-		devsoc_port_mac_clock_reset(i);
+		ipq5332_port_mac_clock_reset(i);
 
 		if (i == aquantia_port[0] || i == aquantia_port[1])
-			devsoc_uxsgmii_speed_set(i, mac_speed, duplex, status);
+			ipq5332_uxsgmii_speed_set(i, mac_speed, duplex, status);
 		else
-			devsoc_pqsgmii_speed_set(i, mac_speed, status);
+			ipq5332_pqsgmii_speed_set(i, mac_speed, status);
 #else
 		ppe_port_bridge_txmac_set(i + 1, 1);
 		//FAL_SPEED_5000
 		mac_speed = 0x5;
-		devsoc_uxsgmii_speed_set(i, mac_speed, FAL_DUPLEX_BUTT, status);
+		ipq5332_uxsgmii_speed_set(i, mac_speed, FAL_DUPLEX_BUTT, status);
 #endif
 	}
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 	if (linkup <= 0) {
 		/* No PHY link is alive */
 		return -1;
@@ -1151,12 +1151,12 @@ static int devsoc_eth_init(struct eth_device *eth_dev, bd_t *this)
 	return 0;
 }
 
-static int devsoc_edma_wr_macaddr(struct eth_device *dev)
+static int ipq5332_edma_wr_macaddr(struct eth_device *dev)
 {
 	return 0;
 }
 
-static void devsoc_eth_halt(struct eth_device *dev)
+static void ipq5332_eth_halt(struct eth_device *dev)
 {
 	pr_debug("\n\n*****GMAC0 info*****\n");
 	pr_debug("GMAC0 RXPAUSE(0x3a001044):%x\n", readl(0x3a001044));
@@ -1177,23 +1177,23 @@ static void devsoc_eth_halt(struct eth_device *dev)
 	pr_info("%s: done\n", __func__);
 }
 
-static void devsoc_edma_set_ring_values(struct devsoc_edma_hw *edma_hw)
+static void ipq5332_edma_set_ring_values(struct ipq5332_edma_hw *edma_hw)
 {
-	edma_hw->txdesc_ring_start = DEVSOC_EDMA_TX_DESC_RING_START;
-	edma_hw->txdesc_rings = DEVSOC_EDMA_TX_DESC_RING_NOS;
-	edma_hw->txdesc_ring_end = DEVSOC_EDMA_TX_DESC_RING_SIZE;
+	edma_hw->txdesc_ring_start = IPQ5332_EDMA_TX_DESC_RING_START;
+	edma_hw->txdesc_rings = IPQ5332_EDMA_TX_DESC_RING_NOS;
+	edma_hw->txdesc_ring_end = IPQ5332_EDMA_TX_DESC_RING_SIZE;
 
-	edma_hw->txcmpl_ring_start = DEVSOC_EDMA_TX_CMPL_RING_START;
-	edma_hw->txcmpl_rings = DEVSOC_EDMA_TX_CMPL_RING_NOS;
-	edma_hw->txcmpl_ring_end = DEVSOC_EDMA_TX_CMPL_RING_SIZE;
+	edma_hw->txcmpl_ring_start = IPQ5332_EDMA_TX_CMPL_RING_START;
+	edma_hw->txcmpl_rings = IPQ5332_EDMA_TX_CMPL_RING_NOS;
+	edma_hw->txcmpl_ring_end = IPQ5332_EDMA_TX_CMPL_RING_SIZE;
 
-	edma_hw->rxfill_ring_start = DEVSOC_EDMA_RX_FILL_RING_START;
-	edma_hw->rxfill_rings = DEVSOC_EDMA_RX_FILL_RING_NOS;
-	edma_hw->rxfill_ring_end = DEVSOC_EDMA_RX_FILL_RING_SIZE;
+	edma_hw->rxfill_ring_start = IPQ5332_EDMA_RX_FILL_RING_START;
+	edma_hw->rxfill_rings = IPQ5332_EDMA_RX_FILL_RING_NOS;
+	edma_hw->rxfill_ring_end = IPQ5332_EDMA_RX_FILL_RING_SIZE;
 
-	edma_hw->rxdesc_ring_start = DEVSOC_EDMA_RX_DESC_RING_START;
-	edma_hw->rxdesc_rings = DEVSOC_EDMA_RX_DESC_RING_NOS;
-	edma_hw->rxdesc_ring_end = DEVSOC_EDMA_RX_DESC_RING_SIZE;
+	edma_hw->rxdesc_ring_start = IPQ5332_EDMA_RX_DESC_RING_START;
+	edma_hw->rxdesc_rings = IPQ5332_EDMA_RX_DESC_RING_NOS;
+	edma_hw->rxdesc_ring_end = IPQ5332_EDMA_RX_DESC_RING_SIZE;
 
 	pr_info("Num rings - TxDesc:%u (%u-%u) TxCmpl:%u (%u-%u)\n",
 		edma_hw->txdesc_rings, edma_hw->txdesc_ring_start,
@@ -1209,13 +1209,13 @@ static void devsoc_edma_set_ring_values(struct devsoc_edma_hw *edma_hw)
 }
 
 /*
- * devsoc_edma_alloc_rings()
+ * ipq5332_edma_alloc_rings()
  *	Allocate EDMA software rings
  */
-static int devsoc_edma_alloc_rings(struct devsoc_edma_hw *ehw)
+static int ipq5332_edma_alloc_rings(struct ipq5332_edma_hw *ehw)
 {
 	ehw->rxfill_ring = (void *)noncached_alloc((sizeof(
-				struct devsoc_edma_rxfill_ring) *
+				struct ipq5332_edma_rxfill_ring) *
 				ehw->rxfill_rings),
 				CONFIG_SYS_CACHELINE_SIZE);
 	if (!ehw->rxfill_ring) {
@@ -1224,7 +1224,7 @@ static int devsoc_edma_alloc_rings(struct devsoc_edma_hw *ehw)
 	}
 
 	ehw->rxdesc_ring = (void *)noncached_alloc((sizeof(
-				struct devsoc_edma_rxdesc_ring) *
+				struct ipq5332_edma_rxdesc_ring) *
 				ehw->rxdesc_rings),
 				CONFIG_SYS_CACHELINE_SIZE);
 	if (!ehw->rxdesc_ring) {
@@ -1233,7 +1233,7 @@ static int devsoc_edma_alloc_rings(struct devsoc_edma_hw *ehw)
 	}
 
 	ehw->txdesc_ring = (void *)noncached_alloc((sizeof(
-				struct devsoc_edma_txdesc_ring) *
+				struct ipq5332_edma_txdesc_ring) *
 				ehw->txdesc_rings),
 				CONFIG_SYS_CACHELINE_SIZE);
 	if (!ehw->txdesc_ring) {
@@ -1242,7 +1242,7 @@ static int devsoc_edma_alloc_rings(struct devsoc_edma_hw *ehw)
 	}
 
 	ehw->txcmpl_ring = (void *)noncached_alloc((sizeof(
-				struct devsoc_edma_txcmpl_ring) *
+				struct ipq5332_edma_txcmpl_ring) *
 				ehw->txcmpl_rings),
 				CONFIG_SYS_CACHELINE_SIZE);
 	if (!ehw->txcmpl_ring) {
@@ -1258,29 +1258,29 @@ static int devsoc_edma_alloc_rings(struct devsoc_edma_hw *ehw)
 
 
 /*
- * devsoc_edma_init_rings()
+ * ipq5332_edma_init_rings()
  *	Initialize EDMA rings
  */
-static int devsoc_edma_init_rings(struct devsoc_edma_hw *ehw)
+static int ipq5332_edma_init_rings(struct ipq5332_edma_hw *ehw)
 {
 	int ret;
 
 	/*
 	 * Setup ring values
 	 */
-	devsoc_edma_set_ring_values(ehw);
+	ipq5332_edma_set_ring_values(ehw);
 
 	/*
 	 * Allocate desc rings
 	 */
-	ret = devsoc_edma_alloc_rings(ehw);
+	ret = ipq5332_edma_alloc_rings(ehw);
 	if (ret)
 		return ret;
 
 	/*
 	 * Setup ring resources
 	 */
-	ret = devsoc_edma_setup_ring_resources(ehw);
+	ret = ipq5332_edma_setup_ring_resources(ehw);
 	if (ret)
 		return ret;
 
@@ -1288,115 +1288,115 @@ static int devsoc_edma_init_rings(struct devsoc_edma_hw *ehw)
 }
 
 /*
- * devsoc_edma_configure_txdesc_ring()
+ * ipq5332_edma_configure_txdesc_ring()
  *	Configure one TxDesc ring
  */
-static void devsoc_edma_configure_txdesc_ring(struct devsoc_edma_hw *ehw,
-					struct devsoc_edma_txdesc_ring *txdesc_ring)
+static void ipq5332_edma_configure_txdesc_ring(struct ipq5332_edma_hw *ehw,
+					struct ipq5332_edma_txdesc_ring *txdesc_ring)
 {
 	/*
 	 * Configure TXDESC ring
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC_BA(txdesc_ring->id),
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC_BA(txdesc_ring->id),
 			(uint32_t)(txdesc_ring->dma &
-			DEVSOC_EDMA_RING_DMA_MASK));
+			IPQ5332_EDMA_RING_DMA_MASK));
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC_BA2(txdesc_ring->id),
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC_BA2(txdesc_ring->id),
 			(uint32_t)(txdesc_ring->sdma &
-			DEVSOC_EDMA_RING_DMA_MASK));
+			IPQ5332_EDMA_RING_DMA_MASK));
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC_RING_SIZE(
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC_RING_SIZE(
 			txdesc_ring->id), (uint32_t)(txdesc_ring->count &
-			DEVSOC_EDMA_TXDESC_RING_SIZE_MASK));
+			IPQ5332_EDMA_TXDESC_RING_SIZE_MASK));
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC_PROD_IDX(
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC_PROD_IDX(
 					txdesc_ring->id),
-					DEVSOC_EDMA_TX_INITIAL_PROD_IDX);
+					IPQ5332_EDMA_TX_INITIAL_PROD_IDX);
 }
 
 /*
- * devsoc_edma_configure_txcmpl_ring()
+ * ipq5332_edma_configure_txcmpl_ring()
  *	Configure one TxCmpl ring
  */
-static void devsoc_edma_configure_txcmpl_ring(struct devsoc_edma_hw *ehw,
-					struct devsoc_edma_txcmpl_ring *txcmpl_ring)
+static void ipq5332_edma_configure_txcmpl_ring(struct ipq5332_edma_hw *ehw,
+					struct ipq5332_edma_txcmpl_ring *txcmpl_ring)
 {
 	/*
 	 * Configure TxCmpl ring base address
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXCMPL_BA(txcmpl_ring->id),
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXCMPL_BA(txcmpl_ring->id),
 			(uint32_t)(txcmpl_ring->dma &
-			DEVSOC_EDMA_RING_DMA_MASK));
+			IPQ5332_EDMA_RING_DMA_MASK));
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXCMPL_RING_SIZE(
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXCMPL_RING_SIZE(
 			txcmpl_ring->id), (uint32_t)(txcmpl_ring->count &
-			DEVSOC_EDMA_TXDESC_RING_SIZE_MASK));
+			IPQ5332_EDMA_TXDESC_RING_SIZE_MASK));
 
 	/*
 	 * Set TxCmpl ret mode to opaque
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXCMPL_CTRL(txcmpl_ring->id),
-			DEVSOC_EDMA_TXCMPL_RETMODE_OPAQUE);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXCMPL_CTRL(txcmpl_ring->id),
+			IPQ5332_EDMA_TXCMPL_RETMODE_OPAQUE);
 
 	/*
 	 * Enable ring. Set ret mode to 'opaque'.
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TX_INT_CTRL(txcmpl_ring->id),
-			DEVSOC_EDMA_TX_NE_INT_EN);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TX_INT_CTRL(txcmpl_ring->id),
+			IPQ5332_EDMA_TX_NE_INT_EN);
 }
 
 /*
- * devsoc_edma_configure_rxdesc_ring()
+ * ipq5332_edma_configure_rxdesc_ring()
  *	Configure one RxDesc ring
  */
-static void devsoc_edma_configure_rxdesc_ring(struct devsoc_edma_hw *ehw,
-					struct devsoc_edma_rxdesc_ring *rxdesc_ring)
+static void ipq5332_edma_configure_rxdesc_ring(struct ipq5332_edma_hw *ehw,
+					struct ipq5332_edma_rxdesc_ring *rxdesc_ring)
 {
 	uint32_t data;
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_BA(rxdesc_ring->id),
-			(uint32_t)(rxdesc_ring->dma & DEVSOC_EDMA_RING_DMA_MASK));
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_BA(rxdesc_ring->id),
+			(uint32_t)(rxdesc_ring->dma & IPQ5332_EDMA_RING_DMA_MASK));
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_BA2(rxdesc_ring->id),
-			(uint32_t)(rxdesc_ring->sdma & DEVSOC_EDMA_RING_DMA_MASK));
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_BA2(rxdesc_ring->id),
+			(uint32_t)(rxdesc_ring->sdma & IPQ5332_EDMA_RING_DMA_MASK));
 
-	data = rxdesc_ring->count & DEVSOC_EDMA_RXDESC_RING_SIZE_MASK;
-	data |= (ehw->rx_payload_offset & DEVSOC_EDMA_RXDESC_PL_OFFSET_MASK) <<
-		DEVSOC_EDMA_RXDESC_PL_OFFSET_SHIFT;
+	data = rxdesc_ring->count & IPQ5332_EDMA_RXDESC_RING_SIZE_MASK;
+	data |= (ehw->rx_payload_offset & IPQ5332_EDMA_RXDESC_PL_OFFSET_MASK) <<
+		IPQ5332_EDMA_RXDESC_PL_OFFSET_SHIFT;
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_RING_SIZE(
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_RING_SIZE(
 			rxdesc_ring->id), data);
 
 	/*
 	 * Enable ring. Set ret mode to 'opaque'.
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RX_INT_CTRL(rxdesc_ring->id),
-			       DEVSOC_EDMA_RX_NE_INT_EN);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RX_INT_CTRL(rxdesc_ring->id),
+			       IPQ5332_EDMA_RX_NE_INT_EN);
 }
 
 /*
- * devsoc_edma_configure_rxfill_ring()
+ * ipq5332_edma_configure_rxfill_ring()
  *	Configure one RxFill ring
  */
-static void devsoc_edma_configure_rxfill_ring(struct devsoc_edma_hw *ehw,
-					struct devsoc_edma_rxfill_ring *rxfill_ring)
+static void ipq5332_edma_configure_rxfill_ring(struct ipq5332_edma_hw *ehw,
+					struct ipq5332_edma_rxfill_ring *rxfill_ring)
 {
 	uint32_t data;
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_BA(rxfill_ring->id),
-			(uint32_t)(rxfill_ring->dma & DEVSOC_EDMA_RING_DMA_MASK));
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_BA(rxfill_ring->id),
+			(uint32_t)(rxfill_ring->dma & IPQ5332_EDMA_RING_DMA_MASK));
 
-	data = rxfill_ring->count & DEVSOC_EDMA_RXFILL_RING_SIZE_MASK;
+	data = rxfill_ring->count & IPQ5332_EDMA_RXFILL_RING_SIZE_MASK;
 
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_RING_SIZE(rxfill_ring->id), data);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_RING_SIZE(rxfill_ring->id), data);
 }
 
 
 /*
- * devsoc_edma_configure_rings()
+ * ipq5332_edma_configure_rings()
  *	Configure EDMA rings
  */
-static void devsoc_edma_configure_rings(struct devsoc_edma_hw *ehw)
+static void ipq5332_edma_configure_rings(struct ipq5332_edma_hw *ehw)
 {
 	int i;
 
@@ -1404,34 +1404,34 @@ static void devsoc_edma_configure_rings(struct devsoc_edma_hw *ehw)
 	 * Configure TXDESC ring
 	 */
 	for (i = 0; i < ehw->txdesc_rings; i++)
-		devsoc_edma_configure_txdesc_ring(ehw, &ehw->txdesc_ring[i]);
+		ipq5332_edma_configure_txdesc_ring(ehw, &ehw->txdesc_ring[i]);
 
 	/*
 	 * Configure TXCMPL ring
 	 */
 	for (i = 0; i < ehw->txcmpl_rings; i++)
-		devsoc_edma_configure_txcmpl_ring(ehw, &ehw->txcmpl_ring[i]);
+		ipq5332_edma_configure_txcmpl_ring(ehw, &ehw->txcmpl_ring[i]);
 
 	/*
 	 * Configure RXFILL rings
 	 */
 	for (i = 0; i < ehw->rxfill_rings; i++)
-		devsoc_edma_configure_rxfill_ring(ehw, &ehw->rxfill_ring[i]);
+		ipq5332_edma_configure_rxfill_ring(ehw, &ehw->rxfill_ring[i]);
 
 	/*
 	 * Configure RXDESC ring
 	 */
 	for (i = 0; i < ehw->rxdesc_rings; i++)
-		devsoc_edma_configure_rxdesc_ring(ehw, &ehw->rxdesc_ring[i]);
+		ipq5332_edma_configure_rxdesc_ring(ehw, &ehw->rxdesc_ring[i]);
 
 	pr_info("%s: successfull\n", __func__);
 }
 
 /*
- * devsoc_edma_hw_reset()
+ * ipq5332_edma_hw_reset()
  *	EDMA hw reset
  */
-void devsoc_edma_hw_reset(void)
+void ipq5332_edma_hw_reset(void)
 {
 #if 0
 	writel(NSS_CC_EDMA_HW_RESET_ASSERT, NSS_CC_PPE_RESET_ADDR);
@@ -1442,63 +1442,63 @@ void devsoc_edma_hw_reset(void)
 }
 
 /*
- * devsoc_edma_hw_init()
+ * ipq5332_edma_hw_init()
  *	EDMA hw init
  */
-int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
+int ipq5332_edma_hw_init(struct ipq5332_edma_hw *ehw)
 {
 	int ret, desc_index;
 	uint32_t i, reg, reg_idx, ring_id;
 	volatile uint32_t data;
 
-	struct devsoc_edma_rxdesc_ring *rxdesc_ring = NULL;
+	struct ipq5332_edma_rxdesc_ring *rxdesc_ring = NULL;
 
-	devsoc_ppe_provision_init();
+	ipq5332_ppe_provision_init();
 
-	data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_MAS_CTRL);
+	data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_MAS_CTRL);
 	printf("EDMA ver %d hw init\n", data);
 
 	/*
 	 * Setup private data structure
 	 */
-	ehw->rxfill_intr_mask = DEVSOC_EDMA_RXFILL_INT_MASK;
-	ehw->rxdesc_intr_mask = DEVSOC_EDMA_RXDESC_INT_MASK_PKT_INT;
-	ehw->txcmpl_intr_mask = DEVSOC_EDMA_TX_INT_MASK_PKT_INT;
+	ehw->rxfill_intr_mask = IPQ5332_EDMA_RXFILL_INT_MASK;
+	ehw->rxdesc_intr_mask = IPQ5332_EDMA_RXDESC_INT_MASK_PKT_INT;
+	ehw->txcmpl_intr_mask = IPQ5332_EDMA_TX_INT_MASK_PKT_INT;
 	ehw->misc_intr_mask = 0xff;
 	ehw->rx_payload_offset = 0x0;
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 	/*
 	 * Reset EDMA
 	 */
-	devsoc_edma_hw_reset();
+	ipq5332_edma_hw_reset();
 #endif
 
 	/*
 	 * Disable interrupts
 	 */
-	devsoc_edma_disable_intr(ehw);
+	ipq5332_edma_disable_intr(ehw);
 
 	/*
 	 * Disable rings
 	 */
-	devsoc_edma_disable_rings(ehw);
+	ipq5332_edma_disable_rings(ehw);
 
-	ret = devsoc_edma_init_rings(ehw);
+	ret = ipq5332_edma_init_rings(ehw);
 	if (ret)
 		return ret;
 
-	devsoc_edma_configure_rings(ehw);
+	ipq5332_edma_configure_rings(ehw);
 
 	/*
 	 * Clear the TXDESC2CMPL_MAP_xx reg before setting up
 	 * the mapping. This register holds TXDESC to TXFILL ring
 	 * mapping.
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_0, 0);
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_1, 0);
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_2, 0);
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_3, 0);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_0, 0);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_1, 0);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_2, 0);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_3, 0);
 	desc_index = ehw->txcmpl_ring_start;
 
 	/*
@@ -1509,13 +1509,13 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 	for (i = ehw->txdesc_ring_start;
 		i < ehw->txdesc_ring_end; i++) {
 		if ((i >= 0) && (i <= 5))
-			reg = DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_0;
+			reg = IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_0;
 		else if ((i >= 6) && (i <= 11))
-			reg = DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_1;
+			reg = IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_1;
 		else if ((i >= 12) && (i <= 17))
-			reg = DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_2;
+			reg = IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_2;
 		else
-			reg = DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_3;
+			reg = IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_3;
 
 		pr_debug("Configure TXDESC:%u to use TXCMPL:%u\n",
 			 i, desc_index);
@@ -1524,15 +1524,15 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 		 * Set the Tx complete descriptor ring number in the mapping
 		 * register.
 		 * E.g. If (txcmpl ring)desc_index = 31, (txdesc ring)i = 28.
-		 * 	reg = DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_4
+		 * 	reg = IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_4
 		 * 	data |= (desc_index & 0x1F) << ((i % 6) * 5);
 		 * 	data |= (0x1F << 20); - This sets 11111 at 20th bit of
-		 * 	register DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_4
+		 * 	register IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_4
 		 */
 
-		data = devsoc_edma_reg_read(reg);
+		data = ipq5332_edma_reg_read(reg);
 		data |= (desc_index & 0x1F) << ((i % 6) * 5);
-		devsoc_edma_reg_write(reg, data);
+		ipq5332_edma_reg_write(reg, data);
 
 		desc_index++;
 		if (desc_index == ehw->txcmpl_ring_end)
@@ -1540,13 +1540,13 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 	}
 
 	pr_debug("EDMA_REG_TXDESC2CMPL_MAP_0: 0x%x\n",
-		 devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_0));
+		 ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_0));
 	pr_debug("EDMA_REG_TXDESC2CMPL_MAP_1: 0x%x\n",
-		 devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_1));
+		 ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_1));
 	pr_debug("EDMA_REG_TXDESC2CMPL_MAP_2: 0x%x\n",
-		 devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_2));
+		 ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_2));
 	pr_debug("EDMA_REG_TXDESC2CMPL_MAP_3: 0x%x\n",
-		 devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXDESC2CMPL_MAP_3));
+		 ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXDESC2CMPL_MAP_3));
 
 	/*
 	 * Set PPE QID to EDMA Rx ring mapping.
@@ -1555,13 +1555,13 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 	 */
 	desc_index = (ehw->rxdesc_ring_start & 0x1f);
 
-	reg = DEVSOC_EDMA_QID2RID_TABLE_MEM(0);
+	reg = IPQ5332_EDMA_QID2RID_TABLE_MEM(0);
 	data = ((desc_index << 0) & 0xff) |
 	       (((desc_index + 1) << 8) & 0xff00) |
 	       (((desc_index + 2) << 16) & 0xff0000) |
 	       (((desc_index + 3) << 24) & 0xff000000);
 
-	devsoc_edma_reg_write(reg, data);
+	ipq5332_edma_reg_write(reg, data);
 	pr_debug("Configure QID2RID(0) reg:0x%x to 0x%x\n", reg, data);
 
 	/*
@@ -1569,18 +1569,18 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 	 */
 	desc_index = (ehw->rxdesc_ring_start & 0x1f);
 
-	for (i = DEVSOC_EDMA_CPU_PORT_MC_QID_MIN;
-		i <= DEVSOC_EDMA_CPU_PORT_MC_QID_MAX;
-			i += DEVSOC_EDMA_QID2RID_NUM_PER_REG) {
-		reg_idx = i/DEVSOC_EDMA_QID2RID_NUM_PER_REG;
+	for (i = IPQ5332_EDMA_CPU_PORT_MC_QID_MIN;
+		i <= IPQ5332_EDMA_CPU_PORT_MC_QID_MAX;
+			i += IPQ5332_EDMA_QID2RID_NUM_PER_REG) {
+		reg_idx = i/IPQ5332_EDMA_QID2RID_NUM_PER_REG;
 
-		reg = DEVSOC_EDMA_QID2RID_TABLE_MEM(reg_idx);
+		reg = IPQ5332_EDMA_QID2RID_TABLE_MEM(reg_idx);
 		data = ((desc_index << 0) & 0xff) |
 		       ((desc_index << 8) & 0xff00) |
 		       ((desc_index << 16) & 0xff0000) |
 		       ((desc_index << 24) & 0xff000000);
 
-		devsoc_edma_reg_write(reg, data);
+		ipq5332_edma_reg_write(reg, data);
 		pr_debug("Configure QID2RID(%d) reg:0x%x to 0x%x\n",
 				reg_idx, reg, data);
 	}
@@ -1591,17 +1591,17 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 	 * 3 bits holds the rx fill ring mapping for each of the
 	 * rx descriptor ring.
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC2FILL_MAP_0, 0);
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC2FILL_MAP_1, 0);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC2FILL_MAP_0, 0);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC2FILL_MAP_1, 0);
 
 	for (i = 0; i < ehw->rxdesc_rings; i++) {
 		rxdesc_ring = &ehw->rxdesc_ring[i];
 
 		ring_id = rxdesc_ring->id;
 		if ((ring_id >= 0) && (ring_id <= 9))
-			reg = DEVSOC_EDMA_REG_RXDESC2FILL_MAP_0;
+			reg = IPQ5332_EDMA_REG_RXDESC2FILL_MAP_0;
 		else
-			reg = DEVSOC_EDMA_REG_RXDESC2FILL_MAP_1;
+			reg = IPQ5332_EDMA_REG_RXDESC2FILL_MAP_1;
 
 
 		pr_debug("Configure RXDESC:%u to use RXFILL:%u\n",
@@ -1611,61 +1611,61 @@ int devsoc_edma_hw_init(struct devsoc_edma_hw *ehw)
 		 * Set the Rx fill descriptor ring number in the mapping
 		 * register.
 		 */
-		data = devsoc_edma_reg_read(reg);
+		data = ipq5332_edma_reg_read(reg);
 		data |= (rxdesc_ring->rxfill->id & 0x7) << ((ring_id % 10) * 3);
-		devsoc_edma_reg_write(reg, data);
+		ipq5332_edma_reg_write(reg, data);
 	}
 
 	pr_debug("EDMA_REG_RXDESC2FILL_MAP_0: 0x%x\n",
-		devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXDESC2FILL_MAP_0));
+		ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXDESC2FILL_MAP_0));
 	pr_debug("EDMA_REG_RXDESC2FILL_MAP_1: 0x%x\n",
-		 devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXDESC2FILL_MAP_1));
+		 ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXDESC2FILL_MAP_1));
 
 	/*
 	 * Configure DMA request priority, DMA read burst length,
 	 * and AXI write size.
 	 */
-	data = DEVSOC_EDMA_DMAR_BURST_LEN_SET(DEVSOC_EDMA_BURST_LEN_ENABLE)
-		| DEVSOC_EDMA_DMAR_REQ_PRI_SET(0)
-		| DEVSOC_EDMA_DMAR_TXDATA_OUTSTANDING_NUM_SET(31)
-		| DEVSOC_EDMA_DMAR_TXDESC_OUTSTANDING_NUM_SET(7)
-		| DEVSOC_EDMA_DMAR_RXFILL_OUTSTANDING_NUM_SET(7);
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_DMAR_CTRL, data);
+	data = IPQ5332_EDMA_DMAR_BURST_LEN_SET(IPQ5332_EDMA_BURST_LEN_ENABLE)
+		| IPQ5332_EDMA_DMAR_REQ_PRI_SET(0)
+		| IPQ5332_EDMA_DMAR_TXDATA_OUTSTANDING_NUM_SET(31)
+		| IPQ5332_EDMA_DMAR_TXDESC_OUTSTANDING_NUM_SET(7)
+		| IPQ5332_EDMA_DMAR_RXFILL_OUTSTANDING_NUM_SET(7);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_DMAR_CTRL, data);
 
 	/*
 	 * Global EDMA and padding enable
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_PORT_CTRL,
-				 DEVSOC_EDMA_PORT_CTRL_EN);
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_PORT_CTRL,
+				 IPQ5332_EDMA_PORT_CTRL_EN);
 
 	/*
 	 * Enable Rx rings
 	 */
 	for (i = ehw->rxdesc_ring_start; i < ehw->rxdesc_ring_end; i++) {
-		data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXDESC_CTRL(i));
-		data |= DEVSOC_EDMA_RXDESC_RX_EN;
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXDESC_CTRL(i), data);
+		data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXDESC_CTRL(i));
+		data |= IPQ5332_EDMA_RXDESC_RX_EN;
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_CTRL(i), data);
 	}
 
 	for (i = ehw->rxfill_ring_start; i < ehw->rxfill_ring_end; i++) {
-		data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_RXFILL_RING_EN(i));
-		data |= DEVSOC_EDMA_RXFILL_RING_EN;
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_RXFILL_RING_EN(i), data);
+		data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXFILL_RING_EN(i));
+		data |= IPQ5332_EDMA_RXFILL_RING_EN;
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_RING_EN(i), data);
 	}
 
 	/*
 	 * Enable Tx rings
 	 */
 	for (i = ehw->txdesc_ring_start; i < ehw->txdesc_ring_end; i++) {
-		data = devsoc_edma_reg_read(DEVSOC_EDMA_REG_TXDESC_CTRL(i));
-		data |= DEVSOC_EDMA_TXDESC_TX_EN;
-		devsoc_edma_reg_write(DEVSOC_EDMA_REG_TXDESC_CTRL(i), data);
+		data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_TXDESC_CTRL(i));
+		data |= IPQ5332_EDMA_TXDESC_TX_EN;
+		ipq5332_edma_reg_write(IPQ5332_EDMA_REG_TXDESC_CTRL(i), data);
 	}
 
 	/*
 	 * Enable MISC interrupt mask
 	 */
-	devsoc_edma_reg_write(DEVSOC_EDMA_REG_MISC_INT_MASK,
+	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_MISC_INT_MASK,
 				ehw->misc_intr_mask);
 
 	pr_info("%s: successfull\n", __func__);
@@ -1680,7 +1680,7 @@ void get_phy_address(int offset, phy_info_t * phy_info[], int max_phy_ports)
 	int i;
 
 	for (i = 0; i < max_phy_ports; i++)
-		phy_info[i] = devsoc_alloc_mem(sizeof(phy_info_t));
+		phy_info[i] = ipq5332_alloc_mem(sizeof(phy_info_t));
 	i = 0;
 	for (offset = fdt_first_subnode(gd->fdt_blob, offset); offset > 0;
 	     offset = fdt_next_subnode(gd->fdt_blob, offset)) {
@@ -1699,19 +1699,19 @@ void get_phy_address(int offset, phy_info_t * phy_info[], int max_phy_ports)
 	}
 }
 
-int devsoc_edma_init(void *edma_board_cfg)
+int ipq5332_edma_init(void *edma_board_cfg)
 {
-	struct eth_device *dev[DEVSOC_EDMA_DEV];
-	struct devsoc_edma_common_info *c_info[DEVSOC_EDMA_DEV];
-	struct devsoc_edma_hw *hw[DEVSOC_EDMA_DEV];
-	uchar enet_addr[DEVSOC_EDMA_DEV * 6];
+	struct eth_device *dev[IPQ5332_EDMA_DEV];
+	struct ipq5332_edma_common_info *c_info[IPQ5332_EDMA_DEV];
+	struct ipq5332_edma_hw *hw[IPQ5332_EDMA_DEV];
+	uchar enet_addr[IPQ5332_EDMA_DEV * 6];
 	int i;
 	int ret = -1;
-	devsoc_edma_board_cfg_t ledma_cfg, *edma_cfg;
-#ifndef CONFIG_DEVSOC_RUMI
+	ipq5332_edma_board_cfg_t ledma_cfg, *edma_cfg;
+#ifndef CONFIG_IPQ5332_RUMI
 	int phy_id;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
-#ifdef CONFIG_DEVSOC_QCA8075_PHY
+#ifdef CONFIG_IPQ5332_QCA8075_PHY
 	static int sw_init_done = 0;
 #endif
 #ifdef CONFIG_QCA8084_SWT_MODE
@@ -1729,7 +1729,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 	 */
 	noncached_init();
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
 
 	if (node >= 0) {
@@ -1786,7 +1786,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
 	if (phy_node >= 0)
-		get_phy_address(phy_node, phy_info, DEVSOC_PHY_MAX);
+		get_phy_address(phy_node, phy_info, IPQ5332_PHY_MAX);
 
 	mode = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode0", -1);
 	if (mode < 0) {
@@ -1795,61 +1795,61 @@ int devsoc_edma_init(void *edma_board_cfg)
 	}
 #endif
 
-	memset(c_info, 0, (sizeof(c_info) * DEVSOC_EDMA_DEV));
+	memset(c_info, 0, (sizeof(c_info) * IPQ5332_EDMA_DEV));
 	memset(enet_addr, 0, sizeof(enet_addr));
 	memset(&ledma_cfg, 0, sizeof(ledma_cfg));
 	edma_cfg = &ledma_cfg;
 	strlcpy(edma_cfg->phy_name, "IPQ MDIO0", sizeof(edma_cfg->phy_name));
 
 	/* Getting the MAC address from ART partition */
-	ret = get_eth_mac_address(enet_addr, DEVSOC_EDMA_DEV);
+	ret = get_eth_mac_address(enet_addr, IPQ5332_EDMA_DEV);
 
 	/*
 	 * Register EDMA as single ethernet
 	 * interface.
 	 */
-	for (i = 0; i < DEVSOC_EDMA_DEV; edma_cfg++, i++) {
-		dev[i] = devsoc_alloc_mem(sizeof(struct eth_device));
+	for (i = 0; i < IPQ5332_EDMA_DEV; edma_cfg++, i++) {
+		dev[i] = ipq5332_alloc_mem(sizeof(struct eth_device));
 
 		if (!dev[i])
 			goto init_failed;
 
 		memset(dev[i], 0, sizeof(struct eth_device));
 
-		c_info[i] = devsoc_alloc_mem(
-			sizeof(struct devsoc_edma_common_info));
+		c_info[i] = ipq5332_alloc_mem(
+			sizeof(struct ipq5332_edma_common_info));
 
 		if (!c_info[i])
 			goto init_failed;
 
 		memset(c_info[i], 0,
-			sizeof(struct devsoc_edma_common_info));
+			sizeof(struct ipq5332_edma_common_info));
 
 		hw[i] = &c_info[i]->hw;
 
 		c_info[i]->hw.hw_addr = (unsigned long  __iomem *)
-						DEVSOC_EDMA_CFG_BASE;
+						IPQ5332_EDMA_CFG_BASE;
 
-		devsoc_edma_dev[i] = devsoc_alloc_mem(
-				sizeof(struct devsoc_eth_dev));
+		ipq5332_edma_dev[i] = ipq5332_alloc_mem(
+				sizeof(struct ipq5332_eth_dev));
 
-		if (!devsoc_edma_dev[i])
+		if (!ipq5332_edma_dev[i])
 			goto init_failed;
 
-		memset (devsoc_edma_dev[i], 0,
-			sizeof(struct devsoc_eth_dev));
+		memset (ipq5332_edma_dev[i], 0,
+			sizeof(struct ipq5332_eth_dev));
 
-		dev[i]->iobase = DEVSOC_EDMA_CFG_BASE;
-		dev[i]->init = devsoc_eth_init;
-		dev[i]->halt = devsoc_eth_halt;
-		dev[i]->recv = devsoc_eth_recv;
-		dev[i]->send = devsoc_eth_snd;
-		dev[i]->write_hwaddr = devsoc_edma_wr_macaddr;
-		dev[i]->priv = (void *)devsoc_edma_dev[i];
+		dev[i]->iobase = IPQ5332_EDMA_CFG_BASE;
+		dev[i]->init = ipq5332_eth_init;
+		dev[i]->halt = ipq5332_eth_halt;
+		dev[i]->recv = ipq5332_eth_recv;
+		dev[i]->send = ipq5332_eth_snd;
+		dev[i]->write_hwaddr = ipq5332_edma_wr_macaddr;
+		dev[i]->priv = (void *)ipq5332_edma_dev[i];
 
 		if ((ret < 0) ||
 			(!is_valid_ethaddr(&enet_addr[edma_cfg->unit * 6]))) {
-			memcpy(&dev[i]->enetaddr[0], devsoc_def_enetaddr, 6);
+			memcpy(&dev[i]->enetaddr[0], ipq5332_def_enetaddr, 6);
 		} else {
 			memcpy(&dev[i]->enetaddr[0],
 				&enet_addr[edma_cfg->unit * 6], 6);
@@ -1865,17 +1865,17 @@ int devsoc_edma_init(void *edma_board_cfg)
 
 		snprintf(dev[i]->name, sizeof(dev[i]->name), "eth%d", i);
 
-		devsoc_edma_dev[i]->dev  = dev[i];
-		devsoc_edma_dev[i]->mac_unit = edma_cfg->unit;
-		devsoc_edma_dev[i]->c_info = c_info[i];
-		devsoc_edma_hw_addr = DEVSOC_EDMA_CFG_BASE;
+		ipq5332_edma_dev[i]->dev  = dev[i];
+		ipq5332_edma_dev[i]->mac_unit = edma_cfg->unit;
+		ipq5332_edma_dev[i]->c_info = c_info[i];
+		ipq5332_edma_hw_addr = IPQ5332_EDMA_CFG_BASE;
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 		ret = ipq_sw_mdio_init(edma_cfg->phy_name);
 		if (ret)
 			goto init_failed;
 
-		for (phy_id =  0; phy_id < DEVSOC_PHY_MAX; phy_id++) {
+		for (phy_id =  0; phy_id < IPQ5332_PHY_MAX; phy_id++) {
 			if (phy_node >= 0) {
 				phy_addr = phy_info[phy_id]->phy_address;
 			} else {
@@ -1901,33 +1901,33 @@ int devsoc_edma_init(void *edma_board_cfg)
 			pr_debug("phy_id is: 0x%x, phy_addr = 0x%x, phy_chip_id1 = 0x%x, phy_chip_id2 = 0x%x, phy_chip_id = 0x%x\n",
 				 phy_id, phy_addr, phy_chip_id1, phy_chip_id2, phy_chip_id);
 			switch(phy_chip_id) {
-#ifdef CONFIG_DEVSOC_QCA8075_PHY
+#ifdef CONFIG_IPQ5332_QCA8075_PHY
 				case QCA8075_PHY_V1_0_5P:
 				case QCA8075_PHY_V1_1_5P:
 				case QCA8075_PHY_V1_1_2P:
 					if (!sw_init_done) {
-						if (devsoc_qca8075_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr) == 0) {
+						if (ipq5332_qca8075_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr) == 0) {
 							sw_init_done = 1;
 						}
 					} else {
-						devsoc_qca8075_phy_map_ops(&devsoc_edma_dev[i]->ops[phy_id]);
+						ipq5332_qca8075_phy_map_ops(&ipq5332_edma_dev[i]->ops[phy_id]);
 					}
 
 					if (mode == EPORT_WRAPPER_PSGMII)
-						devsoc_qca8075_phy_interface_set_mode(phy_addr, 0x0);
+						ipq5332_qca8075_phy_interface_set_mode(phy_addr, 0x0);
 					else if (mode == EPORT_WRAPPER_QSGMII)
-						devsoc_qca8075_phy_interface_set_mode(phy_addr, 0x4);
+						ipq5332_qca8075_phy_interface_set_mode(phy_addr, 0x4);
 					break;
 #endif
 #ifdef CONFIG_QCA8033_PHY
 				case QCA8033_PHY:
-					ipq_qca8033_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr);
+					ipq_qca8033_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
 #ifdef CONFIG_QCA8081_PHY
 				case QCA8081_PHY:
 				case QCA8081_1_1_PHY:
-					ipq_qca8081_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr);
+					ipq_qca8081_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
 #ifdef CONFIG_QCA8084_SWT_MODE
@@ -1954,7 +1954,7 @@ int devsoc_edma_init(void *edma_board_cfg)
 				case AQUANTIA_PHY_113C_B1:
 					ipq_board_fw_download(phy_addr);
 					mdelay(100);
-					ipq_qca_aquantia_phy_init(&devsoc_edma_dev[i]->ops[phy_id], phy_addr);
+					ipq_qca_aquantia_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr);
 					break;
 #endif
 				default:
@@ -1966,27 +1966,27 @@ int devsoc_edma_init(void *edma_board_cfg)
 		}
 #endif
 
-		ret = devsoc_edma_hw_init(hw[i]);
+		ret = ipq5332_edma_hw_init(hw[i]);
 
 		if (ret)
 			goto init_failed;
 
-#ifndef CONFIG_DEVSOC_RUMI
+#ifndef CONFIG_IPQ5332_RUMI
 #ifdef CONFIG_QCA8084_SWT_MODE
 		/** QCA8084 switch specific configurations */
 		if (qca8084_swt_enb && qca8084_chip_detect) {
-			/** Force speed devsoc 2nd port for QCA8084 switch mode */
+			/** Force speed ipq5332 2nd port for QCA8084 switch mode */
 			clk[0] = 0x301;
 			clk[1] = 0x0;
 			clk[2] = 0x401;
 			clk[3] = 0x0;
 
-			pr_debug("Force speed devsoc 2nd PORT for QCA8084 switch mode \n");
-			devsoc_speed_clock_set(PORT1, clk);
+			pr_debug("Force speed ipq5332 2nd PORT for QCA8084 switch mode \n");
+			ipq5332_speed_clock_set(PORT1, clk);
 
 			/** Force Link-speed: 1000M
 			 *  Force Link-status: enable */
-			devsoc_pqsgmii_speed_set(PORT1, 0x2, 0x0);
+			ipq5332_pqsgmii_speed_set(PORT1, 0x2, 0x0);
 
 			ret = ipq_qca8084_hw_init(swt_info);
 			if (ret < 0) {
@@ -2008,16 +2008,16 @@ int devsoc_edma_init(void *edma_board_cfg)
 init_failed:
 	printf("Error in allocating Mem\n");
 
-	for (i = 0; i < DEVSOC_EDMA_DEV; i++) {
+	for (i = 0; i < IPQ5332_EDMA_DEV; i++) {
 		if (dev[i]) {
 			eth_unregister(dev[i]);
-			devsoc_free_mem(dev[i]);
+			ipq5332_free_mem(dev[i]);
 		}
 		if (c_info[i]) {
-			devsoc_free_mem(c_info[i]);
+			ipq5332_free_mem(c_info[i]);
 		}
-		if (devsoc_edma_dev[i]) {
-			devsoc_free_mem(devsoc_edma_dev[i]);
+		if (ipq5332_edma_dev[i]) {
+			ipq5332_free_mem(ipq5332_edma_dev[i]);
 		}
 	}
 

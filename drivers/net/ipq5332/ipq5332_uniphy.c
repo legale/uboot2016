@@ -22,10 +22,10 @@
 #include <phy.h>
 #include <net.h>
 #include <miiphy.h>
-#include <asm/arch-devsoc/edma_regs.h>
-#include "devsoc_edma.h"
-#include "devsoc_uniphy.h"
-#include "devsoc_ppe.h"
+#include <asm/arch-ipq5332/edma_regs.h>
+#include "ipq5332_edma.h"
+#include "ipq5332_uniphy.h"
+#include "ipq5332_ppe.h"
 #include <fdtdec.h>
 #include "ipq_phy.h"
 
@@ -35,7 +35,7 @@ extern int ipq_mdio_write(int mii_id,
 		int regnum, u16 value);
 extern int ipq_mdio_read(int mii_id,
 		int regnum, ushort *data);
-extern void devsoc_qca8075_phy_serdes_reset(u32 phy_id);
+extern void ipq5332_qca8075_phy_serdes_reset(u32 phy_id);
 
 void csr1_write(int phy_id, int addr, int  value)
 {
@@ -175,8 +175,8 @@ static void ppe_uniphy_psgmii_mode_set(uint32_t uniphy_index)
 	}
 	mdelay(100);
 	ppe_uniphy_calibration(uniphy_index);
-#ifdef CONFIG_DEVSOC_QCA8075_PHY
-	devsoc_qca8075_phy_serdes_reset(0x10);
+#ifdef CONFIG_IPQ5332_QCA8075_PHY
+	ipq5332_qca8075_phy_serdes_reset(0x10);
 #endif
 }
 
