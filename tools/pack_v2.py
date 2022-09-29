@@ -141,11 +141,11 @@ class GPT(object):
                            " last_lba attribute_flag part_name")
     GPT_TABLE_FMT = "<16s16sQQQ72s"
 
-    def __init__(self, filename, pagesize, blocksize, chipsize):
+    def __init__(self, filename, flinfo):
         self.filename = filename
-        self.pagesize = pagesize
-        self.blocksize = blocksize
-        self.chipsize = chipsize
+        self.pagesize = flinfo.pagesize
+        self.blocksize = flinfo.blocksize
+        self.chipsize = flinfo.chipsize
         self.__partitions = OrderedDict()
 
     def __validate_and_read_parts(self, part_fp):
@@ -230,11 +230,11 @@ class MIBIB(object):
                         " attr1 attr2 attr3 which_flash")
     ENTRY_FMT = "<16sLLBBBB"
 
-    def __init__(self, filename, pagesize, blocksize, chipsize, nand_blocksize, nand_chipsize, root_part):
+    def __init__(self, filename, flinfo, nand_blocksize, nand_chipsize, root_part):
         self.filename = filename
-        self.pagesize = pagesize
-        self.blocksize = blocksize
-        self.chipsize = chipsize
+        self.pagesize = flinfo.pagesize
+        self.blocksize = flinfo.blocksize
+        self.chipsize = flinfo.chipsize
         self.nand_blocksize = nand_blocksize
         self.nand_chipsize = nand_chipsize
         self.__partitions = OrderedDict()
@@ -464,7 +464,7 @@ class Pack(object):
         section -- section to retreive the machid from
         """
         try:
-            machid = int(section.find("./machid").text, 0)
+            machid = int(section.find(".//machid").text, 0)
             machid = "%x" % machid
         except ValueError, e:
             error("invalid value for machid, should be integer")
@@ -497,8 +497,7 @@ class Pack(object):
     def __gen_flash_script_cdt(self, entries, partition, flinfo, script):
 	global ARCH_NAME
         for section in entries:
-            machid = int(section.find(".//machid").text, 0)
-            machid = "%x" % machid
+            machid = self.__get_machid(section)
             board = section.find(".//board").text
 
             try:
@@ -645,8 +644,7 @@ class Pack(object):
     def __gen_flash_script_bootldr(self, entries, partition, flinfo, script):
         for section in entries:
 
-            machid = int(section.find(".//machid").text, 0)
-            machid = "%x" % machid
+            machid = self.__get_machid(section)
             board = section.find(".//board").text
             memory = section.find(".//memory").text
             tiny_image = section.find('.//tiny_image')
@@ -700,6 +698,19 @@ class Pack(object):
 
         return 1
 
+    def __gen_script_mibib(self, script, flinfo, parts, parts_length, cmd):
+
+        for index in range(parts_length):
+             partition = parts[index]
+             pnames = partition.findall('name')
+             if pnames[0].text == "0:MIBIB":
+                 imgs = partition.findall('img_name')
+                 filename = imgs[0].text
+                 if cmd == "mibib_reload":
+                     self.mibib_reload(filename, pnames[0].text, flinfo, script)
+                 if cmd == "xtract_n_flash":
+                     script.imxtract_n_flash("mibib-" + sha1(filename), "0:MIBIB")
+
     def mibib_reload(self, filename, partition, flinfo, script):
 
         img_size = self.__get_img_size(filename)
@@ -722,7 +733,7 @@ class Pack(object):
 
         return 1
 
-    def __gen_flash_script_image(self, filename, soc_version, file_exists, machid, partition, flinfo, script):
+    def __gen_flash_script_image(self, parts, parts_length, filename, soc_version, file_exists, machid, partition, flinfo, script):
 
 	    img_size = 0
 	    if file_exists == 1:
@@ -773,7 +784,10 @@ class Pack(object):
 		return 1
 
             if img_size > 0:
-                script.imxtract_n_flash(section_conf + "-" + sha1(filename), part_info.name)
+                 if section_conf == "mibib":
+                     self.__gen_script_mibib(script, flinfo, parts, parts_length, "xtract_n_flash")
+                 else:
+                     script.imxtract_n_flash(section_conf + "-" + sha1(filename), part_info.name)
 
 	    if machid:
 		script.end_if()
@@ -856,8 +870,7 @@ class Pack(object):
 	if testmachid:
 	    machid_count = 0
 	    for section in entries:
-		machid = int(section.find(".//machid").text, 0)
-		machid = "%x" % machid
+                machid = self.__get_machid(section)
 		machid_count =  machid_count + 1
 		if machid_count == 1:
 		    script.script.append('if test "$machid" = "%s" ' % machid)
@@ -882,13 +895,8 @@ class Pack(object):
         elif flinfo.type == "emmc" or self.flash_type == "norplusemmc":
             script.append("flashinit mmc")
 
-        section = parts[1]
-        imgs = section.findall('img_name')
-        pnames = section.findall('name')
-        for img, pname in zip(imgs,pnames):
-            if pname.text == "0:MIBIB":
-                filename = img.text
-                self.mibib_reload(filename, pname.text, flinfo, script)
+        if flinfo.type != "emmc":
+            self.__gen_script_mibib(script, flinfo, parts, parts_length, "mibib_reload")
 
         for index in range(parts_length):
             filename = ""
@@ -1030,7 +1038,7 @@ class Pack(object):
 			filename = section.get('filename_atf')
 
             if filename != "":
-                ret = self.__gen_flash_script_image(filename, soc_version, file_exists, machid, partition, flinfo, script)
+                ret = self.__gen_flash_script_image(parts, parts_length, filename, soc_version, file_exists, machid, partition, flinfo, script)
                 if ret == 0:
                     return 0
 
@@ -1472,6 +1480,7 @@ class Pack(object):
         """
         script_fp = open(self.scr_fname, "a")
         self.flinfo = flinfo
+        script = FlashScript(flinfo)
 
         if flinfo.type != "emmc":
             if root.find(".//data[@type='NAND_PARAMETER']/entry") != None:
@@ -1491,14 +1500,11 @@ class Pack(object):
             srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
             root_part = ET.parse(srcDir_part)
 
-            script = FlashScript(flinfo)
-            mibib = MIBIB(part_fname, flinfo.pagesize, flinfo.blocksize,
-                          flinfo.chipsize, blocksize, chipsize, root_part)
+            mibib = MIBIB(part_fname, flinfo, blocksize, chipsize, root_part)
             self.partitions = mibib.get_parts()
 
         else:
-            script = FlashScript(flinfo)
-            gpt = GPT(part_fname, flinfo.pagesize, flinfo.blocksize, flinfo.chipsize)
+            gpt = GPT(part_fname, flinfo)
             self.partitions = gpt.get_parts()
 
         ret = self.__gen_script(script_fp, script, images, flinfo, root)
