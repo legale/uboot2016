@@ -24,6 +24,9 @@ config UBI_WRITE
 config MMC_FLASH
 	bool "Enable MMC flash support"
 
+config IPQ_TZT
+	bool "Enable TZ test command"
+
 config PCI_IPQ
 	bool "Enable pci support"
 
