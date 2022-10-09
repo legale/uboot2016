@@ -443,10 +443,9 @@ void board_pci_init(int id)
 
 void board_pci_deinit()
 {
-	int node, gpio_node, i, err, is_x2;
+	int node, gpio_node, i, err;
 	char name[16];
 	struct fdt_resource parf;
-	struct fdt_resource pci_phy;
 
 	for (i = 0; i < PCI_MAX_DEVICES; i++) {
 		snprintf(name, sizeof(name), "pci%d", i);
@@ -457,22 +456,14 @@ void board_pci_deinit()
 		}
 		err = fdt_get_named_resource(gd->fdt_blob, node, "reg",
 				"reg-names", "parf", &parf);
-
-		writel(0x0, parf.start + 0x358);
-		writel(0x1, parf.start + 0x40);
-
-		err = fdt_get_named_resource(gd->fdt_blob, node, "reg",
-				"reg-names", "pci_phy", &pci_phy);
-		if (err < 0)
+		if (err < 0) {
+			printf("Unable to find parf node for PCIE%d \n", i);
 			continue;
+		}
 
-		if ((i == 0) || (i == 1))
-			is_x2 = 0;
-		else
-			is_x2 = 1;
-
-		writel(0x1, pci_phy.start + (0x800 + (0x800 * is_x2)));
-		writel(0x0, pci_phy.start + (0x804 + (0x800 * is_x2)));
+		writel(0x0, parf.start + PCIE_PARF_SLV_ADDR_SPACE_SIZE);
+		writel(PCIE_PHY_TEST_PWR_DOWN,
+				parf.start + PCIE_PARF_PHY_CTRL);
 
 		gpio_node = fdt_subnode_offset(gd->fdt_blob, node, "pci_gpio");
 		if (gpio_node >= 0)

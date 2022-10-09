@@ -144,6 +144,11 @@ enum pcie_port_lane_mode_t{
 #define PCIE_1_CLOCK_DISABLE_BIT		12
 #define PCIE_2_CLOCK_DISABLE_BIT		10
 
+#define PCIE_PARF_SLV_ADDR_SPACE_SIZE		0x358
+#define PCIE_PARF_PHY_CTRL			0x40
+
+#define PCIE_PHY_TEST_PWR_DOWN			0x1
+
 /*
  * GPIO functional configs
  */
