@@ -114,12 +114,13 @@ dtb-$(CONFIG_ARCH_IPQ9574) += ipq9574-al01-c1.dtb \
 			ipq9574-al02-c8.dtb \
 			ipq9574-al02-c10.dtb \
 			ipq9574-al02-c13.dtb \
+			ipq9574-al02-c18.dtb \
 			ipq9574-db-al01-c1.dtb \
 			ipq9574-db-al01-c2.dtb \
 			ipq9574-db-al01-c3.dtb \
 			ipq9574-db-al02-c1.dtb \
 			ipq9574-db-al02-c2.dtb \
-			ipq9574-db-al02-c3.dtb \
+			ipq9574-db-al02-c3.dtb
 
 dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-firefly.dtb \
