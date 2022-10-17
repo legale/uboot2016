@@ -498,6 +498,9 @@ typedef struct {
 	int phy_interface_mode;
 	int phy_napa_gpio;
 	int phy_8033_gpio;
+	u32 sfp_tx_gpio;
+	u32 sfp_rx_gpio;
+	u32 sfp_mode;
 	int phy_type;
 	u32 mac_pwr;
 	int ipq_swith;

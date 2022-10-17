@@ -770,6 +770,15 @@ static void set_ext_mdio_gpio(int node)
 	}
 }
 
+static void reset_sfp_gpio(int gpio)
+{
+	unsigned int *sfp_gpio_base;
+
+	sfp_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(gpio);
+	writel(0x2c3, sfp_gpio_base);
+	writel(0x0, GPIO_IN_OUT_ADDR(gpio));
+}
+
 static void reset_napa_phy_gpio(int gpio)
 {
 	unsigned int *napa_gpio_base;
@@ -1171,6 +1180,18 @@ int board_eth_init(bd_t *bis)
 
 			gmac_cfg[loop].phy_external_link = fdtdec_get_uint(gd->fdt_blob,
 					offset, "phy_external_link", 0);
+
+			gmac_cfg[loop].sfp_mode = fdtdec_get_uint(gd->fdt_blob,
+					offset, "switch_mac_mode", 0);
+			gmac_cfg[loop].sfp_rx_gpio
+				= fdtdec_get_uint(gd->fdt_blob, offset,
+					"sfp_rx_gpio", 0);
+			gmac_cfg[loop].sfp_tx_gpio
+				= fdtdec_get_uint(gd->fdt_blob, offset,
+					"sfp_tx_gpio", 0);
+			if (gmac_cfg[loop].sfp_tx_gpio) {
+				reset_sfp_gpio(gmac_cfg[loop].sfp_tx_gpio);
+			}
 
 			gmac_cfg[loop].phy_napa_gpio = fdtdec_get_uint(gd->fdt_blob,
 					offset, "napa_gpio", 0);

@@ -266,6 +266,9 @@ struct ipq_eth_dev {
 	uint			ipq_swith;
 	uint			phy_external_link;
 	int			link_printed;
+	u32			sfp_mode;
+	u32			sfp_tx_gpio;
+	u32			sfp_rx_gpio;
 	u32			padding;
 	ipq_gmac_desc_t		*desc_tx[NO_OF_TX_DESC];
 	ipq_gmac_desc_t		*desc_rx[NO_OF_RX_DESC];
