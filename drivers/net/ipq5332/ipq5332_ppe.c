@@ -82,7 +82,8 @@ void ppe_ipo_action_set(union ipo_action_u *hw_act, int rule_id)
 	}
 }
 
-void ipq5332_ppe_acl_set(int rule_id, int rule_type, int field0, int field1, int mask, int permit, int deny)
+void ipq5332_ppe_acl_set(int rule_id, int rule_type, int field0, int field1,
+				int mask, int permit, int deny)
 {
 	union ipo_rule_reg_u hw_reg = {0};
 	union ipo_mask_reg_u hw_mask = {0};
@@ -198,14 +199,16 @@ void ppe_port_bridge_txmac_set(int port_id, int status)
 	uint32_t reg_value = 0;
 
 	ipq5332_ppe_reg_read(IPE_L2_BASE_ADDR + PORT_BRIDGE_CTRL_ADDRESS +
-		 (port_id * PORT_BRIDGE_CTRL_INC), &reg_value);
+		 ((port_id * PORT_BRIDGE_CTRL_INC) + PORT_BRIDGE_CTRL_INC),
+		&reg_value);
 	if (status == 0)
 		reg_value |= TX_MAC_EN;
 	else
 		reg_value &= ~TX_MAC_EN;
 
 	ipq5332_ppe_reg_write(IPE_L2_BASE_ADDR + PORT_BRIDGE_CTRL_ADDRESS +
-		 (port_id * PORT_BRIDGE_CTRL_INC), reg_value);
+		 ((port_id * PORT_BRIDGE_CTRL_INC) + PORT_BRIDGE_CTRL_INC),
+		reg_value);
 
 }
 
@@ -221,8 +224,10 @@ void ppe_port_txmac_status_set(uint32_t port)
 	ipq5332_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
 
-	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x -> Value = %u\n",
-	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address"
+			" = 0x%x -> Value = %u\n",
+	      PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			(port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
 	      reg_value);
 }
 
@@ -233,7 +238,8 @@ void ppe_port_rxmac_status_set(uint32_t port)
 	pr_debug("DEBUGGING rxmac_status_set......... PORTID = %d\n", port);
 	ipq5332_ppe_reg_read(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 			MAC_RX_CONFIGURATION_ADDRESS +
-			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION), &reg_value);
+			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION),
+			&reg_value);
 
 	reg_value |= 0x300000c0;
 	reg_value |=RE;
@@ -241,9 +247,11 @@ void ppe_port_rxmac_status_set(uint32_t port)
 	reg_value |=CST;
 	ipq5332_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 			MAC_RX_CONFIGURATION_ADDRESS +
-			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION), reg_value);
+			(port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION),
+			reg_value);
 
-	pr_debug("NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION Address = 0x%x -> Value = %u\n",
+	pr_debug("NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION Address"
+			" = 0x%x -> Value = %u\n",
 	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + MAC_RX_CONFIGURATION_ADDRESS +
 	      (port * NSS_SWITCH_XGMAC_MAC_RX_CONFIGURATION),
 	      reg_value);
@@ -251,11 +259,12 @@ void ppe_port_rxmac_status_set(uint32_t port)
 
 void ppe_mac_packet_filter_set(uint32_t port)
 {
-	pr_debug("DEBUGGING mac_packet_filter_set......... PORTID = %d\n", port);
+	pr_debug("DEBUGGING mac_packet_filter_set...... PORTID = %d\n", port);
 	ipq5332_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 			MAC_PACKET_FILTER_ADDRESS +
 			(port * MAC_PACKET_FILTER_INC), 0x80000081);
-	pr_debug("NSS_SWITCH_XGMAC_MAC_PACKET_FILTER Address = 0x%x -> Value = %u\n",
+	pr_debug("NSS_SWITCH_XGMAC_MAC_PACKET_FILTER Address"
+			" = 0x%x -> Value = %u\n",
 	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + MAC_PACKET_FILTER_ADDRESS +
 	      (port * MAC_PACKET_FILTER_ADDRESS),
 	      0x80000081);
@@ -267,43 +276,28 @@ void ppe_mac_packet_filter_set(uint32_t port)
  */
 void ipq5332_port_mac_clock_reset(int port)
 {
-	int reg_val, reg_val1;
+	int reg_val;
 
-	reg_val = readl(NSS_CC_PPE_RESET_ADDR);
-	reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
-	switch(port) {
-		case 0:
-			/* Assert */
-			reg_val |= GCC_PPE_PORT1_MAC_ARES;
-			reg_val1 |= GCC_PORT1_ARES;
-			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
-			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
-			mdelay(150);
-			/* De-Assert */
-			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
-			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
-			reg_val &= ~GCC_PPE_PORT1_MAC_ARES;
-			reg_val1 &= ~GCC_PORT1_ARES;
-			break;
-		case 1:
-			/* Assert */
-			reg_val |= GCC_PPE_PORT2_MAC_ARES;
-			reg_val1 |= GCC_PORT2_ARES;
-			writel(reg_val, NSS_CC_PPE_RESET_ADDR);
-			writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
-			mdelay(150);
-			/* De-Assert */
-			reg_val = readl(NSS_CC_PPE_RESET_ADDR);
-			reg_val1 = readl(NSS_CC_UNIPHY_MISC_RESET);
-			reg_val &= ~GCC_PPE_PORT2_MAC_ARES;
-			reg_val1 &= ~GCC_PORT2_ARES;
-			break;
-		default:
-			break;
-	}
-	writel(reg_val, NSS_CC_PPE_RESET_ADDR);
-	writel(reg_val1, NSS_CC_UNIPHY_MISC_RESET);
-	mdelay(150);
+	/* PPE Reset */
+	writel(0x1, NSS_CC_PPE_BCR);
+	udelay(10);
+	writel(0x0, NSS_CC_PPE_BCR);
+
+	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8));
+	reg_val |= GCC_PORT1_ARES;
+	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8));
+	mdelay(10);
+	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8));
+	reg_val &= ~GCC_PORT1_ARES;
+	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8));
+
+	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
+	reg_val |= GCC_PORT1_ARES;
+	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
+	mdelay(10);
+	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
+	reg_val &= ~GCC_PORT1_ARES;
+	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
 }
 
 void ipq5332_speed_clock_set(int port_id, int clk[4])
@@ -313,14 +307,15 @@ void ipq5332_speed_clock_set(int port_id, int clk[4])
 
 	for (i = 0; i < 6; i++)
 	{
-		reg_val[i] = readl(NSS_CC_PORT1_RX_CMD_RCGR + (i * 0x4) + (port_id * 0x18));
+		reg_val[i] = readl(NSS_CC_PORT1_RX_CMD_RCGR + (i * 0x4) +
+					(port_id * 0x18));
 	}
 	reg_val[0] &= ~0x1;
 	reg_val[1] &= ~0x71f;
-	reg_val[2] &= ~0x1ff;
+	reg_val[2] &= ~0xf;
 	reg_val[3] &= ~0x1;
 	reg_val[4] &= ~0x71f;
-	reg_val[5] &= ~0x1ff;
+	reg_val[5] &= ~0xf;
 
 	reg_val[1] |= clk[0];
 	reg_val[2] |= clk[1];
@@ -334,7 +329,8 @@ void ipq5332_speed_clock_set(int port_id, int clk[4])
 	/* Port Tx direction speed clock cfg */
 	writel(reg_val[4], NSS_CC_PORT1_RX_CMD_RCGR + 0x10 + (port_id * 0x18));
 	writel(reg_val[5], NSS_CC_PORT1_RX_CMD_RCGR + 0x14 + (port_id * 0x18));
-	writel(reg_val[3] | 0x1, NSS_CC_PORT1_RX_CMD_RCGR + 0xc + (port_id * 0x18));
+	writel(reg_val[3] | 0x1, NSS_CC_PORT1_RX_CMD_RCGR + 0xc +
+			(port_id * 0x18));
 }
 
 int phy_status_get_from_ppe(int port_id)
@@ -342,10 +338,9 @@ int phy_status_get_from_ppe(int port_id)
 	uint32_t reg_field = 0;
 
 	ipq5332_ppe_reg_read(PORT_PHY_STATUS_ADDRESS, &reg_field);
-	if (port_id == (PORT5 - PPE_UNIPHY_INSTANCE1))
-		reg_field >>= PORT_PHY_STATUS_PORT5_1_OFFSET;
-	else
-		reg_field >>= PORT_PHY_STATUS_PORT6_OFFSET;
+
+	if (port_id == 1)
+		reg_field >>= PORT_PHY_STATUS_PORT2_OFFSET;
 
 	return ((reg_field >> 7) & 0x1) ? 0 : 1;
 }
@@ -362,15 +357,17 @@ void ppe_xgmac_10g_r_speed_set(uint32_t port)
 	ipq5332_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
 
-	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x -> Value = %u\n",
-	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
-	      reg_value);
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x"
+			"-> Value = %u\n",
+			PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			(port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+			reg_value);
 }
 
 void ipq5332_10g_r_speed_set(int port, int status)
 {
 	ppe_xgmac_10g_r_speed_set(port);
-	ppe_port_bridge_txmac_set(port + 1, status);
+	ppe_port_bridge_txmac_set(port, status);
 	ppe_port_txmac_status_set(port);
 	ppe_port_rxmac_status_set(port);
 	ppe_mac_packet_filter_set(port);
@@ -408,11 +405,14 @@ void ppe_xgmac_speed_set(uint32_t port, int speed)
 	reg_value |=JD;
 	ipq5332_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
 		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
-	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x -> Value = %u\n",
-	      PPE_SWITCH_NSS_SWITCH_XGMAC0 + (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
-	      reg_value);
-
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x"
+			" -> Value = %u\n",
+			PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			(port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+			reg_value);
 }
+
+
 
 void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex,
 				int status)
@@ -433,7 +433,7 @@ void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex,
 	ppe_uniphy_usxgmii_duplex_set(uniphy_index, duplex);
 	ppe_uniphy_usxgmii_port_reset(uniphy_index);
 #endif
-	ppe_port_bridge_txmac_set(port + 1, status);
+	ppe_port_bridge_txmac_set(port, status);
 	ppe_port_txmac_status_set(port);
 	ppe_port_rxmac_status_set(port);
 	ppe_mac_packet_filter_set(port);
@@ -441,7 +441,7 @@ void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex,
 
 void ipq5332_pqsgmii_speed_set(int port, int speed, int status)
 {
-	ppe_port_bridge_txmac_set(port + 1, status);
+	ppe_port_bridge_txmac_set(port, status);
 	ipq5332_ppe_reg_write(IPQ5332_PPE_MAC_SPEED + (0x200 * port), speed);
 	ipq5332_ppe_reg_write(IPQ5332_PPE_MAC_ENABLE + (0x200 * port), 0x73);
 	ipq5332_ppe_reg_write(IPQ5332_PPE_MAC_MIB_CTL + (0x200 * port), 0x1);
@@ -464,12 +464,12 @@ static void ipq5332_ppe_flow_port_map_tbl_port_num_set(int queue, int port)
 static void ipq5332_ppe_flow_map_tbl_set(int queue, int port)
 {
 	uint32_t val = port | 0x401000; /* c_drr_wt = 1, e_drr_wt = 1 */
-	ipq5332_ppe_reg_write(IPQ5332_PPE_L0_FLOW_MAP_TBL + queue * IPQ5332_PPE_L0_FLOW_MAP_TBL_INC,
-									val);
+	ipq5332_ppe_reg_write(IPQ5332_PPE_L0_FLOW_MAP_TBL + queue *
+				IPQ5332_PPE_L0_FLOW_MAP_TBL_INC, val);
 
 	val = port | 0x100400; /* c_drr_wt = 1, e_drr_wt = 1 */
-	ipq5332_ppe_reg_write(IPQ5332_PPE_L1_FLOW_MAP_TBL + port * IPQ5332_PPE_L1_FLOW_MAP_TBL_INC,
-									val);
+	ipq5332_ppe_reg_write(IPQ5332_PPE_L1_FLOW_MAP_TBL + port *
+				IPQ5332_PPE_L1_FLOW_MAP_TBL_INC, val);
 }
 
 /*
@@ -477,6 +477,38 @@ static void ipq5332_ppe_flow_map_tbl_set(int queue, int port)
  */
 static void ipq5332_ppe_tdm_configuration(void)
 {
+#ifndef CONFIG_IPQ5332_RUMI
+	ipq5332_ppe_reg_write(0xc000, 0x22);
+	ipq5332_ppe_reg_write(0xc010, 0x30);
+	ipq5332_ppe_reg_write(0xc020, 0x21);
+	ipq5332_ppe_reg_write(0xc030, 0x31);
+	ipq5332_ppe_reg_write(0xc040, 0x22);
+	ipq5332_ppe_reg_write(0xc050, 0x32);
+	ipq5332_ppe_reg_write(0xc060, 0x20);
+	ipq5332_ppe_reg_write(0xc070, 0x30);
+	ipq5332_ppe_reg_write(0xc080, 0x22);
+	ipq5332_ppe_reg_write(0xc090, 0x31);
+	ipq5332_ppe_reg_write(0xc0a0, 0x21);
+	ipq5332_ppe_reg_write(0xc0b0, 0x32);
+	ipq5332_ppe_reg_write(0xc0c0, 0x20);
+	ipq5332_ppe_reg_write(0xc0d0, 0x30);
+	ipq5332_ppe_reg_write(0xc0e0, 0x21);
+	ipq5332_ppe_reg_write(0xc0f0, 0x31);
+	ipq5332_ppe_reg_write(0xc100, 0x22);
+	ipq5332_ppe_reg_write(0xc110, 0x32);
+	ipq5332_ppe_reg_write(0xc120, 0x20);
+	ipq5332_ppe_reg_write(0xc130, 0x30);
+	ipq5332_ppe_reg_write(0xc140, 0x22);
+	ipq5332_ppe_reg_write(0xc150, 0x31);
+	ipq5332_ppe_reg_write(0xc160, 0x21);
+	ipq5332_ppe_reg_write(0xc170, 0x32);
+	ipq5332_ppe_reg_write(0xc180, 0x22);
+	ipq5332_ppe_reg_write(0xc190, 0x30);
+	ipq5332_ppe_reg_write(0xc1a0, 0x20);
+	ipq5332_ppe_reg_write(0xc1b0, 0x31);
+	ipq5332_ppe_reg_write(0xc1c0, 0x22);
+	ipq5332_ppe_reg_write(0xc1d0, 0x32);
+#else
 	ipq5332_ppe_reg_write(0xc000, 0x20);
 	ipq5332_ppe_reg_write(0xc010, 0x32);
 	ipq5332_ppe_reg_write(0xc020, 0x21);
@@ -484,11 +516,11 @@ static void ipq5332_ppe_tdm_configuration(void)
 	ipq5332_ppe_reg_write(0xc040, 0x22);
 	ipq5332_ppe_reg_write(0xc050, 0x31);
 	ipq5332_ppe_reg_write(0xb000, 0x80000006);
-
 	ipq5332_ppe_reg_write(0x47a000, 0xfa10);
 	ipq5332_ppe_reg_write(0x47a010, 0xfc21);
 	ipq5332_ppe_reg_write(0x47a020, 0xf902);
 	ipq5332_ppe_reg_write(0x400000, 0x3);
+#endif
 }
 
 /*
@@ -585,8 +617,10 @@ static void ipq5332_ppe_enable_port_counter(void)
  */
 static void ipq5332_ppe_c_sp_cfg_tbl_drr_id_set(int id)
 {
-	ipq5332_ppe_reg_write(IPQ5332_PPE_L0_C_SP_CFG_TBL + (id * 0x80), id * 2);
-	ipq5332_ppe_reg_write(IPQ5332_PPE_L1_C_SP_CFG_TBL + (id * 0x80), id * 2);
+	ipq5332_ppe_reg_write(IPQ5332_PPE_L0_C_SP_CFG_TBL +
+					(id * 0x80), id * 2);
+	ipq5332_ppe_reg_write(IPQ5332_PPE_L1_C_SP_CFG_TBL +
+					(id * 0x80), id * 2);
 }
 
 /*
@@ -594,8 +628,10 @@ static void ipq5332_ppe_c_sp_cfg_tbl_drr_id_set(int id)
  */
 static void ipq5332_ppe_e_sp_cfg_tbl_drr_id_set(int id)
 {
-	ipq5332_ppe_reg_write(IPQ5332_PPE_L0_E_SP_CFG_TBL + (id * 0x80), id * 2 + 1);
-	ipq5332_ppe_reg_write(IPQ5332_PPE_L1_E_SP_CFG_TBL + (id * 0x80), id * 2 + 1);
+	ipq5332_ppe_reg_write(IPQ5332_PPE_L0_E_SP_CFG_TBL +
+				(id * 0x80), id * 2 + 1);
+	ipq5332_ppe_reg_write(IPQ5332_PPE_L1_E_SP_CFG_TBL +
+				(id * 0x80), id * 2 + 1);
 }
 
 static void ppe_port_mux_set(int port_id, int port_type, int mode)
@@ -611,13 +647,14 @@ static void ppe_port_mux_set(int port_id, int port_type, int mode)
 	else if (port_type == PORT_XGMAC_TYPE)
 		mux_mac_type = IPQ5332_PORT_MUX_XMAC_TYPE;
 	else
-		printf("\nAttention!!!..Port type configured wrongly..port_id = %d, mode = %d, port_type = %d",
-		       port_id, mode, port_type);
+		printf("\nAttention!!!..Port type configured wrongly.."
+				"port_id = %d, mode = %d, port_type = %d",
+				port_id, mode, port_type);
 
 	port_mux_ctrl.val = 0;
 	ipq5332_ppe_reg_read(IPQ5332_PORT_MUX_CTRL, &(port_mux_ctrl.val));
-	pr_debug("\nBEFORE UPDATE: Port MUX CTRL value is %u", port_mux_ctrl.val);
-
+	pr_debug("\nBEFORE UPDATE: Port MUX CTRL value is %u",
+			port_mux_ctrl.val);
 
 	switch (port_id) {
 		case PORT1:
@@ -633,7 +670,8 @@ static void ppe_port_mux_set(int port_id, int port_type, int mode)
 	}
 
 	ipq5332_ppe_reg_write(IPQ5332_PORT_MUX_CTRL, port_mux_ctrl.val);
-	pr_debug("\nAFTER UPDATE: Port MUX CTRL value is %u", port_mux_ctrl.val);
+	pr_debug("\nAFTER UPDATE: Port MUX CTRL value is %u",
+			port_mux_ctrl.val);
 }
 
 void ppe_port_mux_mac_type_set(int port_id, int mode)
@@ -653,8 +691,9 @@ void ppe_port_mux_mac_type_set(int port_id, int mode)
 			port_type = PORT_XGMAC_TYPE;
 			break;
 		default:
-			printf("\nError during port_type set: mode is %d, port_id is: %d",
-			       mode, port_id);
+			printf("\nError during port_type set: mode is %d, "
+				"port_id is: %d",
+				mode, port_id);
 			return;
 	}
 	ppe_port_mux_set(port_id, port_type, mode);
@@ -701,6 +740,7 @@ void ipq5332_ppe_provision_init(void)
 {
 	int i;
 	uint32_t queue;
+	uint32_t bridge_ctrl;
 
 	/* tdm/sched configuration */
 	ipq5332_ppe_tdm_configuration();
@@ -709,28 +749,20 @@ void ipq5332_ppe_provision_init(void)
 	/* Add CPU port 0 to VSI 2 */
 	ipq5332_ppe_vp_port_tbl_set(0, 2);
 
-	/* Add port 1 - 4 to VSI 2 */
+	/* Add port 1 - 2 to VSI 2 */
 	ipq5332_ppe_vp_port_tbl_set(1, 2);
 	ipq5332_ppe_vp_port_tbl_set(2, 2);
-	ipq5332_ppe_vp_port_tbl_set(3, 2);
-	ipq5332_ppe_vp_port_tbl_set(4, 2);
-	ipq5332_ppe_vp_port_tbl_set(5, 2);
-	ipq5332_ppe_vp_port_tbl_set(6, 2);
 
 #else
 	ipq5332_ppe_vp_port_tbl_set(1, 2);
 	ipq5332_ppe_vp_port_tbl_set(2, 3);
-	ipq5332_ppe_vp_port_tbl_set(3, 4);
-	ipq5332_ppe_vp_port_tbl_set(4, 5);
-	ipq5332_ppe_vp_port_tbl_set(5, 6);
-	ipq5332_ppe_vp_port_tbl_set(6, 7);
 #endif
 
 	/* Unicast priority map */
 	ipq5332_ppe_reg_write(IPQ5332_PPE_QM_UPM_TBL, 0);
 
-	/* Port0 - 7 unicast queue settings */
-	for (i = 0; i < 8; i++) {
+	/* Port0 - 3 unicast queue settings */
+	for (i = 0; i < 3; i++) {
 		if (i == 0)
 			queue = 0;
 		else
@@ -748,7 +780,7 @@ void ipq5332_ppe_provision_init(void)
 	ipq5332_ppe_reg_write(0x403000, 0x00401000);
 
 	/* Port1 - 7 multicast queue */
-	for (i = 1; i < 8; i++) {
+	for (i = 1; i < 3; i++) {
 		ipq5332_ppe_reg_write(0x409100 + ((i - 1) * 0x40), i);
 		ipq5332_ppe_reg_write(0x403100 + ((i - 1) * 0x40), 0x401000 | i);
 	}
@@ -771,57 +803,51 @@ void ipq5332_ppe_provision_init(void)
 	/*
 	 * Port0 - TX_EN is set by default, Port1 - LRN_EN is set
 	 * Port0 -> CPU Port
-	 * Port1-6 -> Ethernet Ports
-	 * Port7 -> EIP197
+	 * Port1-2 -> Ethernet Ports
 	 */
-	for (i = 0; i < 8; i++) {
-		if (i == 0)
-			ipq5332_ppe_reg_write(IPQ5332_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+	for (i = 0; i < 3; i++) {
+		bridge_ctrl = IPQ5332_PPE_PORT_BRIDGE_CTRL_OFFSET;
+		if (i == 0) {
+			ipq5332_ppe_reg_write(bridge_ctrl + (i * 4),
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_TXMAC_EN |
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
-		else if (i == 7)
-			ipq5332_ppe_reg_write(IPQ5332_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
-			      IPQ5332_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
-			      IPQ5332_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP |
-			      IPQ5332_PPE_PORT_BRIDGE_CTRL_STATION_LRN_EN |
-			      IPQ5332_PPE_PORT_BRIDGE_CTRL_NEW_ADDR_LRN_EN);
-		else
-			ipq5332_ppe_reg_write(IPQ5332_PPE_PORT_BRIDGE_CTRL_OFFSET + (i * 4),
+		} else {
+			ipq5332_ppe_reg_write(bridge_ctrl + (i * 4),
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_PROMISC_EN |
 			      IPQ5332_PPE_PORT_BRIDGE_CTRL_PORT_ISOLATION_BMP);
+		}
 	}
 
 	/* Global learning */
 	ipq5332_ppe_reg_write(0x060038, 0xc0);
 
 #ifdef CONFIG_IPQ5332_BRIDGED_MODE
-	ipq5332_vsi_setup(2, 0x7f);
+	ipq5332_vsi_setup(2, 0x7);
 #else
 	ipq5332_vsi_setup(2, 0x03);
 	ipq5332_vsi_setup(3, 0x05);
-	ipq5332_vsi_setup(4, 0x09);
-	ipq5332_vsi_setup(5, 0x11);
-	ipq5332_vsi_setup(6, 0x21);
-	ipq5332_vsi_setup(7, 0x41);
 #endif
 
-	/* Port 0-7 STP */
-	for (i = 0; i < 8; i++)
+	/* Port 0-3 STP */
+	for (i = 0; i < 3; i++)
 		ipq5332_ppe_reg_write(IPQ5332_PPE_STP_BASE + (0x4 * i), 0x3);
 
 	ipq5332_ppe_interface_mode_init();
 	/* Port 1-2 disable */
 	for (i = 0; i < 2; i++) {
 		ipq5332_gmac_port_disable(i);
-		ppe_port_bridge_txmac_set(i + 1, 1);
+		ppe_port_bridge_txmac_set(i, 1);
 	}
 
 	/* Allowing DHCP packets */
-	ipq5332_ppe_acl_set(0, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 67, 0xffff, 0, 0);
-	ipq5332_ppe_acl_set(1, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 68, 0xffff, 0, 0);
+	ipq5332_ppe_acl_set(0, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 67,
+				0xffff, 0, 0);
+	ipq5332_ppe_acl_set(1, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 68,
+				0xffff, 0, 0);
 	/* Dropping all the UDP packets */
-	ipq5332_ppe_acl_set(2, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 0, 0, 0, 1);
+	ipq5332_ppe_acl_set(2, ADPT_ACL_HPPE_IPV4_DIP_RULE, UDP_PKT, 0, 0, 0,
+				1);
 }

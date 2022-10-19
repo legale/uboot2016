@@ -45,10 +45,16 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 static struct ipq5332_eth_dev *ipq5332_edma_dev[IPQ5332_EDMA_DEV];
+typedef struct {
+	phy_info_t *phy_info;
+	int port_id;
+	int uniphy_id;
+	int mode;
+} ipq5332_edma_port_info_t;
 
 uchar ipq5332_def_enetaddr[6] = {0x00, 0x03, 0x7F, 0xBA, 0xDB, 0xAD};
-phy_info_t *phy_info[IPQ5332_PHY_MAX] = {0};
 phy_info_t *swt_info[QCA8084_MAX_PORTS] = {0};
+ipq5332_edma_port_info_t *port_info[IPQ5332_PHY_MAX] = {0};
 int sgmii_mode[2] = {0};
 
 #ifndef CONFIG_IPQ5332_RUMI
@@ -58,7 +64,8 @@ extern int ipq_sw_mdio_init(const char *);
 extern int ipq_mdio_read(int mii_id, int regnum, ushort *data);
 extern void ipq5332_qca8075_phy_map_ops(struct phy_ops **ops);
 extern int ipq5332_qca8075_phy_init(struct phy_ops **ops, u32 phy_id);
-extern void ipq5332_qca8075_phy_interface_set_mode(uint32_t phy_id, uint32_t mode);
+extern void ipq5332_qca8075_phy_interface_set_mode(uint32_t phy_id,
+							uint32_t mode);
 extern int ipq_qca8033_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca8081_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_qca_aquantia_phy_init(struct phy_ops **ops, u32 phy_id);
@@ -126,7 +133,8 @@ int ipq5332_edma_alloc_rx_buffer(struct ipq5332_edma_hw *ehw,
 	reg_data = ipq5332_edma_reg_read(IPQ5332_EDMA_REG_RXFILL_PROD_IDX(
 					rxfill_ring->id));
 
-	next = reg_data & IPQ5332_EDMA_RXFILL_PROD_IDX_MASK & (rxfill_ring->count - 1);
+	next = reg_data & IPQ5332_EDMA_RXFILL_PROD_IDX_MASK &
+		(rxfill_ring->count - 1);
 
 	/*
 	 * Read RXFILL ring consumer index
@@ -291,13 +299,15 @@ uint32_t ipq5332_edma_clean_rx(struct ipq5332_edma_common_info *c_info,
 		/*
 		 * Check src_info from Rx Descriptor
 		 */
-		src_port_num = IPQ5332_EDMA_RXDESC_SRC_INFO_GET(rxdesc_desc->rdes4);
+		src_port_num =
+			IPQ5332_EDMA_RXDESC_SRC_INFO_GET(rxdesc_desc->rdes4);
 		if ((src_port_num & IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_MASK) ==
 				IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_PORTID) {
 			src_port_num &= IPQ5332_EDMA_RXDESC_PORTNUM_BITS;
 		} else {
 			pr_warn("WARN: src_info_type:0x%x. Drop skb:%p\n",
-				(src_port_num & IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_MASK),
+				(src_port_num &
+					IPQ5332_EDMA_RXDESC_SRCINFO_TYPE_MASK),
 				skb);
 			goto next_rx_desc;
 		}
@@ -498,8 +508,9 @@ static int ipq5332_eth_snd(struct eth_device *dev, void *packet, int length)
 	 *
 	 * Currently mac port no. is fixed as 3 for the purpose of testing
 	 */
-	txdesc->tdes4 |= (IPQ5332_EDMA_DST_PORT_TYPE_SET(IPQ5332_EDMA_DST_PORT_TYPE) |
-			  IPQ5332_EDMA_DST_PORT_ID_SET(IPQ5332_EDMA_MAC_PORT_NO));
+	txdesc->tdes4 |=
+		(IPQ5332_EDMA_DST_PORT_TYPE_SET(IPQ5332_EDMA_DST_PORT_TYPE) |
+		IPQ5332_EDMA_DST_PORT_ID_SET(IPQ5332_EDMA_MAC_PORT_NO));
 #endif
 
 	/*
@@ -546,7 +557,8 @@ static int ipq5332_eth_recv(struct eth_device *dev)
 	struct ipq5332_edma_rxfill_ring *rxfill_ring;
 	struct ipq5332_edma_hw *ehw = &c_info->hw;
 	volatile u32 reg_data;
-	u32 rxdesc_intr_status = 0, txcmpl_intr_status = 0, rxfill_intr_status = 0;
+	u32 rxdesc_intr_status = 0;
+	u32 txcmpl_intr_status = 0, rxfill_intr_status = 0;
 	int i;
 
 	/*
@@ -647,15 +659,18 @@ static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 		rxfill_ring->count = IPQ5332_EDMA_RX_RING_SIZE;
 		rxfill_ring->id = ehw->rxfill_ring_start + i;
 		rxfill_ring->desc = (void *)noncached_alloc(
-				IPQ5332_EDMA_RXFILL_DESC_SIZE * rxfill_ring->count,
+				IPQ5332_EDMA_RXFILL_DESC_SIZE *
+				rxfill_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 
 		if (rxfill_ring->desc == NULL) {
-			pr_info("%s: rxfill_ring->desc alloc error\n", __func__);
+			pr_info("%s: rxfill_ring->desc alloc error\n",
+				__func__);
 			return -ENOMEM;
 		}
 		rxfill_ring->dma = virt_to_phys(rxfill_ring->desc);
-		pr_debug("rxfill ring id = %d, rxfill ring ptr = %p, rxfill ring dma = %u\n",
+		pr_debug("rxfill ring id = %d, rxfill ring ptr = %p,"
+			"rxfill ring dma = %u\n",
 			rxfill_ring->id, rxfill_ring->desc, (unsigned int)
 			rxfill_ring->dma);
 
@@ -701,10 +716,12 @@ static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 		rxdesc_ring->rxfill = ehw->rxfill_ring;
 
 		rxdesc_ring->desc = (void *)noncached_alloc(
-				IPQ5332_EDMA_RXDESC_DESC_SIZE * rxdesc_ring->count,
+				IPQ5332_EDMA_RXDESC_DESC_SIZE *
+				rxdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (rxdesc_ring->desc == NULL) {
-			pr_info("%s: rxdesc_ring->desc alloc error\n", __func__);
+			pr_info("%s: rxdesc_ring->desc alloc error\n",
+				__func__);
 			return -ENOMEM;
 		}
 		rxdesc_ring->dma = virt_to_phys(rxdesc_ring->desc);
@@ -713,10 +730,12 @@ static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 		 * Allocate secondary Rx ring descriptors
 		 */
 		rxdesc_ring->sdesc = (void *)noncached_alloc(
-				IPQ5332_EDMA_RX_SEC_DESC_SIZE * rxdesc_ring->count,
+				IPQ5332_EDMA_RX_SEC_DESC_SIZE *
+				rxdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (rxdesc_ring->sdesc == NULL) {
-			pr_info("%s: rxdesc_ring->sdesc alloc error\n", __func__);
+			pr_info("%s: rxdesc_ring->sdesc alloc error\n",
+			__func__);
 			return -ENOMEM;
 		}
 		rxdesc_ring->sdma = virt_to_phys(rxdesc_ring->sdesc);
@@ -730,10 +749,12 @@ static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 		txdesc_ring->count = IPQ5332_EDMA_TX_RING_SIZE;
 		txdesc_ring->id = ehw->txdesc_ring_start + i;
 		txdesc_ring->desc = (void *)noncached_alloc(
-				IPQ5332_EDMA_TXDESC_DESC_SIZE * txdesc_ring->count,
+				IPQ5332_EDMA_TXDESC_DESC_SIZE *
+				txdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (txdesc_ring->desc == NULL) {
-			pr_info("%s: txdesc_ring->desc alloc error\n", __func__);
+			pr_info("%s: txdesc_ring->desc alloc error\n",
+				__func__);
 			return -ENOMEM;
 		}
 		txdesc_ring->dma = virt_to_phys(txdesc_ring->desc);
@@ -767,10 +788,12 @@ static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 		 * Allocate secondary Tx ring descriptors
 		 */
 		txdesc_ring->sdesc = (void *)noncached_alloc(
-				IPQ5332_EDMA_TX_SEC_DESC_SIZE * txdesc_ring->count,
+				IPQ5332_EDMA_TX_SEC_DESC_SIZE *
+				txdesc_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 		if (txdesc_ring->sdesc == NULL) {
-			pr_info("%s: txdesc_ring->sdesc alloc error\n", __func__);
+			pr_info("%s: txdesc_ring->sdesc alloc error\n",
+				__func__);
 			return -ENOMEM;
 		}
 		txdesc_ring->sdma = virt_to_phys(txdesc_ring->sdesc);
@@ -784,11 +807,13 @@ static int ipq5332_edma_setup_ring_resources(struct ipq5332_edma_hw *ehw)
 		txcmpl_ring->count = IPQ5332_EDMA_TX_RING_SIZE;
 		txcmpl_ring->id = ehw->txcmpl_ring_start + i;
 		txcmpl_ring->desc = (void *)noncached_alloc(
-				IPQ5332_EDMA_TXCMPL_DESC_SIZE * txcmpl_ring->count,
+				IPQ5332_EDMA_TXCMPL_DESC_SIZE *
+				txcmpl_ring->count,
 				CONFIG_SYS_CACHELINE_SIZE);
 
 		if (txcmpl_ring->desc == NULL) {
-			pr_info("%s: txcmpl_ring->desc alloc error\n", __func__);
+			pr_info("%s: txcmpl_ring->desc alloc error\n",
+				__func__);
 			return -ENOMEM;
 		}
 		txcmpl_ring->dma = virt_to_phys(txcmpl_ring->desc);
@@ -833,7 +858,7 @@ static void ipq5332_edma_disable_rings(struct ipq5332_edma_hw *edma_hw)
 				IPQ5332_EDMA_REG_TXDESC_CTRL(desc_index));
 		data &= ~IPQ5332_EDMA_TXDESC_TX_EN;
 		ipq5332_edma_reg_write(
-				IPQ5332_EDMA_REG_TXDESC_CTRL(desc_index), data);
+			IPQ5332_EDMA_REG_TXDESC_CTRL(desc_index), data);
 	}
 }
 
@@ -861,23 +886,13 @@ static void ipq5332_edma_disable_intr(struct ipq5332_edma_hw *ehw)
 }
 
 #ifndef CONFIG_IPQ5332_RUMI
-static void set_sgmii_mode(int port_id, int sg_mode)
+void print_eth_info(int mac_unit, int phy_id, char *status, int speed,
+				char *duplex)
 {
-	if (port_id == 4)
-		sgmii_mode[0] = sg_mode;
-	else if (port_id == 5)
-		sgmii_mode[1] = sg_mode;
+	printf("eth%d PHY%d %s Speed :%d %s duplex\n",mac_unit, phy_id,
+			status, speed, duplex);
 }
 
-static int get_sgmii_mode(int port_id)
-{
-	if (port_id == 4)
-		return sgmii_mode[0];
-	else if (port_id == 5)
-		return sgmii_mode[1];
-	else
-		return -1;
-}
 #endif
 
 static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
@@ -888,32 +903,17 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 #ifndef CONFIG_IPQ5332_RUMI
 	struct ipq5332_eth_dev *priv = eth_dev->priv;
 	struct phy_ops *phy_get_ops;
-	static fal_port_speed_t old_speed[IPQ5332_PHY_MAX] = {[0 ... IPQ5332_PHY_MAX-1] = FAL_SPEED_BUTT};
+	static fal_port_speed_t old_speed[IPQ5332_PHY_MAX] =
+				{[0 ... IPQ5332_PHY_MAX-1] = FAL_SPEED_BUTT};
 	static fal_port_speed_t curr_speed[IPQ5332_PHY_MAX];
 	fal_port_duplex_t duplex;
 	char *lstatus[] = {"up", "Down"};
 	char *dp[] = {"Half", "Full"};
 	int linkup = 0;
 	int clk[4] = {0};
-	int phy_addr = -1, node = -1;
-	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
-	int sgmii_mode = -1;
-	int phy_node = -1, res = -1;
-
-	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
-
-	if (node >= 0) {
-		aquantia_port_cnt = fdtdec_get_uint(gd->fdt_blob, node, "aquantia_port_cnt", -1);
-
-		if (aquantia_port_cnt >= 1) {
-			res = fdtdec_get_int_array(gd->fdt_blob, node, "aquantia_port",
-					  (u32 *)aquantia_port, aquantia_port_cnt);
-			if (res < 0)
-				printf("Error: Aquantia port details not provided in DT\n");
-		}
-	}
-
-	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
+	int phy_addr = -1, ret = -1;
+	phy_info_t *phy_info;
+	int sgmii_mode = EPORT_WRAPPER_SGMII0_RGMII4, sfp_mode = -1;
 #endif
 	/*
 	 * Check PHY link, speed, Duplex on all phys.
@@ -922,18 +922,19 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 	 */
 	for (i =  0; i < IPQ5332_PHY_MAX; i++) {
 #ifndef CONFIG_IPQ5332_RUMI
-		if (phy_info[i]->phy_type == UNUSED_PHY_TYPE)
+		phy_info = port_info[i]->phy_info;
+		if (phy_info->phy_type == UNUSED_PHY_TYPE)
 			continue;
 #ifdef CONFIG_QCA8084_SWT_MODE
 		else if ((qca8084_swt_enb && qca8084_chip_detect) &&
-				(phy_info[i]->phy_type == QCA8084_PHY_TYPE)) {
+				(phy_info->phy_type == QCA8084_PHY_TYPE)) {
 			if (!ipq_qca8084_link_update(swt_info))
 				linkup++;
 			continue;
 		}
 #endif
 #ifdef CONFIG_ATHRS17C_SWITCH
-		else if (phy_info[i]->phy_type == ATHRS17C_SWITCH_TYPE) {
+		else if (phy_info->phy_type == ATHRS17C_SWITCH_TYPE) {
 			if (s17c_swt_cfg.chip_detect) {
 				if (!ipq_qca8337_link_update(&s17c_swt_cfg))
 					linkup++;
@@ -941,48 +942,59 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			}
 		}
 #endif
-		else {
+		else if (phy_info->phy_type == SFP_PHY_TYPE) {
+			status = phy_status_get_from_ppe(i);
+			duplex = FAL_FULL_DUPLEX;
+			sfp_mode = port_info[i]->mode;
+
+			if (sfp_mode == EPORT_WRAPPER_SGMII_FIBER) {
+				curr_speed[i] = FAL_SPEED_1000;
+			} else if (sfp_mode == EPORT_WRAPPER_10GBASE_R) {
+				curr_speed[i] = FAL_SPEED_10000;
+			} else if (sfp_mode == EPORT_WRAPPER_SGMII_PLUS) {
+				curr_speed[i] = FAL_SPEED_2500;
+			} else {
+				printf("Error: Unsupported SPF mode \n");
+				return ret;
+			}
+		} else {
 			if (!priv->ops[i]) {
 				printf("Phy ops not mapped\n");
 				continue;
 			}
 			phy_get_ops = priv->ops[i];
+			phy_addr = phy_info->phy_address;
 
 			if (!phy_get_ops->phy_get_link_status ||
 					!phy_get_ops->phy_get_speed ||
 					!phy_get_ops->phy_get_duplex) {
-				printf("Error:Link status/Get speed/Get duplex not mapped\n");
-				return -1;
+				printf("Error:Link status/Get speed/"
+						"Get duplex not mapped\n");
+				return ret;
 			}
 
-			if (phy_node >= 0) {
-				/*
-				 * For each ethernet port, one node should be added
-				 * inside port_phyinfo with appropriate phy address
-				 */
-				phy_addr = phy_info[i]->phy_address;
-			} else {
-				printf("Error:Phy addresses not configured in DT\n");
-				return -1;
-			}
-
-			status = phy_get_ops->phy_get_link_status(priv->mac_unit, phy_addr);
-			phy_get_ops->phy_get_speed(priv->mac_unit, phy_addr, &curr_speed[i]);
-			phy_get_ops->phy_get_duplex(priv->mac_unit, phy_addr, &duplex);
+			status = phy_get_ops->phy_get_link_status(
+						priv->mac_unit, phy_addr);
+			phy_get_ops->phy_get_speed(priv->mac_unit,
+						phy_addr, &curr_speed[i]);
+			phy_get_ops->phy_get_duplex(priv->mac_unit,
+						phy_addr, &duplex);
 
 			if (status == 0) {
 				linkup++;
 				if (old_speed[i] == curr_speed[i]) {
-					printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-							priv->mac_unit, i, lstatus[status], curr_speed[i],
+					print_eth_info(priv->mac_unit, i,
+							lstatus[status],
+							curr_speed[i],
 							dp[duplex]);
 					continue;
 				} else {
 					old_speed[i] = curr_speed[i];
 				}
 			} else {
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
+				print_eth_info(priv->mac_unit, i,
+						lstatus[status],
+						curr_speed[i],
 						dp[duplex]);
 				continue;
 			}
@@ -997,129 +1009,112 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 		 *
 		 * These conditions are checked above and if any of it
 		 * fails, then no config is done for that eth port.
+		 * clk[0-3] = { RX_RCGR, RX_DIV, TX_RCGR, TX_DIV}
 		 */
 		switch (curr_speed[i]) {
-			case FAL_SPEED_10:
-				mac_speed = 0x0;
+		case FAL_SPEED_10:
+			mac_speed = 0x0;
+			clk[0] = 0x318;
+			clk[1] = 9;
+			clk[2] = 0x318;
+			clk[3] = 9;
+			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
+				clk[1] = 3;
+				clk[3] = 3;
+			}
+		break;
+		case FAL_SPEED_100:
+			mac_speed = 0x1;
+			clk[0] = 0x318;
+			clk[1] = 1;
+			clk[2] = 0x318;
+			clk[3] = 1;
+			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
 				clk[0] = 0x309;
-				clk[1] = 0x9;
-				clk[2] = 0x409;
-				clk[3] = 0x9;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
-					clk[1] = 0x18;
-					clk[3] = 0x18;
-					clk[0] = 0x313;
-					clk[2] = 0x413;
-				}
-				if (phy_node >= 0) {
-					if (phy_info[i]->phy_type == QCA8081_PHY_TYPE) {
-						set_sgmii_mode(i, 1);
-						clk[0] = 0x309;
-						clk[2] = 0x409;
-					}
-				}
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
-						dp[duplex]);
-				break;
-			case FAL_SPEED_100:
-				mac_speed = 0x1;
-				clk[0] = 0x309;
-				clk[1] = 0x0;
-				clk[2] = 0x409;
-				clk[3] = 0x0;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
-					clk[1] = 0x4;
-					clk[3] = 0x4;
-					clk[0] = 0x309;
-					clk[2] = 0x409;
-				}
-				if (phy_node >= 0) {
-					if (phy_info[i]->phy_type == QCA8081_PHY_TYPE) {
-						set_sgmii_mode(i, 1);
-						clk[0] = 0x309;
-						clk[2] = 0x409;
-					}
-				}
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
-						dp[duplex]);
-				break;
-			case FAL_SPEED_1000:
+				clk[1] = 0;
+				clk[2] = 0x309;
+				clk[3] = 0;
+			}
+		break;
+		case FAL_SPEED_1000:
+			mac_speed = 0x2;
+			clk[0] = 0x304;
+			clk[1] = 0x0;
+			clk[2] = 0x304;
+			clk[3] = 0x0;
+			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
+				clk[0] = 0x301;
+				clk[2] = 0x301;
+			}
+		break;
+		case FAL_SPEED_2500:
+			mac_speed = 0x4;
+			clk[0] = 0x307;
+			clk[1] = 0x0;
+			clk[2] = 0x307;
+			clk[3] = 0x0;
+			if (phy_info->phy_type == SFP_PHY_TYPE ||
+				phy_info->phy_type == QCA8081_PHY_TYPE) {
+				clk[0] = 0x301;
+				clk[2] = 0x301;
 				mac_speed = 0x2;
-				clk[0] = 0x301;
-				clk[1] = 0x0;
-				clk[2] = 0x401;
-				clk[3] = 0x0;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
-					clk[0] = 0x304;
-					clk[2] = 0x404;
-				}
-				if (phy_node >= 0) {
-					if (phy_info[i]->phy_type == QCA8081_PHY_TYPE) {
-						set_sgmii_mode(i, 1);
-						clk[0] = 0x301;
-						clk[2] = 0x401;
-					}
-				}
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
-						dp[duplex]);
-				break;
-			case FAL_SPEED_2500:
-				clk[1] = 0x0;
-				clk[3] = 0x0;
-				if (i == aquantia_port[0] || i == aquantia_port[1]) {
-					mac_speed = 0x4;
-					clk[0] = 0x307;
-					clk[2] = 0x407;
-				}
-				if (phy_node >= 0) {
-					if (phy_info[i]->phy_type == QCA8081_PHY_TYPE) {
-						mac_speed = 0x2;
-						set_sgmii_mode(i, 0);
-						clk[0] = 0x301;
-						clk[2] = 0x401;
-					}
-				}
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
-						dp[duplex]);
-				break;
-			case FAL_SPEED_5000:
-				mac_speed = 0x5;
-				clk[1] = 0x0;
-				clk[3] = 0x0;
-				clk[0] = 0x303;
-				clk[2] = 0x403;
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
-						dp[duplex]);
-				break;
-			case FAL_SPEED_10000:
-				mac_speed = 0x3;
-				clk[1] = 0x0;
-				clk[3] = 0x0;
-				clk[0] = 0x301;
-				clk[2] = 0x401;
-				printf("eth%d PHY%d %s Speed :%d %s duplex\n",
-						priv->mac_unit, i, lstatus[status], curr_speed[i],
-						dp[duplex]);
-				break;
-			default:
-				printf("Unknown speed\n");
-				break;
+			}
+
+			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
+				sgmii_mode = EPORT_WRAPPER_SGMII_PLUS;
+			}
+		break;
+		case FAL_SPEED_5000:
+			mac_speed = 0x5;
+			clk[0] = 0x303;
+			clk[1] = 0x0;
+			clk[2] = 0x303;
+			clk[3] = 0x0;
+		break;
+		case FAL_SPEED_10000:
+			mac_speed = 0x3;
+			clk[1] = 0x0;
+			clk[3] = 0x0;
+			clk[0] = 0x301;
+			clk[2] = 0x401;
+		break;
+		default:
+			ret = FAL_SPEED_BUTT;
+			break;
 		}
 
-		if (phy_node >= 0) {
-			if (phy_info[i]->phy_type == QCA8081_PHY_TYPE) {
-				sgmii_mode = get_sgmii_mode(i);
-				ppe_port_bridge_txmac_set(i + 1, 1);
-				if (sgmii_mode == 1) { /* SGMII Mode */
-					ppe_uniphy_mode_set(0x0, EPORT_WRAPPER_SGMII0_RGMII4);
-				} else if (sgmii_mode == 0) { /* SGMII Plus Mode */
-					ppe_uniphy_mode_set(0x0, EPORT_WRAPPER_SGMII_PLUS);
-				}
+		if (ret == FAL_SPEED_BUTT) {
+			printf("Unknown speed\n");
+			ret = -1;
+		} else {
+			print_eth_info(priv->mac_unit, i, lstatus[status],
+					curr_speed[i], dp[duplex]);
+		}
+
+		if (phy_info->phy_type == QCA8081_PHY_TYPE) {
+			ppe_port_bridge_txmac_set(i, 1);
+			ppe_uniphy_mode_set(port_info[i]->uniphy_id,
+						sgmii_mode);
+		}
+
+		if (phy_info->phy_type == SFP_PHY_TYPE) {
+			if (sfp_mode == EPORT_WRAPPER_SGMII_FIBER) {
+				/* SGMII Fiber mode */
+				ppe_port_bridge_txmac_set(i, 1);
+				ppe_uniphy_mode_set(port_info[i]->uniphy_id,
+					EPORT_WRAPPER_SGMII_FIBER);
+				ppe_port_mux_mac_type_set(i + 1,
+					EPORT_WRAPPER_SGMII_FIBER);
+			} else if (sfp_mode == EPORT_WRAPPER_10GBASE_R) {
+				/* 10GBASE_R mode */
+				ppe_uniphy_mode_set(port_info[i]->uniphy_id,
+					EPORT_WRAPPER_10GBASE_R);
+				ppe_port_mux_mac_type_set(i + 1,
+					EPORT_WRAPPER_10GBASE_R);
+			} else { /* SGMII Plus Mode */
+				ppe_port_bridge_txmac_set(i, 1);
+				ppe_uniphy_mode_set(port_info[i]->uniphy_id,
+					EPORT_WRAPPER_SGMII_PLUS);
 			}
 		}
 
@@ -1127,15 +1122,20 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 
 		ipq5332_port_mac_clock_reset(i);
 
-		if (i == aquantia_port[0] || i == aquantia_port[1])
+		if (phy_info->phy_type == AQ_PHY_TYPE){
 			ipq5332_uxsgmii_speed_set(i, mac_speed, duplex, status);
-		else
+		} else if ((phy_info->phy_type == SFP_PHY_TYPE) &&
+				(sfp_mode != EPORT_WRAPPER_SGMII_FIBER)) {
+			ipq5332_10g_r_speed_set(i, status);
+		} else {
 			ipq5332_pqsgmii_speed_set(i, mac_speed, status);
+		}
 #else
-		ppe_port_bridge_txmac_set(i + 1, 1);
+		ppe_port_bridge_txmac_set(i, 1);
 		//FAL_SPEED_5000
 		mac_speed = 0x5;
-		ipq5332_uxsgmii_speed_set(i, mac_speed, FAL_DUPLEX_BUTT, status);
+		ipq5332_uxsgmii_speed_set(i, mac_speed,
+						FAL_DUPLEX_BUTT, status);
 #endif
 	}
 
@@ -1292,7 +1292,7 @@ static int ipq5332_edma_init_rings(struct ipq5332_edma_hw *ehw)
  *	Configure one TxDesc ring
  */
 static void ipq5332_edma_configure_txdesc_ring(struct ipq5332_edma_hw *ehw,
-					struct ipq5332_edma_txdesc_ring *txdesc_ring)
+				struct ipq5332_edma_txdesc_ring *txdesc_ring)
 {
 	/*
 	 * Configure TXDESC ring
@@ -1319,7 +1319,7 @@ static void ipq5332_edma_configure_txdesc_ring(struct ipq5332_edma_hw *ehw,
  *	Configure one TxCmpl ring
  */
 static void ipq5332_edma_configure_txcmpl_ring(struct ipq5332_edma_hw *ehw,
-					struct ipq5332_edma_txcmpl_ring *txcmpl_ring)
+				struct ipq5332_edma_txcmpl_ring *txcmpl_ring)
 {
 	/*
 	 * Configure TxCmpl ring base address
@@ -1350,15 +1350,15 @@ static void ipq5332_edma_configure_txcmpl_ring(struct ipq5332_edma_hw *ehw,
  *	Configure one RxDesc ring
  */
 static void ipq5332_edma_configure_rxdesc_ring(struct ipq5332_edma_hw *ehw,
-					struct ipq5332_edma_rxdesc_ring *rxdesc_ring)
+				struct ipq5332_edma_rxdesc_ring *rxdesc_ring)
 {
 	uint32_t data;
 
 	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_BA(rxdesc_ring->id),
-			(uint32_t)(rxdesc_ring->dma & IPQ5332_EDMA_RING_DMA_MASK));
+		(uint32_t)(rxdesc_ring->dma & IPQ5332_EDMA_RING_DMA_MASK));
 
 	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXDESC_BA2(rxdesc_ring->id),
-			(uint32_t)(rxdesc_ring->sdma & IPQ5332_EDMA_RING_DMA_MASK));
+		(uint32_t)(rxdesc_ring->sdma & IPQ5332_EDMA_RING_DMA_MASK));
 
 	data = rxdesc_ring->count & IPQ5332_EDMA_RXDESC_RING_SIZE_MASK;
 	data |= (ehw->rx_payload_offset & IPQ5332_EDMA_RXDESC_PL_OFFSET_MASK) <<
@@ -1379,16 +1379,18 @@ static void ipq5332_edma_configure_rxdesc_ring(struct ipq5332_edma_hw *ehw,
  *	Configure one RxFill ring
  */
 static void ipq5332_edma_configure_rxfill_ring(struct ipq5332_edma_hw *ehw,
-					struct ipq5332_edma_rxfill_ring *rxfill_ring)
+				struct ipq5332_edma_rxfill_ring *rxfill_ring)
 {
 	uint32_t data;
 
 	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_BA(rxfill_ring->id),
-			(uint32_t)(rxfill_ring->dma & IPQ5332_EDMA_RING_DMA_MASK));
+			(uint32_t)(rxfill_ring->dma &
+			IPQ5332_EDMA_RING_DMA_MASK));
 
 	data = rxfill_ring->count & IPQ5332_EDMA_RXFILL_RING_SIZE_MASK;
 
-	ipq5332_edma_reg_write(IPQ5332_EDMA_REG_RXFILL_RING_SIZE(rxfill_ring->id), data);
+	ipq5332_edma_reg_write(
+		IPQ5332_EDMA_REG_RXFILL_RING_SIZE(rxfill_ring->id), data);
 }
 
 
@@ -1426,21 +1428,6 @@ static void ipq5332_edma_configure_rings(struct ipq5332_edma_hw *ehw)
 
 	pr_info("%s: successfull\n", __func__);
 }
-
-/*
- * ipq5332_edma_hw_reset()
- *	EDMA hw reset
- */
-void ipq5332_edma_hw_reset(void)
-{
-#if 0
-	writel(NSS_CC_EDMA_HW_RESET_ASSERT, NSS_CC_PPE_RESET_ADDR);
-	mdelay(500);
-	writel(NSS_CC_EDMA_HW_RESET_DEASSERT, NSS_CC_PPE_RESET_ADDR);
-	mdelay(100);
-#endif
-}
-
 /*
  * ipq5332_edma_hw_init()
  *	EDMA hw init
@@ -1466,13 +1453,6 @@ int ipq5332_edma_hw_init(struct ipq5332_edma_hw *ehw)
 	ehw->txcmpl_intr_mask = IPQ5332_EDMA_TX_INT_MASK_PKT_INT;
 	ehw->misc_intr_mask = 0xff;
 	ehw->rx_payload_offset = 0x0;
-
-#ifndef CONFIG_IPQ5332_RUMI
-	/*
-	 * Reset EDMA
-	 */
-	ipq5332_edma_hw_reset();
-#endif
 
 	/*
 	 * Disable interrupts
@@ -1672,30 +1652,47 @@ int ipq5332_edma_hw_init(struct ipq5332_edma_hw *ehw)
 	return 0;
 }
 
-void get_phy_address(int offset, phy_info_t * phy_info[], int max_phy_ports)
+void ipq5332_prepare_phy_info(int offset, phy_info_t * phy_info)
 {
-	int phy_type;
-	int phy_address;
-	int forced_speed, forced_duplex;
+	phy_info->phy_address = fdtdec_get_uint(gd->fdt_blob,
+				      offset, "phy_address", 0);
+	phy_info->phy_type = fdtdec_get_uint(gd->fdt_blob,
+				   offset, "phy_type", 0);
+	phy_info->forced_speed = fdtdec_get_uint(gd->fdt_blob,
+				   offset, "forced-speed", 0);
+	phy_info->forced_duplex = fdtdec_get_uint(gd->fdt_blob,
+				   offset, "forced-duplex", 0);
+}
+
+void ipq5332_prepare_port_info(int offset, int max_phy_ports)
+{
 	int i;
 
-	for (i = 0; i < max_phy_ports; i++)
+	for (i = 0, offset = fdt_first_subnode(gd->fdt_blob, offset);
+		offset > 0 && i < max_phy_ports; ++i,
+		offset = fdt_next_subnode(gd->fdt_blob, offset)) {
+		port_info[i] = ipq5332_alloc_mem(
+					sizeof(ipq5332_edma_port_info_t));
+		port_info[i]->phy_info = ipq5332_alloc_mem(sizeof(phy_info_t));
+		ipq5332_prepare_phy_info(offset, port_info[i]->phy_info);
+		port_info[i]->port_id = i;
+		port_info[i]->uniphy_id = fdtdec_get_uint(gd->fdt_blob,
+					offset, "uniphy_id", 0);
+		port_info[i]->mode = fdtdec_get_uint(gd->fdt_blob,
+					offset, "uniphy_mode", 0);
+	}
+}
+
+void ipq5332_prepare_switch_info(int offset, phy_info_t * phy_info[],
+					int max_phy_ports)
+{
+	int i;
+
+	for (i = 0, offset = fdt_first_subnode(gd->fdt_blob, offset);
+		offset > 0 && i < max_phy_ports; ++i,
+		offset = fdt_next_subnode(gd->fdt_blob, offset)) {
 		phy_info[i] = ipq5332_alloc_mem(sizeof(phy_info_t));
-	i = 0;
-	for (offset = fdt_first_subnode(gd->fdt_blob, offset); offset > 0;
-	     offset = fdt_next_subnode(gd->fdt_blob, offset)) {
-		phy_address = fdtdec_get_uint(gd->fdt_blob,
-					      offset, "phy_address", 0);
-		phy_type = fdtdec_get_uint(gd->fdt_blob,
-					   offset, "phy_type", 0);
-		forced_speed = fdtdec_get_uint(gd->fdt_blob,
-					   offset, "forced-speed", 0);
-		forced_duplex = fdtdec_get_uint(gd->fdt_blob,
-					   offset, "forced-duplex", 0);
-		phy_info[i]->phy_address = phy_address;
-		phy_info[i]->forced_speed = forced_speed;
-		phy_info[i]->forced_duplex = forced_duplex;
-		phy_info[i++]->phy_type = phy_type;
+		ipq5332_prepare_phy_info(offset, phy_info[i]);
 	}
 }
 
@@ -1708,7 +1705,8 @@ int ipq5332_edma_init(void *edma_board_cfg)
 	int i;
 	int ret = -1;
 	ipq5332_edma_board_cfg_t ledma_cfg, *edma_cfg;
-#ifndef CONFIG_IPQ5332_RUMI
+#ifndef	CONFIG_IPQ5332_RUMI
+	phy_info_t *phy_info;
 	int phy_id;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
 #ifdef CONFIG_IPQ5332_QCA8075_PHY
@@ -1721,8 +1719,7 @@ int ipq5332_edma_init(void *edma_board_cfg)
 #ifdef CONFIG_ATHRS17C_SWITCH
 	int s17c_swt_enb = 0, s17c_rst_gpio = 0;
 #endif
-	int node, phy_addr, mode, phy_node = -1, res = -1;
-	int aquantia_port[2] = {-1, -1}, aquantia_port_cnt = -1;
+	int node, phy_addr, mode, phy_node = -1;
 #endif
 	/*
 	 * Init non cache buffer
@@ -1731,29 +1728,21 @@ int ipq5332_edma_init(void *edma_board_cfg)
 
 #ifndef CONFIG_IPQ5332_RUMI
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
-
-	if (node >= 0) {
-		aquantia_port_cnt = fdtdec_get_uint(gd->fdt_blob, node, "aquantia_port_cnt", -1);
-
-		if (aquantia_port_cnt >= 1) {
-			res = fdtdec_get_int_array(gd->fdt_blob, node, "aquantia_port",
-					  (u32 *)aquantia_port, aquantia_port_cnt);
-			if (res < 0)
-				printf("Error: Aquantia port details not provided in DT");
-		}
-	}
-
 #ifdef CONFIG_QCA8084_SWT_MODE
-	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node, "qca8084_switch_enable", 0);
+	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node,
+				"qca8084_switch_enable", 0);
 	if (qca8084_swt_enb) {
-		qca8084_gpio =  fdtdec_get_uint(gd->fdt_blob, node, "qca808x_gpio", 0);
+		qca8084_gpio =  fdtdec_get_uint(gd->fdt_blob, node,
+					"qca808x_gpio", 0);
 		if (qca8084_gpio)
 			ipq_qca8084_switch_hw_reset(qca8084_gpio);
 	}
 
-	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/qca8084_swt_info");
+	phy_node = fdt_path_offset(gd->fdt_blob,
+					"/ess-switch/qca8084_swt_info");
 	if (phy_node >= 0)
-		get_phy_address(phy_node, swt_info, QCA8084_MAX_PORTS);
+		ipq5332_prepare_switch_info(phy_node, swt_info,
+						QCA8084_MAX_PORTS);
 #endif
 
 #ifdef CONFIG_ATHRS17C_SWITCH
@@ -1763,9 +1752,7 @@ int ipq5332_edma_init(void *edma_board_cfg)
 		s17c_swt_cfg.chip_detect = 0;
 		s17c_rst_gpio = fdtdec_get_uint(gd->fdt_blob, node,
 				"s17c_rst_gpio", 0);
-
 		ipq_s17c_switch_reset(s17c_rst_gpio);
-
 		/*
 		 * Set ref clock 25MHZ and enable Force mode
 		 */
@@ -1783,10 +1770,9 @@ int ipq5332_edma_init(void *edma_board_cfg)
 				s17c_swt_cfg.port_count);
 	}
 #endif
-
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
 	if (phy_node >= 0)
-		get_phy_address(phy_node, phy_info, IPQ5332_PHY_MAX);
+		ipq5332_prepare_port_info(phy_node, IPQ5332_PHY_MAX);
 
 	mode = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode0", -1);
 	if (mode < 0) {
@@ -1876,92 +1862,115 @@ int ipq5332_edma_init(void *edma_board_cfg)
 			goto init_failed;
 
 		for (phy_id =  0; phy_id < IPQ5332_PHY_MAX; phy_id++) {
-			if (phy_node >= 0) {
-				phy_addr = phy_info[phy_id]->phy_address;
-			} else {
-				printf("Error:Phy addresses not configured in DT\n");
-				goto init_failed;
-			}
+			phy_info = port_info[phy_id]->phy_info;
+			phy_addr = phy_info->phy_address;
 #ifdef CONFIG_QCA8084_SWT_MODE
-			if (phy_info[phy_id]->phy_type == QCA8084_PHY_TYPE && !qca8084_init_done) {
+			if (phy_info->phy_type == QCA8084_PHY_TYPE &&
+				!qca8084_init_done) {
 				ipq_phy_addr_fixup();
 				ipq_clock_init();
 				qca8084_init_done = 1;
 			}
 #endif
-
-			phy_chip_id1 = ipq_mdio_read(phy_addr, QCA_PHY_ID1, NULL);
-			phy_chip_id2 = ipq_mdio_read(phy_addr, QCA_PHY_ID2, NULL);
-			phy_chip_id = (phy_chip_id1 << 16) | phy_chip_id2;
-			if (phy_id == aquantia_port[0] || phy_id == aquantia_port[1]) {
-				phy_chip_id1 = ipq_mdio_read(phy_addr, (1<<30) |(1<<16) | QCA_PHY_ID1, NULL);
-				phy_chip_id2 = ipq_mdio_read(phy_addr, (1<<30) |(1<<16) | QCA_PHY_ID2, NULL);
-				phy_chip_id = (phy_chip_id1 << 16) | phy_chip_id2;
+			if (phy_info->phy_type == AQ_PHY_TYPE) {
+				phy_chip_id1 = ipq_mdio_read(phy_addr,
+							(1<<30) |(1<<16) |
+							QCA_PHY_ID1, NULL);
+				phy_chip_id2 = ipq_mdio_read(phy_addr,
+							(1<<30) |(1<<16) |
+							QCA_PHY_ID2, NULL);
+				phy_chip_id = (phy_chip_id1 << 16) |
+							phy_chip_id2;
+			} else {
+				phy_chip_id1 = ipq_mdio_read(phy_addr,
+							QCA_PHY_ID1, NULL);
+				phy_chip_id2 = ipq_mdio_read(phy_addr,
+							QCA_PHY_ID2, NULL);
+				phy_chip_id = (phy_chip_id1 << 16) |
+						phy_chip_id2;
 			}
-			pr_debug("phy_id is: 0x%x, phy_addr = 0x%x, phy_chip_id1 = 0x%x, phy_chip_id2 = 0x%x, phy_chip_id = 0x%x\n",
-				 phy_id, phy_addr, phy_chip_id1, phy_chip_id2, phy_chip_id);
+			pr_debug("phy_id is: 0x%x, phy_addr = 0x%x,"
+					"phy_chip_id1 = 0x%x,"
+					"phy_chip_id2 = 0x%x,"
+					"phy_chip_id = 0x%x\n",
+					phy_id, phy_addr, phy_chip_id1,
+					phy_chip_id2, phy_chip_id);
+
 			switch(phy_chip_id) {
 #ifdef CONFIG_IPQ5332_QCA8075_PHY
-				case QCA8075_PHY_V1_0_5P:
-				case QCA8075_PHY_V1_1_5P:
-				case QCA8075_PHY_V1_1_2P:
-					if (!sw_init_done) {
-						if (ipq5332_qca8075_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr) == 0) {
-							sw_init_done = 1;
-						}
-					} else {
-						ipq5332_qca8075_phy_map_ops(&ipq5332_edma_dev[i]->ops[phy_id]);
+			case QCA8075_PHY_V1_0_5P:
+			case QCA8075_PHY_V1_1_5P:
+			case QCA8075_PHY_V1_1_2P:
+				if (!sw_init_done) {
+					if (ipq5332_qca8075_phy_init(
+						&ipq5332_edma_dev[i]->ops[phy_id],
+						phy_addr) == 0) {
+						sw_init_done = 1;
 					}
-
-					if (mode == EPORT_WRAPPER_PSGMII)
-						ipq5332_qca8075_phy_interface_set_mode(phy_addr, 0x0);
-					else if (mode == EPORT_WRAPPER_QSGMII)
-						ipq5332_qca8075_phy_interface_set_mode(phy_addr, 0x4);
-					break;
+				} else {
+					ipq5332_qca8075_phy_map_ops(
+						&ipq5332_edma_dev[i]->ops[phy_id]);
+				}
+				if (mode == EPORT_WRAPPER_PSGMII)
+					ipq5332_qca8075_phy_interface_set_mode(
+						phy_addr, 0x0);
+				else if (mode == EPORT_WRAPPER_QSGMII)
+					ipq5332_qca8075_phy_interface_set_mode(
+						phy_addr, 0x4);
+			break;
 #endif
 #ifdef CONFIG_QCA8033_PHY
-				case QCA8033_PHY:
-					ipq_qca8033_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr);
-					break;
+			case QCA8033_PHY:
+				ipq_qca8033_phy_init(
+					&ipq5332_edma_dev[i]->ops[phy_id],
+					phy_addr);
+			break;
 #endif
 #ifdef CONFIG_QCA8081_PHY
-				case QCA8081_PHY:
-				case QCA8081_1_1_PHY:
-					ipq_qca8081_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr);
-					break;
+			case QCA8081_PHY:
+			case QCA8081_1_1_PHY:
+				ipq_qca8081_phy_init(
+					&ipq5332_edma_dev[i]->ops[phy_id],
+					phy_addr);
+			break;
 #endif
 #ifdef CONFIG_QCA8084_SWT_MODE
-				case QCA8084_PHY:
-					qca8084_chip_detect = 1;
-					break;
+			case QCA8084_PHY:
+				qca8084_chip_detect = 1;
+			break;
 #endif
 #ifdef CONFIG_ATHRS17C_SWITCH
-				case QCA8337_PHY:
-					if (s17c_swt_enb)
-						s17c_swt_cfg.chip_detect = 1;
-					break;
+			case QCA8337_PHY:
+				if (s17c_swt_enb)
+					s17c_swt_cfg.chip_detect = 1;
+			break;
 #endif
 #ifdef CONFIG_IPQ_QCA_AQUANTIA_PHY
-				case AQUANTIA_PHY_107:
-				case AQUANTIA_PHY_109:
-				case AQUANTIA_PHY_111:
-				case AQUANTIA_PHY_111B0:
-				case AQUANTIA_PHY_112:
-				case AQUANTIA_PHY_112C:
-				case AQUANTIA_PHY_113C_A0:
-				case AQUANTIA_PHY_113C_A1:
-				case AQUANTIA_PHY_113C_B0:
-				case AQUANTIA_PHY_113C_B1:
-					ipq_board_fw_download(phy_addr);
-					mdelay(100);
-					ipq_qca_aquantia_phy_init(&ipq5332_edma_dev[i]->ops[phy_id], phy_addr);
-					break;
+			case AQUANTIA_PHY_107:
+			case AQUANTIA_PHY_109:
+			case AQUANTIA_PHY_111:
+			case AQUANTIA_PHY_111B0:
+			case AQUANTIA_PHY_112:
+			case AQUANTIA_PHY_112C:
+			case AQUANTIA_PHY_113C_A0:
+			case AQUANTIA_PHY_113C_A1:
+			case AQUANTIA_PHY_113C_B0:
+			case AQUANTIA_PHY_113C_B1:
+				ipq_board_fw_download(phy_addr);
+				mdelay(100);
+				ipq_qca_aquantia_phy_init(
+					&ipq5332_edma_dev[i]->ops[phy_id],
+					phy_addr);
+			break;
 #endif
-				default:
-					if (phy_info[phy_id]->phy_type != SFP_PHY_TYPE)
-						printf("\nphy chip id: 0x%x id not matching for phy id: 0x%x with phy_type: 0x%x and phy address: 0x%x",
-							phy_chip_id, phy_id, phy_info[phy_id]->phy_type, phy_info[phy_id]->phy_address);
-					break;
+			default:
+				if (phy_info->phy_type != SFP_PHY_TYPE)
+					printf("Port%d Invalid Phy Id 0x%x"
+						"Type 0x%x add 0x%x\n",
+						phy_id, phy_chip_id,
+						phy_info->phy_type,
+						phy_info->phy_address);
+			break;
 			}
 		}
 #endif
@@ -1975,13 +1984,17 @@ int ipq5332_edma_init(void *edma_board_cfg)
 #ifdef CONFIG_QCA8084_SWT_MODE
 		/** QCA8084 switch specific configurations */
 		if (qca8084_swt_enb && qca8084_chip_detect) {
-			/** Force speed ipq5332 2nd port for QCA8084 switch mode */
+			/*
+			 * Force speed ipq5332 2nd port
+			 * for QCA8084 switch mode
+			 */
 			clk[0] = 0x301;
 			clk[1] = 0x0;
-			clk[2] = 0x401;
+			clk[2] = 0x301;
 			clk[3] = 0x0;
 
-			pr_debug("Force speed ipq5332 2nd PORT for QCA8084 switch mode \n");
+			pr_debug("Force speed ipq5332 2nd PORT "
+					"for QCA8084 switch mode \n");
 			ipq5332_speed_clock_set(PORT1, clk);
 
 			/** Force Link-speed: 1000M
@@ -1990,7 +2003,8 @@ int ipq5332_edma_init(void *edma_board_cfg)
 
 			ret = ipq_qca8084_hw_init(swt_info);
 			if (ret < 0) {
-				printf("Error: ipq_qca8084_hw_init failed \n");
+				printf("Error: qca8084 switch mode"
+					"hw_init failed \n");
 				goto init_failed;
 			}
 		}

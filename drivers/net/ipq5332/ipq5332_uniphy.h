@@ -72,6 +72,8 @@
 #define VR_MII_AN_INTR_STS			0x1f8002
 #define CL37_ANCMPLT_INTR			(1 << 0)
 
+#define GCC_UNIPHY0_MISC			0x1816050
+
 enum uniphy_reset_type {
 	UNIPHY0_SOFT_RESET = 0,
 	UNIPHY0_XPCS_RESET,
