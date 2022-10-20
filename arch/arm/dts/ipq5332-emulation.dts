@@ -86,6 +86,54 @@
 		};
 	};
 
+	spi {
+		spi_gpio {
+			blsp0_spi_clk {
+				gpio = <14>;
+				func = <1>;
+				oe = <GPIO_OE_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+			blsp0_spi_mosi {
+				gpio = <15>;
+				func = <1>;
+				oe = <GPIO_OE_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+			blsp0_spi_miso {
+				gpio = <16>;
+				func = <1>;
+				drvstr = <GPIO_8MA>;
+			};
+			blsp0_spi_cs {
+				gpio = <17>;
+				func = <1>;
+				oe = <GPIO_OE_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	i2c {
+		i2c_gpio {
+			gpio1 {
+				gpio = <29>;
+				func = <3>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+				oe = <GPIO_OE_ENABLE>;
+			};
+
+			gpio2 {
+				gpio = <30>;
+				func = <3>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+				oe = <GPIO_OE_ENABLE>;
+			};
+		};
+	};
+
 	pci0: pci@20000000 {
 		status = "ok";
 		perst_gpio = <42>;
