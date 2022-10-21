@@ -85,27 +85,26 @@ int uart_clock_config(struct ipq_serial_platdata *plat)
 void emmc_clock_init(void)
 {
 #ifdef QCA_CLOCK_ENABLE
-	/* Enable root clock generator */
-	writel(readl(GCC_SDCC1_APPS_CBCR)|0x1, GCC_SDCC1_APPS_CBCR);
-	/* Add 10us delay for CLK_OFF to get cleared */
-	udelay(10);
-	writel(readl(GCC_SDCC1_AHB_CBCR)|0x1, GCC_SDCC1_AHB_CBCR);
-	/* PLL0 - 192Mhz */
-	writel(0x20B, GCC_SDCC1_APPS_CFG_RCGR);
-	/* Delay for clock operation complete */
-	udelay(10);
-	writel(0x1, GCC_SDCC1_APPS_M);
-	/* check this M, N D value while debugging
-	 * because as per clock tool the actual M, N, D
-	 * values are M=1, N=FA, D=F9
+	int cfg;
+
+	/* Configure sdcc1_apps_clk_src */
+	cfg = (GCC_SDCC1_APPS_CFG_RCGR_SRC_SEL |
+		GCC_SDCC1_APPS_CFG_RCGR_SRC_DIV |
+		GCC_SDCC1_APPS_CFG_RCGR_MODE_SEL);
+	writel(cfg, GCC_SDCC1_APPS_CFG_RCGR);
+	/*
+	 * Mode is dual edge,
+	 * For 192Mhz doesn't require MND value
+	 * 1152 / 6 = 192
 	 */
-	writel(0xFC, GCC_SDCC1_APPS_N);
-	writel(0xFD, GCC_SDCC1_APPS_D);
-	/* Delay for clock operation complete */
+	writel(CMD_UPDATE, GCC_SDCC1_APPS_CMD_RCGR);
+	mdelay(10);
+	writel(ROOT_EN, GCC_SDCC1_APPS_CMD_RCGR);
+
+	/* Configure CBCRs */
+	writel(readl(GCC_SDCC1_APPS_CBCR) | CLK_ENABLE, GCC_SDCC1_APPS_CBCR);
 	udelay(10);
-	/* Update APPS_CMD_RCGR to reflect source selection */
-	writel(readl(GCC_SDCC1_APPS_CMD_RCGR)|0x1, GCC_SDCC1_APPS_CMD_RCGR);
-	/* Add 10us delay for clock update to complete */
+	writel(readl(GCC_SDCC1_AHB_CBCR) | CLK_ENABLE, GCC_SDCC1_AHB_CBCR);
 	udelay(10);
 #else
 	return;
