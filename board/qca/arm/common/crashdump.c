@@ -444,7 +444,9 @@ static int do_dumpqca_data(unsigned int dump_level)
 	int indx;
 	int ebi_indx = 0;
 	int ret = CMD_RET_FAILURE;
+#ifdef CONFIG_IPQ5018
 	char buf = 1;
+#endif
 	struct dumpinfo_t *dumpinfo = dumpinfo_n;
 	int dump_entries = dump_entries_n;
 	char wlan_segment_name[32], runcmd[128], *s;
@@ -527,13 +529,14 @@ static int do_dumpqca_data(unsigned int dump_level)
 #endif
 	}
 
+#ifdef CONFIG_IPQ5018
 	ret = qca_scm_call(SCM_SVC_FUSE,
 			   QFPROM_IS_AUTHENTICATE_CMD, &buf, sizeof(char));
 	if (ret == 0 && buf == 1) {
 		dumpinfo = dumpinfo_s;
 		dump_entries = dump_entries_s;
 	}
-
+#endif
 	if (scm_set_boot_addr(false) == 0) {
 		/* Pull Core-1 out of reset, iff scm call succeeds */
 		krait_release_secondary();
@@ -607,13 +610,10 @@ static int do_dumpqca_data(unsigned int dump_level)
 				}
 			}
 
-#ifdef CONFIG_IPQ40XX
-			if (buf != 1)
-#endif
-				if ((is_compress == 1 && (dumpinfo[indx].to_compress != 1)) ||
-				    (is_compress != 1 && (dumpinfo[indx].to_compress == 1))) {
-					continue;
-				}
+			if ((is_compress == 1 && (dumpinfo[indx].to_compress != 1)) ||
+					(is_compress != 1 && (dumpinfo[indx].to_compress == 1))) {
+				continue;
+			}
 
 			if (is_usb_dump == 1 || is_compress == 1) {
 				printf("\nProcessing %s:\n", dumpinfo[indx].name);
