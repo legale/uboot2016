@@ -693,6 +693,37 @@ int qti_pas_and_auth_reset(u32 peripheral)
 
 	return ret;
 }
+
+int qti_scm_toggle_bt_eco_bit(u32 peripheral, u32 reg_val)
+{
+	int ret;
+
+	if (is_scm_armv8())
+	{
+		struct qca_scm_desc desc = {0};
+
+		desc.arginfo = QCA_SCM_ARGS(2);
+		desc.args[0] = peripheral;
+		desc.args[1] = reg_val;
+
+		ret = scm_call_64(SCM_SVC_BT_ECO_BIT,
+				SCM_BT_ECO_BIT_TOGGLE_CMD, &desc);
+	}
+	else
+	{
+		struct {
+			u32 proc;
+			u32 val;
+		} request;
+		request.proc = peripheral;
+		request.val = reg_val;
+		ret = scm_call(SCM_SVC_BT_ECO_BIT, SCM_BT_ECO_BIT_TOGGLE_CMD,
+				&request, sizeof(request), NULL, 0);
+	}
+
+	return ret;
+}
+
 #endif
 
 #else

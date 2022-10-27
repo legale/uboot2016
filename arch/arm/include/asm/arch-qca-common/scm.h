@@ -40,6 +40,8 @@
 #define SCM_PAS_INIT_IMAGE_CMD		0x1
 #define SCM_PAS_AUTH_AND_RESET_CMD	0x5
 #define SCM_CMD_OTP  			0x15
+#define SCM_SVC_BT_ECO_BIT		0x2
+#define SCM_BT_ECO_BIT_TOGGLE_CMD	0x21
 #endif
 
 /* scm_v8 */
@@ -145,6 +147,7 @@ int qca_scm(u32 svc_id, u32 cmd_id, u32 ownr_id, u32 *addr, u32 len);
 int qti_scm_otp(u32 peripheral);
 int qti_scm_pas_init_image(u32 peripheral, u32 addr);
 int qti_pas_and_auth_reset(u32 peripheral);
+int qti_scm_toggle_bt_eco_bit(u32 peripheral, u32 reg_val);
 #endif
 #define MAX_QCA_SCM_RETS		3
 #define MAX_QCA_SCM_ARGS		10

@@ -22,6 +22,7 @@
 #include <memalign.h>
 
 #include <linux/err.h>
+#include <asm/arch-qca-common/scm.h>
 
 static void *bt_ipc_alloc_lmsg(struct bt_descriptor *btDesc, uint32_t len,
 		struct ipc_aux_ptr *aux_ptr, uint8_t *is_lbuf_full)
@@ -185,6 +186,11 @@ static void bt_ipc_cust_msg(struct bt_descriptor *btDesc, uint8_t msgid)
 
 	switch (msgid) {
 	case IPC_CMD_IPC_STOP:
+		ret = qti_scm_toggle_bt_eco_bit(PAS_ID, BT_ECO_BIT_SET);
+		if (ret) {
+			printf("Failed to set BT ECO\n");
+			return;
+		}
 		printf("BT IPC Stopped, gracefully stopping APSS IPC\n");
 		break;
 	case IPC_CMD_SWITCH_TO_UART:
@@ -197,6 +203,12 @@ static void bt_ipc_cust_msg(struct bt_descriptor *btDesc, uint8_t msgid)
 		printf("BT Crashed, gracefully stopping IPC\n");
 		return;
 	case IPC_CMD_IPC_START:
+		ret = qti_scm_toggle_bt_eco_bit(PAS_ID, BT_ECO_BIT_RESET);
+		if (ret) {
+			printf("Failed to reset BT ECO\n");
+			return;
+		}
+
 		btmem->tx_ctxt = (struct context_info *)((void *)
 			btmem->rx_ctxt + btmem->rx_ctxt->TotalMemorySize);
 		btmem->lmsg_ctxt.widx = 0;

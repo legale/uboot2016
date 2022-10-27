@@ -24,6 +24,9 @@
 #define IOCTL_IPC_BOOT		0xBE
 #define IPC_TX_QSIZE		0x20
 
+#define BT_ECO_BIT_SET		0x4
+#define BT_ECO_BIT_RESET	0x0
+
 #define	TO_APPS_ADDR(a)		(btmem->virt + (int)(uintptr_t)a)
 #define	TO_BT_ADDR(a)		(a - btmem->virt)
 #define IPC_LBUF_SZ(w, x, y, z)	(((TO_BT_ADDR((void *)w) + w->x) - w->y) / w->z)
