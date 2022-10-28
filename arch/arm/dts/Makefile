@@ -96,7 +96,9 @@ dtb-$(CONFIG_ARCH_IPQ5332) += ipq5332-emulation.dtb \
 				ipq5332-mi01.2.dtb \
 				ipq5332-mi01.4.dtb \
 				ipq5332-mi01.6.dtb \
-				ipq5332-mi01.7.dtb
+				ipq5332-mi01.7.dtb \
+				ipq5332-db-mi01.1.dtb \
+				ipq5332-db-mi02.1.dtb
 
 dtb-$(CONFIG_ARCH_IPQ6018) += ipq6018-cp01-c1.dtb \
 			ipq6018-cp02-c1.dtb \
