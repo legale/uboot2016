@@ -112,8 +112,9 @@ struct per_part_info
 
 typedef struct
 {
-#define _SMEM_DUAL_BOOTINFO_MAGIC_START		0xA3A2A1A0
-#define _SMEM_DUAL_BOOTINFO_MAGIC_END		0xB3B2B1B0
+#define _SMEM_DUAL_BOOTINFO_MAGIC_START			0xA3A2A1A0
+#define _SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE		0xA3A2A1A1
+#define _SMEM_DUAL_BOOTINFO_MAGIC_END			0xB3B2B1B0
 
 	/* Magic number for identification when reading from flash */
 	uint32_t magic_start;

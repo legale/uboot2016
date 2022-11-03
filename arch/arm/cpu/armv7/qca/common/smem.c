@@ -524,7 +524,8 @@ int smem_bootconfig_info(void)
 	ret = smem_read_alloc_entry(SMEM_BOOT_DUALPARTINFO,
 			&qca_smem_bootconfig_info, sizeof(qca_smem_bootconfig_info_t));
 	if ((ret != 0) ||
-		(qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START) ||
+		((qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START) &&
+		(qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE)) ||
 		(qca_smem_bootconfig_info.magic_end != _SMEM_DUAL_BOOTINFO_MAGIC_END))
 		return -ENOMSG;
 
@@ -580,7 +581,8 @@ int smem_update_bootconfig_to_flash(void)
 		}
 	}
 
-	if (qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START) {
+	if ((qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START) &&
+		(qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE)) {
 		if(smem_bootconfig_info() != 0)
 			return -1;
 	}
