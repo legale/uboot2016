@@ -135,8 +135,10 @@ struct dumpinfo_t{
 extern struct dumpinfo_t dumpinfo_n[];
 extern int dump_entries_n;
 
+#ifdef CONFIG_IPQ5018
 extern struct dumpinfo_t dumpinfo_s[];
 extern int dump_entries_s;
+#endif
 
 #define MMC_IDENTIFY_MODE	0
 #define MMC_DATA_TRANSFER_MODE	1
