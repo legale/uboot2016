@@ -423,6 +423,15 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define QCN9224_TCSR_PBL_LOGGING_REG		0x1B00094
 
+#define QCN9224_OEM_ID 				0x01e20018
+#define QCN9224_SECURE_BOOT0_AUTH_EN 		0x01e20010
+#define QCN9224_OEM_PK_HASH 			0x01e20060
+#define QCN9224_OEM_PK_HASH_SIZE 		36
+
+#define QCN9224_OEM_ID_MASK 			GENMASK(31,16)
+#define QCN9224_OEM_ID_SHIFT 			16
+#define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
+
 #define BHI_STATUS (0x12C)
 #define BHI_IMGADDR_LOW (0x108)
 #define BHI_IMGADDR_HIGH (0x10C)
@@ -2142,5 +2151,68 @@ static int do_list_pci(cmd_tbl_t *cmdtp, int flag,
 U_BOOT_CMD(list_pci, 1, 1, do_list_pci,
 	   "Print the RC's PCIe details and attached device ID",
 	   "If no attach is present, then nothing will be printed");
+
+static int do_list_qcn9224_fuse(cmd_tbl_t *cmdtp, int flag,
+			    int argc, char * const argv[])
+{
+	pci_dev_t devbusfn;
+	struct pci_controller *hose;
+	pci_addr_t pci_mem_base, bar0_base;
+	int device_id;
+	u32 val;
+	int i;
+
+	for(device_id = 0; device_id < 4; device_id++) {
+		devbusfn = pci_find_ipq_devices(supported_device, device_id);
+		if (devbusfn == -1)
+			continue;
+
+		hose = pci_bus_to_hose(PCI_BUS(devbusfn));
+		if(hose == NULL)
+			continue;
+
+		pci_mem_base = hose->regions[0].bus_start;
+		bar0_base = pci_mem_base + 0x400000;
+
+		pci_write_config_dword (devbusfn, PCI_COMMAND,
+				(PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER));
+
+		pci_write_config_dword (devbusfn, PCI_BASE_ADDRESS_0, bar0_base);
+
+		pci_select_window(bar0_base, QCN9224_OEM_ID);
+
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_OEM_ID & WINDOW_RANGE_MASK));
+
+		printf("PCIe Bus ID: %d\nFuse Name \t\t Address \t Value\n",device_id);
+		printf("------------------------------------------------------\n");
+		printf("OEM ID\t\t\t 0x%x \t 0x%lx \n",QCN9224_OEM_ID,
+				(val & QCN9224_OEM_ID_MASK) >> QCN9224_OEM_ID_SHIFT);
+
+		pci_select_window(bar0_base, QCN9224_SECURE_BOOT0_AUTH_EN);
+
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_SECURE_BOOT0_AUTH_EN & WINDOW_RANGE_MASK));
+
+		printf("SECURE_BOOT0_AUTH_EN\t 0x%x \t 0x%x \n", QCN9224_SECURE_BOOT0_AUTH_EN,
+				(val & QCN9224_SECURE_BOOT0_AUTH_EN_MASK));
+
+		for(i = 0; i <= QCN9224_OEM_PK_HASH_SIZE ; i+=4) {
+			pci_select_window(bar0_base, QCN9224_OEM_PK_HASH + i);
+
+			val = readl(bar0_base + WINDOW_START +
+					((QCN9224_OEM_PK_HASH + i) & WINDOW_RANGE_MASK));
+
+			printf("OEM PK hash \t\t 0x%x \t 0x%x\n",QCN9224_OEM_PK_HASH + i, val);
+		}
+		printf("------------------------------------------------------\n\n");
+	}
+
+	return CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(list_qcn9224_fuse, 1, 1, do_list_qcn9224_fuse,
+	   "Print QCN9224 fuse details from attached PCIe slots",
+	   "If there is no QCN9224 attach, then nothing will be printed");
 
 #endif
