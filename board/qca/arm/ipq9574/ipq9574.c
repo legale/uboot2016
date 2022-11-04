@@ -1198,6 +1198,9 @@ void reset_crashdump(void)
 	}
 #endif
 	qca_scm_sdi();
+	if (cookie & DLOAD_ENABLE) {
+		cookie |= CRASHDUMP_RESET;
+	}
 	cookie &= DLOAD_DISABLE;
 	ret = qca_scm_dload(cookie);
 	if (ret)

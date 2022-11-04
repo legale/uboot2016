@@ -293,6 +293,7 @@ extern loff_t board_env_size;
 #ifdef CONFIG_OF_BOARD_SETUP
 #define DLOAD_DISABLE		(~BIT(4))
 #define DLOAD_ENABLE		BIT(4)
+#define CRASHDUMP_RESET                BIT(11)
 
 #define CONFIG_IPQ_RUNTIME_FAILSAFE
 #ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
