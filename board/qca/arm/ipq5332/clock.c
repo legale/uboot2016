@@ -349,16 +349,6 @@ void frequency_init(void)
 	mdelay(1);
 	writel(reg_val | ROOT_EN, NSS_CC_CFG_CMD_RCGR);
 
-	/* PCNOC_BFDCD frequency for Uniphy AHB 100M */
-	reg_val = readl(GCC_PCNOC_BFDCD_CFG_RCGR);
-	reg_val &= ~0x7ff;
-	writel(reg_val | PCCNOC_BFDCD_SRC_SEL | PCCNOC_BFDCD_DIV_SEL,
-			GCC_PCNOC_BFDCD_CFG_RCGR);
-	reg_val = readl(GCC_PCNOC_BFDCD_CMD_RCGR);
-	writel(reg_val | CMD_UPDATE, GCC_PCNOC_BFDCD_CMD_RCGR);
-	mdelay(1);
-	writel(reg_val | ROOT_EN, GCC_PCNOC_BFDCD_CMD_RCGR);
-
 	/* SYSNOC frequency 266.666667M */
 	reg_val = readl(GCC_SYSTEM_NOC_BFDCD_CFG_RCGR);
 	reg_val &= ~0x7ff;
