@@ -222,7 +222,7 @@
 
 #define GCC_USB0_AUX_CFG_MODE_DUAL_EDGE 	(2 << 12)
 #define GCC_USB0_AUX_CFG_SRC_SEL		(0 << 8)
-#define GCC_USB0_AUX_CFG_SRC_DIV		(0x3 << 0)
+#define GCC_USB0_AUX_CFG_SRC_DIV		(0x17 << 0)
 
 #define AUX_M					0x0
 #define AUX_N					0x0
@@ -320,6 +320,9 @@
 
 #define GCC_PCIE_AXI_CFG_RCGR_SRC_SEL		(0x9 << 0)
 #define GCC_PCIE_AXI_CFG_RCGR_SRC_DIV		(2 << 8)
+
+#define GCC_PCIE_AXI_M_CFG_RCGR_SRC_SEL		(0x8 << 0)
+#define GCC_PCIE_AXI_M_CFG_RCGR_SRC_DIV		(2 << 8)
 
 #define GCC_PCIE_AXI_S_CFG_RCGR_SRC_SEL		(2 << 8)
 #define GCC_PCIE_AXI_S_CFG_RCGR_SRC_DIV		(9 << 0)

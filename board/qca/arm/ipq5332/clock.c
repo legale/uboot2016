@@ -122,18 +122,18 @@ void emmc_clock_reset(void)
 void pcie_v2_clock_init(int pcie_id)
 {
 #ifdef QCA_CLOCK_ENABLE
-	int cfg, cfg1;
+	int cfg, cfg1,cfg2;
 	static int clk_configure;
 
-	/* Configure pcie_aux_clk_src */
 	if (clk_configure == 0) {
+		/* Configure pcie_aux_clk_src */
 		cfg = (GCC_PCIE_AUX_CFG_RCGR_MN_MODE |
 			GCC_PCIE_AUX_CFG_RCGR_SRC_SEL |
 			GCC_PCIE_AUX_CFG_RCGR_SRC_DIV);
 		writel(cfg, GCC_PCIE_AUX_CFG_RCGR);
 		writel(0x1, GCC_PCIE_AUX_M);
-		writel(0xFFFC, GCC_PCIE_AUX_N);
-		writel(0xFFFA, GCC_PCIE_AUX_D);
+		writel(0xFFE7, GCC_PCIE_AUX_N);
+		writel(0xFFE6, GCC_PCIE_AUX_D);
 		writel(CMD_UPDATE, GCC_PCIE_AUX_CMD_RCGR);
 		mdelay(10);
 		writel(ROOT_EN, GCC_PCIE_AUX_CMD_RCGR);
@@ -144,6 +144,8 @@ void pcie_v2_clock_init(int pcie_id)
 			GCC_PCIE_AXI_CFG_RCGR_SRC_DIV);
 	cfg1 = (GCC_PCIE_RCHG_CFG_RCGR_SRC_SEL |
 			GCC_PCIE_RCHG_CFG_RCGR_SRC_DIV);
+	cfg2 = (GCC_PCIE_AXI_M_CFG_RCGR_SRC_SEL |
+			GCC_PCIE_AXI_M_CFG_RCGR_SRC_DIV);
 	switch(pcie_id) {
 	case 0:
 		writel(cfg, GCC_PCIE3X1_0_AXI_CFG_RCGR);
@@ -163,7 +165,7 @@ void pcie_v2_clock_init(int pcie_id)
 		writel(CLK_ENABLE, GCC_PCIE3X1_PHY_AHB_CBCR);
 		break;
 	case 1:
-		writel(cfg, GCC_PCIE3X2_AXI_M_CFG_RCGR);
+		writel(cfg2, GCC_PCIE3X2_AXI_M_CFG_RCGR);
 		writel(CMD_UPDATE, GCC_PCIE3X2_AXI_M_CMD_RCGR);
 		mdelay(10);
 		writel(ROOT_EN, GCC_PCIE3X2_AXI_M_CMD_RCGR);
