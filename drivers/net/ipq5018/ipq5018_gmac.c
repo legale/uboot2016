@@ -45,7 +45,10 @@ extern int ipq_qca8081_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_gephy_phy_init(struct phy_ops **ops, u32 phy_id);
 extern int ipq_sw_mdio_init(const char *);
 extern int ipq5018_sw_mdio_init(const char *);
-extern void ppe_uniphy_mode_set(uint32_t mode);
+extern void ppe_uniphy_mode_set(uint32_t mode, uint32_t phy_mode);
+extern void uniphy_channel0_input_output_6_get(int mode, u32 gpio, u8 *status,
+					       fal_port_speed_t *speed,
+					       fal_port_duplex_t *duplex);
 extern int ipq_athrs17_init(ipq_gmac_board_cfg_t *gmac_cfg);
 
 static int ipq_eth_wr_macaddr(struct eth_device *dev)
@@ -354,6 +357,7 @@ static int ipq5018_phy_link_update(struct eth_device *dev)
 	char *dp[] = {"Half", "Full"};
 	int speed_clock1 = 0, speed_clock2 = 0;
 	int mode = PORT_WRAPPER_SGMII0_RGMII4;
+	uint32_t phy_mode = 0x70;
 
 	phy_get_ops = priv->ops;
 
@@ -363,17 +367,27 @@ static int ipq5018_phy_link_update(struct eth_device *dev)
 		status = ipq5018_s17c_Link_Update(priv);
 	}
 
-	if (phy_get_ops != NULL &&
-		phy_get_ops->phy_get_link_status != NULL &&
-		phy_get_ops->phy_get_speed != NULL &&
-		phy_get_ops->phy_get_duplex != NULL){
+	if (priv->sfp_tx_gpio || phy_get_ops) {
+		if (phy_get_ops &&
+		    phy_get_ops->phy_get_link_status != NULL &&
+		    phy_get_ops->phy_get_speed != NULL &&
+		    phy_get_ops->phy_get_duplex != NULL){
 
-		status = phy_get_ops->phy_get_link_status(priv->mac_unit,
-				priv->phy_address);
-		phy_get_ops->phy_get_speed(priv->mac_unit,
-				priv->phy_address, &speed);
-		phy_get_ops->phy_get_duplex(priv->mac_unit,
-				priv->phy_address, &duplex);
+			status = phy_get_ops->phy_get_link_status(priv->mac_unit,
+				 priv->phy_address);
+			phy_get_ops->phy_get_speed(priv->mac_unit,
+				 priv->phy_address, &speed);
+			phy_get_ops->phy_get_duplex(priv->mac_unit,
+				 priv->phy_address, &duplex);
+		}
+
+		if (priv->sfp_tx_gpio) {
+			mode = priv->sfp_mode;
+			uniphy_channel0_input_output_6_get(priv->sfp_mode,
+							   priv->sfp_rx_gpio,
+							   &status,
+							   &speed, &duplex);
+		}
 
 		switch (speed) {
 		case FAL_SPEED_10:
@@ -398,6 +412,8 @@ static int ipq5018_phy_link_update(struct eth_device *dev)
 			priv->speed = SGMII_PORT_SELECT;
 			speed_clock1 = 1;
 			speed_clock2 = 0;
+			if (priv->sfp_tx_gpio)
+				phy_mode = 0x30;
 			printf ("eth%d %s Speed :%d %s duplex\n",
 					priv->mac_unit,
 					lstatus[status], speed,
@@ -408,6 +424,11 @@ static int ipq5018_phy_link_update(struct eth_device *dev)
 			mode = PORT_WRAPPER_SGMII_PLUS;
 			speed_clock1 = 1;
 			speed_clock2 = 0;
+
+			if (priv->sfp_tx_gpio)
+				phy_mode = 0x50;
+			else
+				phy_mode = 0x30;
 			printf ("eth%d %s Speed :%d %s duplex\n",
 					priv->mac_unit,
 					lstatus[status], speed,
@@ -427,7 +448,7 @@ static int ipq5018_phy_link_update(struct eth_device *dev)
 	}
 
 	if (priv->mac_unit){
-		ppe_uniphy_mode_set(mode);
+		ppe_uniphy_mode_set(mode, phy_mode);
 	} else {
 		ipq5018_enable_gephy();
 	}
@@ -724,7 +745,9 @@ int ipq_gmac_init(ipq_gmac_board_cfg_t *gmac_cfg)
 	uchar enet_addr[CONFIG_IPQ_NO_MACS * 6];
 	int i;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
+	uint32_t phy_mode = 0x70;
 	int ret;
+
 	memset(enet_addr, 0, sizeof(enet_addr));
 
 	/* Mdio init */
@@ -786,6 +809,14 @@ int ipq_gmac_init(ipq_gmac_board_cfg_t *gmac_cfg)
 		ipq_gmac_macs[i]->interface = gmac_cfg->phy_interface_mode;
 		ipq_gmac_macs[i]->phy_type = gmac_cfg->phy_type;
 		ipq_gmac_macs[i]->phy_external_link = gmac_cfg->phy_external_link;
+		ipq_gmac_macs[i]->sfp_tx_gpio = gmac_cfg->sfp_tx_gpio;
+		ipq_gmac_macs[i]->sfp_rx_gpio = gmac_cfg->sfp_rx_gpio;
+		ipq_gmac_macs[i]->sfp_mode = gmac_cfg->sfp_mode;
+
+		if (gmac_cfg->sfp_mode == PORT_WRAPPER_SGMII_PLUS)
+			phy_mode = 0x50;
+		else if (gmac_cfg->sfp_mode == PORT_WRAPPER_SGMII_FIBER)
+			phy_mode = 0x30;
 
 		snprintf((char *)ipq_gmac_macs[i]->phy_name,
 				sizeof(ipq_gmac_macs[i]->phy_name), "IPQ MDIO%d", i);
@@ -847,7 +878,12 @@ int ipq_gmac_init(ipq_gmac_board_cfg_t *gmac_cfg)
 				}
 				break;
 			default:
-				printf("GMAC%d:Invalid PHY ID \n", i);
+				if (gmac_cfg->sfp_tx_gpio) {
+					ppe_uniphy_mode_set(gmac_cfg->sfp_mode,
+							    phy_mode);
+				} else {
+					printf("GMAC%d:Invalid PHY ID \n", i);
+				}
 				break;
 		}
 		/* Initialize 8337 switch */

@@ -14,6 +14,7 @@
 
 #ifndef _IPQ5018_UNIPHY_H_
 #define _IPQ5018_UNIPHY_H
+#include "ipq_phy.h"
 
 #define PPE_UNIPHY_INSTANCE0			0
 
@@ -47,6 +48,11 @@
 #define UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4	0x480
 #define UNIPHY_FORCE_SPEED_25M			(1 << 3)
 
+#define UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_6	0x488
+#define CH0_LINK_MAC				(1 << 7)
+#define CH0_DUPLEX_MODE_MAC			(1 << 6)
+#define CH0_SPEED_MODE_MAC			(3 << 4)
+
 #define UNIPHY_REF_CLK_CTRL_REG			0x74
 
 #define UNIPHY_INSTANCE_LINK_DETECT		0x570
@@ -61,7 +67,14 @@
 #define UNIPHY_PLL_RESET_REG_VALUE 		0x02bf
 #define UNIPHY_PLL_RESET_REG_DEFAULT_VALUE 	0x02ff
 
-void ppe_uniphy_mode_set(uint32_t mode);
+#define UNIPHY_SPEED_10M			0
+#define UNIPHY_SPEED_100M			1
+#define UNIPHY_SPEED_1000M			2
+
+void ppe_uniphy_mode_set(uint32_t mode, uint32_t phy_mode);
 void ppe_uniphy_set_forceMode(void);
 void ppe_uniphy_refclk_set(void);
+void uniphy_channel0_input_output_6_get(int mode, u32 gpio, u8 *status,
+					fal_port_speed_t *speed,
+					fal_port_duplex_t *duplex);
 #endif

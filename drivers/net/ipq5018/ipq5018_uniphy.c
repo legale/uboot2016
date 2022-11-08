@@ -59,9 +59,74 @@ static void ppe_gcc_uniphy_soft_reset(void)
 	writel(reg_value, GCC_UNIPHY0_MISC);
 }
 
-static void ppe_uniphy_sgmii_mode_set(uint32_t mode)
+void uniphy_channel0_input_output_6_get(int mode, u32 gpio, u8 *status,
+					fal_port_speed_t *speed,
+					fal_port_duplex_t *duplex)
 {
-	uint32_t phy_mode = 0x70;
+	uint32_t reg_value;
+	int val;
+
+	*status = 1;
+	*speed = FAL_SPEED_BUTT;
+	*duplex = FAL_DUPLEX_BUTT;
+
+	reg_value = readl(PPE_UNIPHY_BASE + UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_6);
+
+	val = reg_value & CH0_LINK_MAC;
+
+	if (val) {
+		switch(mode) {
+			case PORT_WRAPPER_SGMII_FIBER:
+				*status = 0; /* LINK UP */
+				break;
+			case PORT_WRAPPER_SGMII_PLUS:
+				/*
+				 * get rx_los status
+				 * if, rx_los = 0, link up
+				 * else, link down
+				 */
+				if (gpio && !gpio_get_value(gpio)) {
+					*status = 0;
+					*speed = FAL_SPEED_2500;
+					*duplex = FAL_FULL_DUPLEX;
+				}
+				return;
+			default:
+				printf("%s: Invalid mode\n", __func__);
+				break;
+		}
+	}
+
+	val = (reg_value & CH0_SPEED_MODE_MAC) >> 4;
+
+	switch(val) {
+		case UNIPHY_SPEED_1000M:
+			*speed = FAL_SPEED_1000;
+			break;
+		case UNIPHY_SPEED_100M:
+			*speed = FAL_SPEED_100;
+			break;
+		case UNIPHY_SPEED_10M:
+			*speed = FAL_SPEED_10;
+			break;
+		default:
+			*speed = FAL_SPEED_BUTT;
+			break;
+
+	}
+
+	val = (reg_value & CH0_DUPLEX_MODE_MAC) >> 6;
+
+	if (val)
+		*duplex = FAL_FULL_DUPLEX;
+	else
+		*duplex = FAL_HALF_DUPLEX;
+
+	return;
+}
+
+static void ppe_uniphy_sgmii_mode_set(uint32_t mode, uint32_t phy_mode)
+{
 	writel(UNIPHY_MISC2_REG_SGMII_MODE,
 		PPE_UNIPHY_BASE + UNIPHY_MISC2_REG_OFFSET);
 
@@ -96,7 +161,6 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t mode)
 		case PORT_WRAPPER_SGMII_PLUS:
 			writel((UNIPHY_SG_PLUS_MODE | UNIPHY_PSGMII_MAC_MODE),
 					PPE_UNIPHY_BASE + PPE_UNIPHY_MODE_CONTROL);
-			phy_mode = 0x30;
 			break;
 
 		default:
@@ -123,12 +187,12 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t mode)
 	ppe_uniphy_calibration();
 }
 
-void ppe_uniphy_mode_set(uint32_t mode)
+void ppe_uniphy_mode_set(uint32_t mode, uint32_t phy_mode)
 {
 	/*
 	 * SGMII and SHMII plus confugure in same function
 	 */
-	ppe_uniphy_sgmii_mode_set(mode);
+	ppe_uniphy_sgmii_mode_set(mode, phy_mode);
 }
 
 void ppe_uniphy_set_forceMode(void)
