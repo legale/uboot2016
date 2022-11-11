@@ -554,17 +554,16 @@ void cmbblk_init(void)
 
 	reg_val = readl(PLL_REFERENCE_CLOCK);
 	reg_val = (reg_val & FREQUENCY_MASK) | INTERNAL_48MHZ_CLOCK;
+	/*Select clock source*/
 	writel(reg_val, PLL_REFERENCE_CLOCK);
+
+	/* Soft reset to calibration clocks */
 	reg_val = readl(PLL_POWER_ON_AND_RESET);
-	reg_val = reg_val | 0x40;
+	reg_val &= ~BIT(6);
 	writel(reg_val, PLL_POWER_ON_AND_RESET);
 	mdelay(10);
-	reg_val = reg_val & (~0x40);
+	reg_val |= BIT(6);
 	writel(reg_val, PLL_POWER_ON_AND_RESET);
-	mdelay(10);
-	writel(0xbf, PLL_POWER_ON_AND_RESET);
-	mdelay(10);
-	writel(0xff, PLL_POWER_ON_AND_RESET);
 	mdelay(10);
 #endif
 }

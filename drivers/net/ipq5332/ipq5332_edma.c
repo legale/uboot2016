@@ -1016,7 +1016,7 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			mac_speed = 0x0;
 			clk[0] = 0x318;
 			clk[1] = 9;
-			clk[2] = 0x318;
+			clk[2] = 0x418;
 			clk[3] = 9;
 			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
 				clk[1] = 3;
@@ -1027,12 +1027,12 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			mac_speed = 0x1;
 			clk[0] = 0x318;
 			clk[1] = 1;
-			clk[2] = 0x318;
+			clk[2] = 0x418;
 			clk[3] = 1;
 			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
 				clk[0] = 0x309;
 				clk[1] = 0;
-				clk[2] = 0x309;
+				clk[2] = 0x409;
 				clk[3] = 0;
 			}
 		break;
@@ -1040,23 +1040,23 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			mac_speed = 0x2;
 			clk[0] = 0x304;
 			clk[1] = 0x0;
-			clk[2] = 0x304;
+			clk[2] = 0x404;
 			clk[3] = 0x0;
 			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
 				clk[0] = 0x301;
-				clk[2] = 0x301;
+				clk[2] = 0x401;
 			}
 		break;
 		case FAL_SPEED_2500:
 			mac_speed = 0x4;
 			clk[0] = 0x307;
 			clk[1] = 0x0;
-			clk[2] = 0x307;
+			clk[2] = 0x407;
 			clk[3] = 0x0;
 			if (phy_info->phy_type == SFP_PHY_TYPE ||
 				phy_info->phy_type == QCA8081_PHY_TYPE) {
 				clk[0] = 0x301;
-				clk[2] = 0x301;
+				clk[2] = 0x401;
 				mac_speed = 0x2;
 			}
 
@@ -1068,7 +1068,7 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			mac_speed = 0x5;
 			clk[0] = 0x303;
 			clk[1] = 0x0;
-			clk[2] = 0x303;
+			clk[2] = 0x403;
 			clk[3] = 0x0;
 		break;
 		case FAL_SPEED_10000:
