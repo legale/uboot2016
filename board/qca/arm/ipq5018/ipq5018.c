@@ -434,9 +434,9 @@ int ipq_read_tcsr_boot_misc(void)
 
 int apps_iscrashed(void)
 {
-	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (*dmagic & DLOAD_MAGIC_COOKIE)
+	if (dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
 
 	return 0;

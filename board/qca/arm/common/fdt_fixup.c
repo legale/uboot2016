@@ -918,11 +918,6 @@ __weak void fdt_fixup_sdx65_gpio(void *blob)
 	return;
 }
 
-__weak void fdt_fixup_runtime_failsafe(void *blob)
-{
-	return;
-}
-
 __weak void ipq_fdt_fixup_usb_device_mode(void *blob)
 {
 	const char *usb_cfg;
@@ -1169,9 +1164,6 @@ int ft_board_setup(void *blob, bd_t *bd)
 	fdt_low_memory_fixup(blob);
 	fdt_fixup_qpic(blob);
 	fdt_fixup_qpic_serial_training_offset(blob);
-#ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
-	fdt_fixup_runtime_failsafe(blob);
-#endif
 	s = getenv("dload_warm_reset");
 	if (s)
 		fdt_fixup_set_dload_warm_reset(blob);

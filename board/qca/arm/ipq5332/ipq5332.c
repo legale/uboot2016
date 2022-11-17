@@ -650,9 +650,9 @@ int ipq_read_tcsr_boot_misc(void)
 
 int apps_iscrashed_crashdump_disabled(void)
 {
-	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (*dmagic & DLOAD_DISABLED)
+	if (dmagic & DLOAD_DISABLED)
 		return 1;
 
 	return 0;
@@ -660,9 +660,9 @@ int apps_iscrashed_crashdump_disabled(void)
 
 int apps_iscrashed(void)
 {
-	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (*dmagic & DLOAD_MAGIC_COOKIE)
+	if (dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
 
 	return 0;
@@ -674,14 +674,6 @@ void reset_crashdump(void)
 	unsigned int cookie = 0;
 
 	cookie = ipq_read_tcsr_boot_misc();
-#ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
-	if (ipq_runtime_fs_feature_enabled) {
-		fs_debug("\nFailsafe: %s: Clearing DLOAD and NonHLOS bits\n",
-			 __func__);
-		cookie &= ~(DLOAD_BITS);
-		cookie &= ~(IPQ_FS_NONHLOS_BIT);
-	}
-#endif
 	qca_scm_sdi();
 	cookie &= DLOAD_DISABLE;
 	ret = qca_scm_dload(cookie);

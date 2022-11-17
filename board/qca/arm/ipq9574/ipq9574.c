@@ -27,11 +27,9 @@
 #include <mmc.h>
 #include <sdhci.h>
 #include <usb.h>
-#include <watchdog.h>
 
 #define DLOAD_MAGIC_COOKIE	0x10
 #define DLOAD_DISABLED		0x40
-#define DLOAD_BITS		0xFF
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -41,7 +39,6 @@ extern int ipq_spi_init(u16);
 
 unsigned int qpic_frequency = 0, qpic_phase = 0;
 static int aq_phy_initialised = 0;
-extern unsigned ipq_runtime_fs_feature_enabled;
 
 extern	int qca_scm_dpr(u32, u32, void *, size_t);
 
@@ -62,31 +59,6 @@ void qca_serial_init(struct ipq_serial_platdata *plat)
 
 	return;
 }
-
-#ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
-void fdt_fixup_runtime_failsafe(void *blob)
-{
-	int node_off, ret;
-	const char *fs_node = {"/soc/qti,scm_restart_reason"};
-
-	/* This fixup is for informing HLOS whether
-	 * runtime failsafe feature is enabled or not
-	 */
-	node_off = fdt_path_offset(blob, fs_node);
-	if (node_off < 0) {
-		printf("%s: Failsafe: unable to find node '%s'\n",
-				__func__, fs_node);
-		return;
-	}
-
-	ret = fdt_setprop_u32(blob, node_off, "qti,runtime-failsafe",
-			ipq_runtime_fs_feature_enabled);
-	if (ret) {
-		printf("%s : Unable to set property 'ipq,runtime_failsafe'\n",__func__);
-		return;
-	}
-}
-#endif
 
 void board_nand_init(void)
 {
@@ -1176,27 +1148,12 @@ unsigned long timer_read_counter(void)
 	return 0;
 }
 
-#ifdef CONFIG_HW_WATCHDOG
-void hw_watchdog_reset(void)
-{
-	writel(1, APCS_WDT_RST);
-}
-#endif
-
 void reset_crashdump(void)
 {
 	unsigned int ret = 0;
 	unsigned int cookie = 0;
 
 	cookie = ipq_read_tcsr_boot_misc();
-#ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
-	if (ipq_runtime_fs_feature_enabled) {
-		fs_debug("\nFailsafe: %s: Clearing DLOAD and NonHLOS bits\n",
-			 __func__);
-		cookie &= ~(DLOAD_BITS);
-		cookie &= ~(IPQ_FS_NONHLOS_BIT);
-	}
-#endif
 	qca_scm_sdi();
 	if (cookie & DLOAD_ENABLE) {
 		cookie |= CRASHDUMP_RESET;
@@ -1286,23 +1243,11 @@ int ipq_read_tcsr_boot_misc(void)
 	return *dmagic;
 }
 
-#ifdef CONFIG_IPQ_RUNTIME_FAILSAFE
-int is_hlos_crashed(void)
-{
-	u32 *dmagic = TCSR_BOOT_MISC_REG;
-
-	if (*dmagic & IPQ_FS_HLOS_BIT)
-		return 1;
-
-	return 0;
-}
-#endif
-
 int apps_iscrashed_crashdump_disabled(void)
 {
-	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (*dmagic & DLOAD_DISABLED)
+	if (dmagic & DLOAD_DISABLED)
 		return 1;
 
 	return 0;
@@ -1310,9 +1255,9 @@ int apps_iscrashed_crashdump_disabled(void)
 
 int apps_iscrashed(void)
 {
-	u32 *dmagic = TCSR_BOOT_MISC_REG;
+	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (*dmagic & DLOAD_MAGIC_COOKIE)
+	if (dmagic & DLOAD_MAGIC_COOKIE)
 		return 1;
 
 	return 0;
