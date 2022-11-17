@@ -979,25 +979,25 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 						phy_addr, &curr_speed[i]);
 			phy_get_ops->phy_get_duplex(priv->mac_unit,
 						phy_addr, &duplex);
+			}
 
-			if (status == 0) {
-				linkup++;
-				if (old_speed[i] == curr_speed[i]) {
-					print_eth_info(priv->mac_unit, i,
-							lstatus[status],
-							curr_speed[i],
-							dp[duplex]);
-					continue;
-				} else {
-					old_speed[i] = curr_speed[i];
-				}
-			} else {
+		if (status == 0) {
+			linkup++;
+			if (old_speed[i] == curr_speed[i]) {
 				print_eth_info(priv->mac_unit, i,
 						lstatus[status],
 						curr_speed[i],
 						dp[duplex]);
 				continue;
+			} else {
+				old_speed[i] = curr_speed[i];
 			}
+		} else {
+			print_eth_info(priv->mac_unit, i,
+					lstatus[status],
+					curr_speed[i],
+					dp[duplex]);
+			continue;
 		}
 #endif
 

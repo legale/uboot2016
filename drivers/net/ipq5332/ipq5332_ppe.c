@@ -298,6 +298,10 @@ void ipq5332_port_mac_clock_reset(int port)
 	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
 	reg_val &= ~GCC_PORT1_ARES;
 	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
+
+	/* Enabel UNIPHY port clk */
+	writel(0x1, (NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8)));
+	writel(0x1, (NSS_CC_UNIPHY_PORT1_TX_CBCR + (port * 0x8)));
 }
 
 void ipq5332_speed_clock_set(int port_id, int clk[4])
@@ -508,6 +512,23 @@ static void ipq5332_ppe_tdm_configuration(void)
 	ipq5332_ppe_reg_write(0xc1b0, 0x31);
 	ipq5332_ppe_reg_write(0xc1c0, 0x22);
 	ipq5332_ppe_reg_write(0xc1d0, 0x32);
+	ipq5332_ppe_reg_write(0xb000, 0x8000001E);
+
+	writel(0x20,(void *)0x3a47a000);
+	writel(0x12,(void *)0x3a47a010);
+	writel(0x1 ,(void *)0x3a47a020);
+	writel(0x2 ,(void *)0x3a47a030);
+	writel(0x10,(void *)0x3a47a040);
+	writel(0x21,(void *)0x3a47a050);
+	writel(0x2 ,(void *)0x3a47a060);
+	writel(0x10,(void *)0x3a47a070);
+	writel(0x12,(void *)0x3a47a080);
+	writel(0x1 ,(void *)0x3a47a090);
+	writel(0xa ,(void *)0x3a400000);
+
+	writel(0x303,(void *)0x3a026100);
+	writel(0x303,(void *)0x3a026104);
+	writel(0x303,(void *)0x3a026108);
 #else
 	ipq5332_ppe_reg_write(0xc000, 0x20);
 	ipq5332_ppe_reg_write(0xc010, 0x32);
