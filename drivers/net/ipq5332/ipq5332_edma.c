@@ -1985,21 +1985,21 @@ int ipq5332_edma_init(void *edma_board_cfg)
 		/** QCA8084 switch specific configurations */
 		if (qca8084_swt_enb && qca8084_chip_detect) {
 			/*
-			 * Force speed ipq5332 2nd port
+			 * Force speed ipq5332 1st port
 			 * for QCA8084 switch mode
 			 */
 			clk[0] = 0x301;
 			clk[1] = 0x0;
-			clk[2] = 0x301;
+			clk[2] = 0x401;
 			clk[3] = 0x0;
 
-			pr_debug("Force speed ipq5332 2nd PORT "
+			pr_debug("Force speed ipq5332 1st PORT "
 					"for QCA8084 switch mode \n");
-			ipq5332_speed_clock_set(PORT1, clk);
+			ipq5332_speed_clock_set(PORT0, clk);
 
 			/** Force Link-speed: 1000M
 			 *  Force Link-status: enable */
-			ipq5332_pqsgmii_speed_set(PORT1, 0x2, 0x0);
+			ipq5332_pqsgmii_speed_set(PORT0, 0x2, 0x0);
 
 			ret = ipq_qca8084_hw_init(swt_info);
 			if (ret < 0) {
