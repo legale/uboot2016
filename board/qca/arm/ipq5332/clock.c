@@ -484,6 +484,16 @@ void mdio_clock_init(void)
 	/* MDIO Master Clock init */
 	reg_val = readl(GCC_MDIO_MASTER_AHB_CBCR);
 	writel(reg_val | GCC_CBCR_CLK_ENABLE, GCC_MDIO_MASTER_AHB_CBCR);
+
+	/* Enable 50MHZ */
+	reg_val = readl(MDIO_50MHZ_CLK_BASE);
+	reg_val |= BIT(0);
+	writel(reg_val, MDIO_50MHZ_CLK_BASE);
+
+	reg_val = readl(MDIO_50MHZ_CLK_BASE + 0x10000);
+	reg_val |= BIT(0);
+	writel(reg_val, MDIO_50MHZ_CLK_BASE + 0x10000);
+
 }
 
 
