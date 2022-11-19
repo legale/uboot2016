@@ -37,6 +37,11 @@
 #endif
 
 #define FLASH_SEL_BIT	7
+#define LINUX_NAND_DTS "/soc/nand@79b0000/"
+#define LINUX_MMC_DTS "/soc/sdhci@7804000/"
+#define STATUS_OK "status%?okay"
+#define STATUS_DISABLED "status%?disabled"
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static int aq_phy_initialised = 0;
@@ -120,23 +125,13 @@ int dump_entries_s = ARRAY_SIZE(dumpinfo_s);
 
 void fdt_fixup_flash(void *blob)
 {
-	int node_off, ret;
-	char *flash = "/soc/nand@79b0000";
-
 	if (gd->bd->bi_arch_number == MACH_TYPE_IPQ5332_EMULATION)
 		return;
 
-	node_off = fdt_path_offset(gd->fdt_blob, "nand");
-	if (!fdtdec_get_is_enabled(gd->fdt_blob, node_off))
-		flash = "/soc/sdhci@7804000";
+	if ((gd->bd->bi_arch_number >> FLASH_SEL_BIT) & 0x1) {
+		parse_fdt_fixup(LINUX_NAND_DTS"%"STATUS_DISABLED, blob);
+		parse_fdt_fixup(LINUX_MMC_DTS"%"STATUS_OK, blob);
 
-	node_off = fdt_path_offset(blob, flash);
-	if (node_off >= 0) {
-		ret = fdt_setprop_string(blob, node_off, "status", "okay");
-		if (ret < 0)
-			printf("Unable to set status of %s\n", flash);
-	} else {
-		printf("%s: unable to find node %d\n", __func__, node_off);
 	}
 	return;
 }
@@ -154,17 +149,28 @@ void ipq_uboot_fdt_fixup(void)
 	/* fix peripherals required for basic board bring up
 	 * like flash etc.
 	 */
-	flash = ((machid >> FLASH_SEL_BIT) & 0x1) ? "mmc" : "nand";
 
-	node = fdt_path_offset(gd->fdt_blob, flash);
-	if (node >= 0) {
-		ret = fdt_setprop_string(blob, node, "status", "okay");
-		if (ret < 0 && ret != -FDT_ERR_NOSPACE)
-			printf("Unable to set status of %s\n", flash);
-	} else {
-		printf("%s node not available\n", flash);
+	if ((machid >> FLASH_SEL_BIT) & 0x1) {
+		flash = "mmc";
+		node = fdt_path_offset(gd->fdt_blob, flash);
+		if (node >= 0) {
+			ret = fdt_setprop_string(blob, node, "status", "okay");
+			if (ret < 0 && ret != -FDT_ERR_NOSPACE)
+				printf("Unable to set status of %s\n", flash);
+		} else {
+			printf("%s node not available\n", flash);
+		}
+
+		flash = "nand";
+		node = fdt_path_offset(gd->fdt_blob, flash);
+		if (node >= 0) {
+			ret = fdt_setprop_string(blob, node, "status", "disabled");
+			if (ret < 0 && ret != -FDT_ERR_NOSPACE)
+				printf("Unable to set status of %s\n", flash);
+		} else {
+			printf("%s node not available\n", flash);
+		}
 	}
-
 	return;
 }
 
