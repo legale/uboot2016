@@ -94,9 +94,14 @@ void emmc_clock_init(void)
 	writel(cfg, GCC_SDCC1_APPS_CFG_RCGR);
 	/*
 	 * Mode is dual edge,
-	 * For 192Mhz doesn't require MND value
+	 * For 192Mhz, MND need to be set to zero
 	 * 1152 / 6 = 192
 	 */
+
+	writel(0, GCC_SDCC1_APPS_M);
+	writel(0, GCC_SDCC1_APPS_N);
+	writel(0, GCC_SDCC1_APPS_D);
+
 	writel(CMD_UPDATE, GCC_SDCC1_APPS_CMD_RCGR);
 	mdelay(10);
 	writel(ROOT_EN, GCC_SDCC1_APPS_CMD_RCGR);
