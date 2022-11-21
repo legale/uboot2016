@@ -801,42 +801,15 @@ void set_flash_secondary_type(qca_smem_flash_info_t *smem)
 };
 
 #ifdef CONFIG_IPQ5332_EDMA
-int get_mdc_mdio_gpio(int mdc_mdio_gpio[2])
-{
-	int mdc_mdio_gpio_cnt = 2, node;
-	int res = -1;
-	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
-	if (node >= 0) {
-		res = fdtdec_get_int_array(gd->fdt_blob, node, "mdc_mdio_gpio",
-					   (u32 *)mdc_mdio_gpio, mdc_mdio_gpio_cnt);
-		if (res >= 0)
-			return mdc_mdio_gpio_cnt;
-	}
-
-	return res;
-}
-
 void set_function_select_as_mdc_mdio(void)
 {
-	int mdc_mdio_gpio[2] = {-1, -1}, mdc_mdio_gpio_cnt, i;
-	unsigned int *mdc_mdio_gpio_base;
-	uint32_t cfg;
+	int gpio_node;
 
-	mdc_mdio_gpio_cnt = get_mdc_mdio_gpio(mdc_mdio_gpio);
-	if (mdc_mdio_gpio_cnt >= 1) {
-		for (i = 0; i < mdc_mdio_gpio_cnt; i++) {
-			if (mdc_mdio_gpio[i] >=0) {
-				mdc_mdio_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(mdc_mdio_gpio[i]);
-				if (i == 0) {
-					cfg = GPIO_DRV_8_MA | MDC_MDIO_FUNC_SEL | GPIO_NO_PULL;
-					writel(cfg, mdc_mdio_gpio_base);
-				} else {
-					cfg = GPIO_DRV_8_MA | MDC_MDIO_FUNC_SEL | GPIO_PULL_UP;
-					writel(cfg, mdc_mdio_gpio_base);
-				}
-			}
-		}
-	}
+	gpio_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/mdio_gpio");
+	if (gpio_node >= 0)
+		qca_gpio_init(gpio_node);
+	else
+		printf("mdio gpio not detect \n");
 }
 
 int get_aquantia_gpio(int aquantia_gpio[2])

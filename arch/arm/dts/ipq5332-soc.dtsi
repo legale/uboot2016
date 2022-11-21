@@ -130,4 +130,21 @@
 		reg = <0x78B6000 0x600>;
 		clock-frequency  = <400000>;
 	};
+
+	ess-switch {
+		mdio_gpio {
+			mdc1 {
+				gpio = <27>;
+				func = <1>;
+				pull = <GPIO_NO_PULL>;
+				drvstr = <GPIO_8MA>;
+			};
+			mdio {
+				gpio = <28>;
+				func = <1>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
 };

@@ -205,7 +205,6 @@
 		switch_mac_mode1 = <PORT_WRAPPER_USXGMII>;
 		aquantia_gpio = <22 24>;
 		aquantia_gpio_cnt = <2>;
-		mdc_mdio_gpio = <27 28>;
 
 		port_phyinfo {
 			port@0 {

@@ -182,7 +182,6 @@
 		switch_mac_mode1 = <PORT_WRAPPER_10GBASE_R>;
 		qca808x_gpio = <51>;
 		qca808x_gpio_cnt = <1>;
-		mdc_mdio_gpio = <27 28>;
 		qca8084_switch_enable = <1>;
 
 		port_phyinfo {

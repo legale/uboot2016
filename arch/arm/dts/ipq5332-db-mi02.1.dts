@@ -171,7 +171,6 @@
 	ess-switch {
 		switch_mac_mode0 = <PORT_WRAPPER_10GBASE_R>;
 		switch_mac_mode1 = <PORT_WRAPPER_10GBASE_R>;
-		mdc_mdio_gpio = <27 28>;
 
 		port_phyinfo {
 			port@0 {
