@@ -67,7 +67,6 @@
 	};
 
 	nand: nand-controller@79B0000 {
-		status = "disabled";
 		nand_gpio {
 			qspi_dat3 {
 				gpio = <8>;
