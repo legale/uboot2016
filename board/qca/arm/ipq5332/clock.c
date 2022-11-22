@@ -323,6 +323,31 @@ void usb_clock_deinit(void)
 #endif
 
 #ifdef CONFIG_IPQ5332_EDMA
+void nssnoc_init(void)
+{
+	unsigned int reg_val;
+
+	writel(QDSS_AT_SRC_SEL | QDSS_AT_DIV_SEL, GCC_QDSS_AT_CFG_RCGR);
+	reg_val = readl(GCC_QDSS_AT_CMD_RCGR);
+	writel(reg_val | CMD_UPDATE, GCC_QDSS_AT_CMD_RCGR);
+	mdelay(1);
+	writel(reg_val | ROOT_EN, GCC_QDSS_AT_CMD_RCGR);
+
+
+	/* Enable required NSSNOC clocks */
+	writel(readl(GCC_NSSCFG_CLK) |
+		GCC_CBCR_CLK_ENABLE, GCC_NSSCFG_CLK);
+
+	writel(readl(GCC_NSSNOC_ATB_CLK) | GCC_CBCR_CLK_ENABLE,
+		GCC_NSSNOC_ATB_CLK);
+
+	writel(readl(GCC_NSSNOC_QOSGEN_REF_CLK) | GCC_CBCR_CLK_ENABLE,
+		GCC_NSSNOC_QOSGEN_REF_CLK);
+
+	writel(readl(GCC_NSSNOC_TIMEOUT_REF_CLK) | GCC_CBCR_CLK_ENABLE,
+		GCC_NSSNOC_TIMEOUT_REF_CLK);
+}
+
 void frequency_init(void)
 {
 	unsigned int reg_val;
@@ -507,6 +532,10 @@ void noc_clock_init(void)
 
 	reg_val = readl(GCC_NSSNOC_SNOC_1_CBCR);
 	writel(reg_val | GCC_CBCR_CLK_ENABLE, GCC_NSSNOC_SNOC_1_CBCR);
+
+	reg_val = readl(GCC_MEM_NOC_SNOC_AXI_CBCR);
+	writel(reg_val | GCC_CBCR_CLK_ENABLE, GCC_MEM_NOC_SNOC_AXI_CBCR);
+
 }
 
 void uniphy_clock_enable(enum uniphy_clk_type clk_type, bool enable)
@@ -580,6 +609,8 @@ void cmbblk_init(void)
 
 void eth_clock_init(void)
 {
+	nssnoc_init();
+
 	fixed_clock_init();
 
 	uniphy_clk_init(true);

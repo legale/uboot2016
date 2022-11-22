@@ -32,6 +32,7 @@
 #else
 #define CTRL_0_REG_C45_DEFAULT_VALUE		0x1510F
 #endif
+#define CTRL_0_REG_C45_DEFAULT_VALUE_3_1M	0x1511F
 #define IPQ_MDIO_RETRY				1000
 #define IPQ_MDIO_DELAY				5
 

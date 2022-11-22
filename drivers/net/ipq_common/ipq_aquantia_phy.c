@@ -58,6 +58,12 @@ extern int ipq_mdio_write(int mii_id,
 extern int ipq_mdio_read(int mii_id,
 		int regnum, ushort *data);
 
+extern int ipq_mdio_write1(int mii_id,
+		int regnum, u16 value);
+extern int ipq_mdio_read1(int mii_id,
+		int regnum, ushort *data);
+
+
 extern int ipq_sw_mdio_init(const char *);
 extern void ipq5332_eth_initialize(void);
 static int program_ethphy_fw(unsigned int phy_addr,
@@ -67,13 +73,21 @@ static qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
 u16 aq_phy_reg_write(u32 dev_id, u32 phy_id,
 		u32 reg_id, u16 reg_val)
 {
+#ifdef MDIO_IO_CLK_315M
+	ipq_mdio_write1(phy_id, reg_id, reg_val);
+#else
 	ipq_mdio_write(phy_id, reg_id, reg_val);
+#endif
 	return 0;
 }
 
 u16 aq_phy_reg_read(u32 dev_id, u32 phy_id, u32 reg_id)
 {
+#ifdef MDIO_IO_CLK_315M
+	return ipq_mdio_read1(phy_id, reg_id, NULL);
+#else
 	return ipq_mdio_read(phy_id, reg_id, NULL);
+#endif
 }
 
 u8 aq_phy_get_link_status(u32 dev_id, u32 phy_id)

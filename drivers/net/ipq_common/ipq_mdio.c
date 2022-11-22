@@ -48,6 +48,114 @@ static int ipq_mdio_wait_busy(void)
 	return -ETIMEDOUT;
 }
 
+int ipq_mdio_write1(int mii_id, int regnum, u16 value)
+{
+	u32 cmd;
+
+	if (regnum & MII_ADDR_C45) {
+		unsigned int mmd = (regnum >> 16) & 0x1F;
+	        unsigned int reg = regnum & 0xFFFF;
+
+		writel(CTRL_0_REG_C45_DEFAULT_VALUE_3_1M,
+			IPQ_MDIO_BASE + MDIO_CTRL_0_REG);
+
+		/* Issue the phy address and reg */
+		writel((mii_id << 8) | mmd,
+			IPQ_MDIO_BASE + MDIO_CTRL_1_REG);
+
+		writel(reg, IPQ_MDIO_BASE + MDIO_CTRL_2_REG);
+
+		/* issue read command */
+		cmd = MDIO_CTRL_4_ACCESS_START | MDIO_CTRL_4_ACCESS_CODE_C45_ADDR;
+
+		writel(cmd, IPQ_MDIO_BASE + MDIO_CTRL_4_REG);
+
+		if (ipq_mdio_wait_busy())
+			return -ETIMEDOUT;
+	} else {
+		writel(CTRL_0_REG_DEFAULT_VALUE,
+			IPQ_MDIO_BASE + MDIO_CTRL_0_REG);
+
+		/* Issue the phy addreass and reg */
+		writel((mii_id << 8 | regnum),
+			IPQ_MDIO_BASE + MDIO_CTRL_1_REG);
+	}
+
+	/* Issue a write data */
+	writel(value, IPQ_MDIO_BASE + MDIO_CTRL_2_REG);
+
+	if (regnum & MII_ADDR_C45) {
+		cmd = MDIO_CTRL_4_ACCESS_START | MDIO_CTRL_4_ACCESS_CODE_C45_WRITE ;
+	} else {
+		cmd = MDIO_CTRL_4_ACCESS_START | MDIO_CTRL_4_ACCESS_CODE_WRITE ;
+	}
+
+	writel(cmd, IPQ_MDIO_BASE + MDIO_CTRL_4_REG);
+	/* Wait for write complete */
+
+	if (ipq_mdio_wait_busy())
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
+int ipq_mdio_read1(int mii_id, int regnum, ushort *data)
+{
+	u32 val,cmd;
+
+	if (regnum & MII_ADDR_C45) {
+
+		unsigned int mmd = (regnum >> 16) & 0x1F;
+	        unsigned int reg = regnum & 0xFFFF;
+
+		writel(CTRL_0_REG_C45_DEFAULT_VALUE_3_1M,
+			IPQ_MDIO_BASE + MDIO_CTRL_0_REG);
+
+		/* Issue the phy address and reg */
+		writel((mii_id << 8) | mmd,
+			IPQ_MDIO_BASE + MDIO_CTRL_1_REG);
+
+
+		writel(reg, IPQ_MDIO_BASE + MDIO_CTRL_2_REG);
+
+		/* issue read command */
+		cmd = MDIO_CTRL_4_ACCESS_START | MDIO_CTRL_4_ACCESS_CODE_C45_ADDR;
+	} else {
+
+		writel(CTRL_0_REG_DEFAULT_VALUE,
+			IPQ_MDIO_BASE + MDIO_CTRL_0_REG);
+
+		/* Issue the phy address and reg */
+		writel((mii_id << 8 | regnum ) ,
+			IPQ_MDIO_BASE + MDIO_CTRL_1_REG);
+
+		/* issue read command */
+		cmd = MDIO_CTRL_4_ACCESS_START | MDIO_CTRL_4_ACCESS_CODE_READ ;
+	}
+
+	/* issue read command */
+	writel(cmd, IPQ_MDIO_BASE + MDIO_CTRL_4_REG);
+
+	if (ipq_mdio_wait_busy())
+		return -ETIMEDOUT;
+
+
+	 if (regnum & MII_ADDR_C45) {
+		cmd = MDIO_CTRL_4_ACCESS_START | MDIO_CTRL_4_ACCESS_CODE_C45_READ;
+		writel(cmd, IPQ_MDIO_BASE + MDIO_CTRL_4_REG);
+
+		if (ipq_mdio_wait_busy())
+			return -ETIMEDOUT;
+	}
+
+	/* Read data */
+	val = readl(IPQ_MDIO_BASE + MDIO_CTRL_3_REG);
+
+	if (data != NULL)
+		*data = val;
+
+	return val;
+}
 int ipq_mdio_write(int mii_id, int regnum, u16 value)
 {
 	u32 cmd;

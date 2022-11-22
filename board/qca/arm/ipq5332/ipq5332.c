@@ -862,8 +862,9 @@ void aquantia_phy_reset_init(void)
 			for (i = 0; i < aquantia_gpio_cnt; i++) {
 				if (aquantia_gpio[i] >= 0) {
 					aquantia_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(aquantia_gpio[i]);
-					cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
+					cfg = GPIO_OE | GPIO_DRV_2_MA | GPIO_PULL_UP;
 					writel(cfg, aquantia_gpio_base);
+					writel(0x0, GPIO_IN_OUT_ADDR(aquantia_gpio[i]));
 				}
 			}
 		}
@@ -898,6 +899,8 @@ void aquantia_phy_reset_init_done(void)
 	if (aquantia_gpio_cnt >= 1) {
 		for (i = 0; i < aquantia_gpio_cnt; i++)
 			gpio_set_value(aquantia_gpio[i], 0x1);
+			writel(0x3, GPIO_IN_OUT_ADDR(aquantia_gpio[i]));
+			mdelay(500);
 	}
 }
 
