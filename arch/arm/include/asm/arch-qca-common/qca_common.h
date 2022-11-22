@@ -95,6 +95,12 @@ int qca_mmc_init(bd_t *, qca_mmc *);
 int board_mmc_env_init(qca_mmc mmc_host);
 #endif
 
+#ifdef CONFIG_QCA_MMC
+int do_mmc_init(void);
+#endif
+#ifdef CONFIG_QPIC_SERIAL
+void do_nand_init(void);
+#endif
 int ipq_board_usb_init(void);
 int spi_nand_init(void);
 void board_mmc_deinit(void);

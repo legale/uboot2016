@@ -125,10 +125,11 @@ int dump_entries_s = ARRAY_SIZE(dumpinfo_s);
 
 void fdt_fixup_flash(void *blob)
 {
-	if (gd->bd->bi_arch_number == MACH_TYPE_IPQ5332_EMULATION)
-		return;
+	uint32_t flash_type = SMEM_BOOT_NO_FLASH;
 
-	if ((gd->bd->bi_arch_number >> FLASH_SEL_BIT) & 0x1) {
+	get_current_flash_type(&flash_type);
+	if (flash_type == SMEM_BOOT_NORPLUSEMMC ||
+		flash_type == SMEM_BOOT_MMC_FLASH ) {
 		parse_fdt_fixup(LINUX_NAND_DTS"%"STATUS_DISABLED, blob);
 		parse_fdt_fixup(LINUX_MMC_DTS"%"STATUS_OK, blob);
 
@@ -148,6 +149,10 @@ void ipq_uboot_fdt_fixup(void)
 
 	/* fix peripherals required for basic board bring up
 	 * like flash etc.
+	 */
+	/* This becomes obsolete as nand or emmc will be
+	 * initialized based on the boot type. Below code
+	 * will be removed later
 	 */
 
 	if ((machid >> FLASH_SEL_BIT) & 0x1) {
@@ -280,11 +285,10 @@ __weak void board_mmc_deinit(void)
 	return;
 }
 
-int board_mmc_init(bd_t *bis)
+int do_mmc_init(void)
 {
 	int node, gpio_node;
-	int ret = 0;
-	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
+
 	node = fdt_path_offset(gd->fdt_blob, "mmc");
 	if (node < 0) {
 		printf("sdhci: Node Not found, skipping initialization\n");
@@ -293,7 +297,7 @@ int board_mmc_init(bd_t *bis)
 
 	if (!fdtdec_get_is_enabled(gd->fdt_blob, node)) {
 		printf("MMC: disabled, skipping initialization\n");
-		return ret;
+		return -1;
 	}
 
 	gpio_node = fdt_subnode_offset(gd->fdt_blob, node, "mmc_gpio");
@@ -314,6 +318,26 @@ int board_mmc_init(bd_t *bis)
 		printf("add_sdhci fail!\n");
 		return -1;
 	}
+
+	return 0;
+}
+
+int board_mmc_init(bd_t *bis)
+{
+	int ret = 0;
+	uint32_t flash_type = SMEM_BOOT_NO_FLASH;
+	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
+	char *name = NULL;
+#ifdef CONFIG_QPIC_SERIAL
+	name = nand_info[CONFIG_NAND_FLASH_INFO_IDX].name;
+#endif
+
+	get_current_flash_type(&flash_type);
+
+	if (flash_type != SMEM_BOOT_NORPLUSNAND &&
+		flash_type !=  SMEM_BOOT_QSPI_NAND_FLASH &&
+		!name)
+		ret = do_mmc_init();
 
 	if (!ret && sfi->flash_type == SMEM_BOOT_MMC_FLASH) {
 		ret = board_mmc_env_init(mmc_host);
@@ -707,21 +731,34 @@ void reset_cpu(unsigned long a)
 	while(1);
 }
 
-void board_nand_init(void)
-{
 #ifdef CONFIG_QPIC_SERIAL
+void do_nand_init(void)
+{
 	/* check for nand node in dts
 	 * if nand node in dts is disabled then
 	 * simply return from here without
 	 * initializing
 	 */
 	int node;
+
 	node = fdt_path_offset(gd->fdt_blob, "/nand-controller");
 	if (!fdtdec_get_is_enabled(gd->fdt_blob, node)) {
 		printf("QPIC: disabled, skipping initialization\n");
 	} else {
 		qpic_nand_init(NULL);
 	}
+}
+#endif
+
+void board_nand_init(void)
+{
+#ifdef CONFIG_QPIC_SERIAL
+	uint32_t flash_type = SMEM_BOOT_NO_FLASH;
+
+	get_current_flash_type(&flash_type);
+	if (flash_type != SMEM_BOOT_NORPLUSEMMC &&
+		flash_type != SMEM_BOOT_MMC_FLASH)
+		do_nand_init();
 #endif
 #ifdef CONFIG_QCA_SPI
 	int gpio_node;

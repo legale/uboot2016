@@ -440,4 +440,6 @@ extern loff_t board_env_size;
 #undef CONFIG_BOOTM_RTEMS
 #undef CONFIG_BOOTM_VXWORKS
 
+#define CONFIG_CMD_IPQ_FLASH_INIT
+
 #endif /* _IPQ5332_H */
