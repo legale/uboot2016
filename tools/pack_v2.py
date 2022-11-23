@@ -865,6 +865,11 @@ class Pack(object):
         if flinfo.type == "emmc" and image_type == "all":
             first = True
 
+        if flinfo.type == "nand" or self.flash_type == "norplusnand":
+            script.append("flashinit nand")
+        elif flinfo.type == "emmc" or self.flash_type == "norplusemmc":
+            script.append("flashinit mmc")
+
         section = parts[1]
         imgs = section.findall('img_name')
         pnames = section.findall('name')

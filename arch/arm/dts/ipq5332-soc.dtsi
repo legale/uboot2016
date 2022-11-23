@@ -56,7 +56,7 @@
 
 	mmc: sdhci@7804000 {
 		compatible = "qcom,sdhci-msm";
-		status = "disabled";
+		status = "okay";
 	};
 
 	pci0: pci@20000000 {

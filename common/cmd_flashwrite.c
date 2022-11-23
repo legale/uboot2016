@@ -23,6 +23,10 @@
 #include <mmc.h>
 #include <sdhci.h>
 #include <ubi_uboot.h>
+#include <fdtdec.h>
+#include <asm/arch-qca-common/qpic_nand.h>
+#include <nand.h>
+
 
 DECLARE_GLOBAL_DATA_PTR;
 #ifndef CONFIG_SDHCI_SUPPORT
@@ -547,6 +551,48 @@ char * const argv[])
 }
 #endif
 
+#ifdef CONFIG_CMD_IPQ_FLASH_INIT
+static int do_flash_init(cmd_tbl_t *cmdtp, int flag, int argc,
+char * const argv[])
+{
+	int ret = 0;
+	char *name = NULL;
+	void *blk_dev = NULL;
+
+	if (argc < 2)
+		return CMD_RET_USAGE;
+
+#ifdef CONFIG_QCA_MMC
+	blk_dev = (void *)(mmc_get_dev(mmc_host.dev_num));
+
+#endif
+#ifdef CONFIG_QPIC_SERIAL
+	int nand_dev = CONFIG_NAND_FLASH_INFO_IDX;
+	name = nand_info[nand_dev].name;
+#endif
+
+	if (name || blk_dev) {
+		printf("Either NAND or eMMC already initialized\n");
+		return 0;
+	}
+
+#ifdef CONFIG_QCA_MMC
+	if (!strncmp(argv[1], "mmc", 3)) {
+		ret = do_mmc_init();
+		if (!ret)
+			ret = run_command("mmc info", 0);
+	}
+#endif
+#ifdef CONFIG_QPIC_SERIAL
+	if (!strncmp(argv[1], "nand", 4)) {
+		do_nand_init();
+		ret = (nand_info[nand_dev].name) ? 0: -1;
+	}
+#endif
+
+	return ret;
+}
+#endif
 U_BOOT_CMD(
 	flash,       4,      0,      do_flash,
 	"flash part_name \n"
@@ -573,5 +619,13 @@ U_BOOT_CMD(
 	xtract_n_flash,       4,      0,      do_xtract_n_flash,
 	"xtract_n_flash addr filename partname \n",
 	"xtract the image and flash \n"
+);
+#endif
+
+#ifdef CONFIG_CMD_IPQ_FLASH_INIT
+U_BOOT_CMD(
+	flashinit,       2,      0,      do_flash_init,
+	"flashinit nand/mmc \n",
+	"Init the flash \n"
 );
 #endif
