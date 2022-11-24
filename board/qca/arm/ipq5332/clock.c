@@ -538,6 +538,8 @@ void fixed_clock_init(void)
 
 	fixed_sys_clock_init();
 
+	fixed_uniphy_clock_init();
+
 	port_mac_clock_init();
 
 	cfg_clock_init();
