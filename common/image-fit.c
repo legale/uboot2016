@@ -1616,7 +1616,8 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 			/* Remember (and possibly verify) this config */
 			images->fit_uname_cfg = fit_uname_config;
 			if (IMAGE_ENABLE_VERIFY && images->verify) {
-				puts("   Verifying Hash Integrity ... ");
+				printf("Verifying Hash Integrity for node '%s'... ",
+						fdt_get_name(fit, cfg_noffset, NULL));
 				if (fit_config_verify(fit, cfg_noffset)) {
 					puts("Bad Data Hash\n");
 					bootstage_error(bootstage_id +
@@ -1633,7 +1634,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 		fit_uname = fit_get_name(fit, noffset, NULL);
 	}
 	if (noffset < 0) {
-		puts("Could not find subimage node\n");
+		printf("Could not find subimage node type '%s'\n", prop_name);
 		bootstage_error(bootstage_id + BOOTSTAGE_SUB_SUBNODE);
 		return -ENOENT;
 	}
