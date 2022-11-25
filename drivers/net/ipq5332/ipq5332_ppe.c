@@ -278,11 +278,6 @@ void ipq5332_port_mac_clock_reset(int port)
 {
 	int reg_val;
 
-	/* PPE Reset */
-	writel(0x1, NSS_CC_PPE_BCR);
-	udelay(10);
-	writel(0x0, NSS_CC_PPE_BCR);
-
 	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8));
 	reg_val |= GCC_PORT1_ARES;
 	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8));
@@ -298,10 +293,6 @@ void ipq5332_port_mac_clock_reset(int port)
 	reg_val = readl(NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
 	reg_val &= ~GCC_PORT1_ARES;
 	writel(reg_val, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (port * 0x8));
-
-	/* Enabel UNIPHY port clk */
-	writel(0x1, (NSS_CC_UNIPHY_PORT1_RX_CBCR + (port * 0x8)));
-	writel(0x1, (NSS_CC_UNIPHY_PORT1_TX_CBCR + (port * 0x8)));
 }
 
 void ipq5332_speed_clock_set(int port_id, int clk[4])
@@ -335,6 +326,13 @@ void ipq5332_speed_clock_set(int port_id, int clk[4])
 	writel(reg_val[5], NSS_CC_PORT1_RX_CMD_RCGR + 0x14 + (port_id * 0x18));
 	writel(reg_val[3] | 0x1, NSS_CC_PORT1_RX_CMD_RCGR + 0xc +
 			(port_id * 0x18));
+
+	/* Enable UNIPHY port clk */
+	mdelay(100);
+	writel(BIT(0), (NSS_CC_UNIPHY_PORT1_RX_CBCR + (port_id * 0x8)));
+	mdelay(100);
+	writel(BIT(0), (NSS_CC_UNIPHY_PORT1_TX_CBCR + (port_id * 0x8)));
+	mdelay(100);
 }
 
 int phy_status_get_from_ppe(int port_id)
@@ -416,7 +414,44 @@ void ppe_xgmac_speed_set(uint32_t port, int speed)
 			reg_value);
 }
 
+void ipq5332_xgmac_sgmiiplus_speed_set(int port, int speed, int status)
+{
+	uint32_t reg_value = 0;
 
+	pr_debug("\nDEBUGGING xgmac_sgmiiplus speed_set..PORTID = %d\n", port);
+	ipq5332_ppe_reg_read(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), &reg_value);
+
+	switch(speed) {
+	case 0:
+	case 1:
+	case 2:
+		reg_value |=SS(XGMAC_SPEED_SELECT_1000M);
+		break;
+	case 3:
+		reg_value |=SS(XGMAC_SPEED_SELECT_10000M);
+		break;
+	case 4:
+		reg_value |=SS(XGMAC_SPEED_SELECT_2500M);
+		break;
+	case 5:
+		reg_value |=SS(XGMAC_SPEED_SELECT_5000M);
+		break;
+	}
+	reg_value |=JD;
+	ipq5332_ppe_reg_write(PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+		 (port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION), reg_value);
+	pr_debug("NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION Address = 0x%x"
+			" -> Value = %u\n",
+			PPE_SWITCH_NSS_SWITCH_XGMAC0 +
+			(port * NSS_SWITCH_XGMAC_MAC_TX_CONFIGURATION),
+			reg_value);
+
+	ppe_port_bridge_txmac_set(port, status);
+	ppe_port_txmac_status_set(port);
+	ppe_port_rxmac_status_set(port);
+	ppe_mac_packet_filter_set(port);
+}
 
 void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex,
 				int status)
@@ -703,10 +738,10 @@ void ppe_port_mux_mac_type_set(int port_id, int mode)
 	{
 		case EPORT_WRAPPER_PSGMII:
 		case EPORT_WRAPPER_SGMII0_RGMII4:
-		case EPORT_WRAPPER_SGMII_PLUS:
 		case EPORT_WRAPPER_SGMII_FIBER:
 			port_type = PORT_GMAC_TYPE;
 			break;
+		case EPORT_WRAPPER_SGMII_PLUS:
 		case EPORT_WRAPPER_USXGMII:
 		case EPORT_WRAPPER_10GBASE_R:
 			port_type = PORT_XGMAC_TYPE;
@@ -751,7 +786,7 @@ void ipq5332_ppe_interface_mode_init(void)
 	 * Port1 and Port2 can be used as GMAC or XGMAC.
 	 */
 	ppe_port_mux_mac_type_set(PORT1, mode0);
-	ppe_port_mux_mac_type_set(PORT2, mode0);
+	ppe_port_mux_mac_type_set(PORT2, mode1);
 }
 
 /*
@@ -762,6 +797,11 @@ void ipq5332_ppe_provision_init(void)
 	int i;
 	uint32_t queue;
 	uint32_t bridge_ctrl;
+
+	/* PPE Reset */
+	writel(0x1, NSS_CC_PPE_BCR);
+	mdelay(10);
+	writel(0x0, NSS_CC_PPE_BCR);
 
 	/* tdm/sched configuration */
 	ipq5332_ppe_tdm_configuration();

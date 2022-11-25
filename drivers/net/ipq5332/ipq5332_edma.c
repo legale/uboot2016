@@ -73,7 +73,7 @@ extern int ipq_board_fw_download(unsigned int phy_addr);
 extern int ipq_qca8084_hw_init(phy_info_t * phy_info[]);
 extern int ipq_qca8084_link_update(phy_info_t * phy_info[]);
 extern void ipq_qca8084_switch_hw_reset(int gpio);
-
+extern void ipq5332_xgmac_sgmiiplus_speed_set(int port, int speed, int status);
 #ifdef CONFIG_ATHRS17C_SWITCH
 extern void ppe_uniphy_set_forceMode(uint32_t uniphy_index);
 
@@ -1057,7 +1057,6 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 				phy_info->phy_type == QCA8081_PHY_TYPE) {
 				clk[0] = 0x301;
 				clk[2] = 0x401;
-				mac_speed = 0x2;
 			}
 
 			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
@@ -1095,6 +1094,7 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			ppe_port_bridge_txmac_set(i, 1);
 			ppe_uniphy_mode_set(port_info[i]->uniphy_id,
 						sgmii_mode);
+			ppe_port_mux_mac_type_set(i + 1, sgmii_mode);
 		}
 
 		if (phy_info->phy_type == SFP_PHY_TYPE) {
@@ -1118,8 +1118,6 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			}
 		}
 
-		ipq5332_speed_clock_set(i, clk);
-
 		ipq5332_port_mac_clock_reset(i);
 
 		if (phy_info->phy_type == AQ_PHY_TYPE){
@@ -1128,8 +1126,16 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 				(sfp_mode != EPORT_WRAPPER_SGMII_FIBER)) {
 			ipq5332_10g_r_speed_set(i, status);
 		} else {
-			ipq5332_pqsgmii_speed_set(i, mac_speed, status);
+			if (curr_speed[i] == FAL_SPEED_2500) {
+				ipq5332_xgmac_sgmiiplus_speed_set(i,
+							mac_speed, status);
+			} else {
+				ipq5332_pqsgmii_speed_set(i,
+							mac_speed, status);
+			}
 		}
+
+		ipq5332_speed_clock_set(i, clk);
 #else
 		ppe_port_bridge_txmac_set(i, 1);
 		//FAL_SPEED_5000
@@ -1995,11 +2001,13 @@ int ipq5332_edma_init(void *edma_board_cfg)
 
 			pr_debug("Force speed ipq5332 1st PORT "
 					"for QCA8084 switch mode \n");
-			ipq5332_speed_clock_set(PORT0, clk);
+			ipq5332_port_mac_clock_reset(PORT0);
 
 			/** Force Link-speed: 1000M
 			 *  Force Link-status: enable */
-			ipq5332_pqsgmii_speed_set(PORT0, 0x2, 0x0);
+			ipq5332_xgmac_sgmiiplus_speed_set(PORT0, 0x4, 0);
+
+			ipq5332_speed_clock_set(PORT0, clk);
 
 			ret = ipq_qca8084_hw_init(swt_info);
 			if (ret < 0) {
