@@ -136,9 +136,9 @@ void pcie_v2_clock_init(int pcie_id)
 			GCC_PCIE_AUX_CFG_RCGR_SRC_SEL |
 			GCC_PCIE_AUX_CFG_RCGR_SRC_DIV);
 		writel(cfg, GCC_PCIE_AUX_CFG_RCGR);
-		writel(0x1, GCC_PCIE_AUX_M);
-		writel(0xFFE7, GCC_PCIE_AUX_N);
-		writel(0xFFE6, GCC_PCIE_AUX_D);
+		writel(0, GCC_PCIE_AUX_M);
+		writel(0, GCC_PCIE_AUX_N);
+		writel(0, GCC_PCIE_AUX_D);
 		writel(CMD_UPDATE, GCC_PCIE_AUX_CMD_RCGR);
 		mdelay(10);
 		writel(ROOT_EN, GCC_PCIE_AUX_CMD_RCGR);
