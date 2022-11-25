@@ -417,21 +417,33 @@ DECLARE_GLOBAL_DATA_PTR;
 #define WINDOW_RANGE_MASK                       0x7FFFF
 
 #define QCN9224_PCIE_REMAP_BAR_CTRL_OFFSET      0x310C
+#define PCIE_SOC_GLOBAL_RESET_ADDRESS 		0x3008
 #define QCN9224_TCSR_SOC_HW_VERSION		0x1B00000
 #define QCN9224_TCSR_SOC_HW_VERSION_MASK	GENMASK(11,8)
 #define QCN9224_TCSR_SOC_HW_VERSION_SHIFT 	8
+#define PCIE_SOC_GLOBAL_RESET_VALUE 		0x5
+#define MAX_SOC_GLOBAL_RESET_WAIT_CNT 		50 /* x 20msec */
 
-#define QCN9224_TCSR_PBL_LOGGING_REG		0x1B00094
-
-#define QCN9224_OEM_ID 				0x01e20018
+#define QCN9224_TCSR_PBL_LOGGING_REG		0x01B00094
 #define QCN9224_SECURE_BOOT0_AUTH_EN 		0x01e20010
+#define QCN9224_OEM_MODEL_ID			0x01e20018
+#define QCN9224_ANTI_ROLL_BACK_FEATURE 		0x01e2001c
 #define QCN9224_OEM_PK_HASH 			0x01e20060
-#define QCN9224_OEM_PK_HASH_SIZE 		36
-
+#define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
 #define QCN9224_OEM_ID_MASK 			GENMASK(31,16)
 #define QCN9224_OEM_ID_SHIFT 			16
-#define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
+#define QCN9224_MODEL_ID_MASK 			GENMASK(15,0)
+#define QCN9224_ANTI_ROLL_BACK_FEATURE_EN_MASK 	BIT(9)
+#define QCN9224_ANTI_ROLL_BACK_FEATURE_EN_SHIFT 9
+#define QCN9224_TOTAL_ROT_NUM_MASK 		GENMASK(13,12)
+#define QCN9224_TOTAL_ROT_NUM_SHIFT 		12
+#define QCN9224_ROT_REVOCATION_MASK 		GENMASK(17,14)
+#define QCN9224_ROT_REVOCATION_SHIFT 		14
+#define QCN9224_ROT_ACTIVATION_MASK 		GENMASK(21,18)
+#define QCN9224_ROT_ACTIVATION_SHIFT 		18
+#define QCN9224_OEM_PK_HASH_SIZE 		36
 
+#define MHICTRL (0x38)
 #define BHI_STATUS (0x12C)
 #define BHI_IMGADDR_LOW (0x108)
 #define BHI_IMGADDR_HIGH (0x10C)
@@ -443,6 +455,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define BHI_IMGTXDB (0x118)
 #define BHI_EXECENV (0x128)
 
+#define MHICTRL_RESET_MASK (0x2)
 #define BHI_STATUS_MASK (0xC0000000)
 #define BHI_STATUS_SHIFT (30)
 #define BHI_STATUS_SUCCESS (2)
@@ -2013,11 +2026,41 @@ static void print_error_code(pci_addr_t addr, bool pbl_log)
 
 }
 
+int qcn92xx_get_exec_env(pci_addr_t bar)
+{
+	u32 exec;
+	exec = readl(bar + BHI_EXECENV);
+
+	return exec;
+}
+
+void qcn92xx_global_soc_reset(pci_addr_t bar)
+{
+	u32 current_ee;
+	u32 count = 0;
+
+	current_ee = qcn92xx_get_exec_env(bar);
+
+	do {
+		writel(PCIE_SOC_GLOBAL_RESET_VALUE,
+			       PCIE_SOC_GLOBAL_RESET_ADDRESS +
+			       bar);
+		mdelay(20);
+		current_ee = qcn92xx_get_exec_env(bar);
+		count++;
+	} while (current_ee != 0 &&
+		 count < MAX_SOC_GLOBAL_RESET_WAIT_CNT);
+
+	if (count >= MAX_SOC_GLOBAL_RESET_WAIT_CNT)
+		printk("SoC global reset failed! Reset count : %d\n",
+			      count);
+}
+
 static int do_fuse_qcn9224(cmd_tbl_t *cmdtp, int flag,
 			    int argc, char * const argv[])
 {
 	pci_dev_t devbusfn;
-	int device_id = 0, ret;
+	int device_id = 0, ret = 0;
 	struct pci_controller *hose;
 	pci_addr_t pci_mem_base, bar0_base;
 	u16 vendor, device;
@@ -2087,14 +2130,14 @@ static int do_fuse_qcn9224(cmd_tbl_t *cmdtp, int flag,
 	if (ret) {
 		printf("Fuse blower bin Download failed, BHI_STATUS 0x%x, ret %d\n", val, ret);
 		print_error_code(bar0_base, true);
-		return CMD_RET_FAILURE;
+		goto fail;
 	}
 
 	ret = poll_reg_field(bar0_base + BHI_EXECENV, &val, NO_MASK, 0, 1);
 	if (ret) {
 		printf("EXECENV is not correct, BHI_EXECENV 0x%x, ret %d\n",val, ret);
 		print_error_code(bar0_base, true);
-		return CMD_RET_FAILURE;
+		goto fail;
 	}
 
 	printf("Fuse blower bin loaded sucessfully\n");
@@ -2103,10 +2146,21 @@ static int do_fuse_qcn9224(cmd_tbl_t *cmdtp, int flag,
 	if (ret) {
 		printf("Fusing failed, ret %d\n",ret);
 		print_error_code(bar0_base, false);
-		return CMD_RET_FAILURE;
+		goto fail;
 	}
 
 	printf("Fusing completed sucessfully\n");
+
+fail:
+	/* Target SoC global reset */
+	qcn92xx_global_soc_reset(bar0_base);
+
+	mdelay(1000);
+
+	/* Target MHI reset */
+	val = readl(bar0_base + MHICTRL);
+	writel(val | MHICTRL_RESET_MASK, bar0_base + MHICTRL);
+
 	return CMD_RET_SUCCESS;
 }
 
@@ -2179,23 +2233,40 @@ static int do_list_qcn9224_fuse(cmd_tbl_t *cmdtp, int flag,
 
 		pci_write_config_dword (devbusfn, PCI_BASE_ADDRESS_0, bar0_base);
 
-		pci_select_window(bar0_base, QCN9224_OEM_ID);
-
-		val = readl(bar0_base + WINDOW_START +
-				(QCN9224_OEM_ID & WINDOW_RANGE_MASK));
-
 		printf("PCIe Bus ID: %d\nFuse Name \t\t Address \t Value\n",device_id);
 		printf("------------------------------------------------------\n");
-		printf("OEM ID\t\t\t 0x%x \t 0x%lx \n",QCN9224_OEM_ID,
-				(val & QCN9224_OEM_ID_MASK) >> QCN9224_OEM_ID_SHIFT);
 
 		pci_select_window(bar0_base, QCN9224_SECURE_BOOT0_AUTH_EN);
 
 		val = readl(bar0_base + WINDOW_START +
 				(QCN9224_SECURE_BOOT0_AUTH_EN & WINDOW_RANGE_MASK));
 
-		printf("SECURE_BOOT0_AUTH_EN\t 0x%x \t 0x%x \n", QCN9224_SECURE_BOOT0_AUTH_EN,
+		printf("SECURE_BOOT0_AUTH_EN\t   0x%x \t 0x%x \n", QCN9224_SECURE_BOOT0_AUTH_EN,
 				(val & QCN9224_SECURE_BOOT0_AUTH_EN_MASK));
+
+
+		pci_select_window(bar0_base, QCN9224_OEM_MODEL_ID);
+
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_OEM_MODEL_ID & WINDOW_RANGE_MASK));
+
+		printf("OEM ID\t\t\t   0x%x \t 0x%lx \n",QCN9224_OEM_MODEL_ID,
+				(val & QCN9224_OEM_ID_MASK) >> QCN9224_OEM_ID_SHIFT);
+		printf("MODEL ID\t\t   0x%x \t 0x%lx \n",QCN9224_OEM_MODEL_ID,
+				(val & QCN9224_MODEL_ID_MASK));
+
+		pci_select_window(bar0_base, QCN9224_ANTI_ROLL_BACK_FEATURE);
+
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_ANTI_ROLL_BACK_FEATURE & WINDOW_RANGE_MASK));
+		printf("ANTI_ROLL_BACK_FEATURE_EN  0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+				(val & QCN9224_ANTI_ROLL_BACK_FEATURE_EN_MASK) >> QCN9224_ANTI_ROLL_BACK_FEATURE_EN_SHIFT);
+		printf("TOTAL_ROT_NUM\t\t   0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+				(val & QCN9224_TOTAL_ROT_NUM_MASK) >> QCN9224_TOTAL_ROT_NUM_SHIFT);
+		printf("ROT_REVOCATION\t\t   0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+				(val & QCN9224_ROT_REVOCATION_MASK) >> QCN9224_ROT_REVOCATION_SHIFT);
+		printf("ROT_ACTIVATION\t\t   0x%x \t 0x%lx \n", QCN9224_ANTI_ROLL_BACK_FEATURE,
+				(val & QCN9224_ROT_ACTIVATION_MASK) >> QCN9224_ROT_ACTIVATION_SHIFT);
 
 		for(i = 0; i <= QCN9224_OEM_PK_HASH_SIZE ; i+=4) {
 			pci_select_window(bar0_base, QCN9224_OEM_PK_HASH + i);
@@ -2203,7 +2274,7 @@ static int do_list_qcn9224_fuse(cmd_tbl_t *cmdtp, int flag,
 			val = readl(bar0_base + WINDOW_START +
 					((QCN9224_OEM_PK_HASH + i) & WINDOW_RANGE_MASK));
 
-			printf("OEM PK hash \t\t 0x%x \t 0x%x\n",QCN9224_OEM_PK_HASH + i, val);
+			printf("OEM PK hash \t\t   0x%x \t 0x%x\n",QCN9224_OEM_PK_HASH + i, val);
 		}
 		printf("------------------------------------------------------\n\n");
 	}
