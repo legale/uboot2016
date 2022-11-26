@@ -277,7 +277,7 @@ void usb_clock_init(void)
 	writel(ROOT_EN, GCC_USB0_MASTER_CMD_RCGR);
 
 	/* Configure usb0_mock_utmi_clk_src */
-	cfg = (GCC_USB_MOCK_UTMI_SRC_SEL |
+	cfg = (GCC_USB_MOCK_UTMI_MN_MODE | GCC_USB_MOCK_UTMI_SRC_SEL |
 		GCC_USB_MOCK_UTMI_SRC_DIV);
 	writel(cfg, GCC_USB0_MOCK_UTMI_CFG_RCGR);
 	writel(MOCK_UTMI_M, GCC_USB0_MOCK_UTMI_M);

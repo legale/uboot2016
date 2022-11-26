@@ -231,6 +231,7 @@
 #define GCC_USB0_MASTER_CFG_RCGR_SRC_SEL	(1 << 8)
 #define GCC_USB0_MASTER_CFG_RCGR_SRC_DIV	(0x7 << 0)
 
+#define GCC_USB_MOCK_UTMI_MN_MODE		(2 << 12)
 #define GCC_USB_MOCK_UTMI_SRC_SEL		(1 << 8)
 #define GCC_USB_MOCK_UTMI_SRC_DIV		(0x13 << 0)
 #define MOCK_UTMI_M				0x1

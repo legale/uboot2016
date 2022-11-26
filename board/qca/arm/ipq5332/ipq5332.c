@@ -559,25 +559,23 @@ static void usb_init_hsphy(void __iomem *phybase, int ssphy)
 	writel(FREQ_SEL, phybase + USB_PHY_FSEL_SEL);
 	/* Configure refclk frequency */
 
-	writel(FSEL_VALUE << FSEL, phybase + USB_PHY_HS_PHY_CTRL_COMMON0);
+	writel(COMMONONN | FSEL_VALUE | RETENABLEN,
+			phybase + USB_PHY_HS_PHY_CTRL_COMMON0);
 
-	writel(readl(phybase + USB_PHY_UTMI_CTRL5) & ATERESET,
+	writel(POR_EN & ATERESET,
 		phybase + USB_PHY_UTMI_CTRL5);
 
-	writel(USB2_SUSPEND_N_SEL | USB2_SUSPEND_N,
+	writel(USB2_SUSPEND_N_SEL | USB2_SUSPEND_N | USB2_UTMI_CLK_EN,
 			phybase + USB_PHY_HS_PHY_CTRL2);
 
-	writel(SLEEPM, phybase + USB_PHY_UTMI_CTRL0);
-
-	writel(XCFG_COARSE_TUNE_NUM | XCFG_COARSE_TUNE_NUM,
+	writel(XCFG_COARSE_TUNE_NUM | XCFG_FINE_TUNE_NUM,
 		phybase + USB2PHY_USB_PHY_M31_XCFGI_11);
 
-	udelay(100);
+	udelay(10);
 
-	writel(readl(phybase + USB_PHY_UTMI_CTRL5) & ~POR_EN,
-		phybase + USB_PHY_UTMI_CTRL5);
+	writel(0, phybase + USB_PHY_UTMI_CTRL5);
 
-	writel(readl(phybase + USB_PHY_HS_PHY_CTRL2) & USB2_SUSPEND_N_SEL,
+	writel(USB2_SUSPEND_N | USB2_UTMI_CLK_EN,
 		phybase + USB_PHY_HS_PHY_CTRL2);
 }
 
