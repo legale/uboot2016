@@ -165,7 +165,7 @@
 	ess-switch {
 		switch_mac_mode0 = <PORT_WRAPPER_SGMII_PLUS>;
 		switch_mac_mode1 = <PORT_WRAPPER_SGMII_PLUS>;
-		qca808x_gpio = <16>;
+		qca808x_gpio = <51>;
 		qca808x_gpio_cnt = <1>;
 		mdc_mdio_gpio = <27 28>;
 		napa_gpio = <22>;

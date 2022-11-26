@@ -911,6 +911,7 @@ void qca808x_phy_reset_init(void)
 				qca808x_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(qca808x_gpio[i]);
 				cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
 				writel(cfg, qca808x_gpio_base);
+				gpio_set_value(qca808x_gpio[i], 0x0);
 			}
 		}
 	}
