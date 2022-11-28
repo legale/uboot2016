@@ -57,7 +57,6 @@ phy_info_t *swt_info[QCA8084_MAX_PORTS] = {0};
 ipq5332_edma_port_info_t *port_info[IPQ5332_PHY_MAX] = {0};
 int sgmii_mode[2] = {0};
 
-#ifndef CONFIG_IPQ5332_RUMI
 extern void ipq_phy_addr_fixup(void);
 extern void ipq_clock_init(void);
 extern int ipq_sw_mdio_init(const char *);
@@ -82,14 +81,11 @@ extern int ipq_qca8337_link_update(ipq_s17c_swt_cfg_t *s17c_swt_cfg);
 extern void ipq_s17c_switch_reset(int gpio);
 ipq_s17c_swt_cfg_t s17c_swt_cfg;
 #endif
-#endif
 
 static int tftp_acl_our_port;
-#ifndef CONFIG_IPQ5332_RUMI
 #ifdef CONFIG_QCA8084_SWT_MODE
 static int qca8084_swt_enb = 0;
 static int qca8084_chip_detect = 0;
-#endif
 #endif
 
 /*
@@ -885,7 +881,6 @@ static void ipq5332_edma_disable_intr(struct ipq5332_edma_hw *ehw)
 				IPQ5332_EDMA_MASK_INT_DISABLE);
 }
 
-#ifndef CONFIG_IPQ5332_RUMI
 void print_eth_info(int mac_unit, int phy_id, char *status, int speed,
 				char *duplex)
 {
@@ -893,14 +888,11 @@ void print_eth_info(int mac_unit, int phy_id, char *status, int speed,
 			status, speed, duplex);
 }
 
-#endif
-
 static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 {
 	int i;
 	u8 status = 0;
 	int mac_speed = 0x1;
-#ifndef CONFIG_IPQ5332_RUMI
 	struct ipq5332_eth_dev *priv = eth_dev->priv;
 	struct phy_ops *phy_get_ops;
 	static fal_port_speed_t old_speed[IPQ5332_PHY_MAX] =
@@ -914,14 +906,12 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 	int phy_addr = -1, ret = -1;
 	phy_info_t *phy_info;
 	int sgmii_mode = EPORT_WRAPPER_SGMII0_RGMII4, sfp_mode = -1;
-#endif
 	/*
 	 * Check PHY link, speed, Duplex on all phys.
 	 * we will proceed even if single link is up
 	 * else we will return with -1;
 	 */
 	for (i =  0; i < IPQ5332_PHY_MAX; i++) {
-#ifndef CONFIG_IPQ5332_RUMI
 		phy_info = port_info[i]->phy_info;
 		if (phy_info->phy_type == UNUSED_PHY_TYPE)
 			continue;
@@ -999,9 +989,6 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 					dp[duplex]);
 			continue;
 		}
-#endif
-
-#ifndef CONFIG_IPQ5332_RUMI
 		/*
 		 * Note: If the current port link is up and its speed is
 		 * different from its initially configured speed, only then
@@ -1136,21 +1123,12 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 		}
 
 		ipq5332_speed_clock_set(i, clk);
-#else
-		ppe_port_bridge_txmac_set(i, 1);
-		//FAL_SPEED_5000
-		mac_speed = 0x5;
-		ipq5332_uxsgmii_speed_set(i, mac_speed,
-						FAL_DUPLEX_BUTT, status);
-#endif
 	}
 
-#ifndef CONFIG_IPQ5332_RUMI
 	if (linkup <= 0) {
 		/* No PHY link is alive */
 		return -1;
 	}
-#endif
 
 	pr_info("%s: done\n", __func__);
 
@@ -1711,7 +1689,6 @@ int ipq5332_edma_init(void *edma_board_cfg)
 	int i;
 	int ret = -1;
 	ipq5332_edma_board_cfg_t ledma_cfg, *edma_cfg;
-#ifndef	CONFIG_IPQ5332_RUMI
 	phy_info_t *phy_info;
 	int phy_id;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
@@ -1726,13 +1703,11 @@ int ipq5332_edma_init(void *edma_board_cfg)
 	int s17c_swt_enb = 0, s17c_rst_gpio = 0;
 #endif
 	int node, phy_addr, mode, phy_node = -1;
-#endif
 	/*
 	 * Init non cache buffer
 	 */
 	noncached_init();
 
-#ifndef CONFIG_IPQ5332_RUMI
 	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
 #ifdef CONFIG_QCA8084_SWT_MODE
 	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node,
@@ -1785,7 +1760,6 @@ int ipq5332_edma_init(void *edma_board_cfg)
 		printf("Error:switch_mac_mode0 not specified in dts");
 		return mode;
 	}
-#endif
 
 	memset(c_info, 0, (sizeof(c_info) * IPQ5332_EDMA_DEV));
 	memset(enet_addr, 0, sizeof(enet_addr));
@@ -1862,7 +1836,6 @@ int ipq5332_edma_init(void *edma_board_cfg)
 		ipq5332_edma_dev[i]->c_info = c_info[i];
 		ipq5332_edma_hw_addr = IPQ5332_EDMA_CFG_BASE;
 
-#ifndef CONFIG_IPQ5332_RUMI
 		ret = ipq_sw_mdio_init(edma_cfg->phy_name);
 		if (ret)
 			goto init_failed;
@@ -1979,14 +1952,12 @@ int ipq5332_edma_init(void *edma_board_cfg)
 			break;
 			}
 		}
-#endif
 
 		ret = ipq5332_edma_hw_init(hw[i]);
 
 		if (ret)
 			goto init_failed;
 
-#ifndef CONFIG_IPQ5332_RUMI
 #ifdef CONFIG_QCA8084_SWT_MODE
 		/** QCA8084 switch specific configurations */
 		if (qca8084_swt_enb && qca8084_chip_detect) {
@@ -2020,7 +1991,6 @@ int ipq5332_edma_init(void *edma_board_cfg)
 #ifdef CONFIG_ATHRS17C_SWITCH
 		if (s17c_swt_cfg.chip_detect)
 			ipq_qca8337_switch_init(&s17c_swt_cfg);
-#endif
 #endif
 		eth_register(dev[i]);
 	}
