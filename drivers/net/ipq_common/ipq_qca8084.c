@@ -1327,7 +1327,7 @@ int ipq_qca8084_link_update(phy_info_t * phy_info[])
 
 		printf("QCA8084-switch PORT%d %s Speed :%d %s duplex\n", port_id,
 			(phy_status.link_status?"Up":"Down"),
-			phy_status.speed, (phy_status.duplex?"Half":"Full"));
+			phy_status.speed, (phy_status.duplex?"Full":"Half"));
 
 		if (phy_status.link_status == PORT_LINK_DOWN) {
 			/* enable mac rx function */
