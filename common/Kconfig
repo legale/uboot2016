@@ -717,3 +717,12 @@ config CONSOLE_RECORD_IN_SIZE
 	  tstc() and getc() will use this in preference to real device input.
 	  The buffer is allocated immediately after the malloc() region is
 	  ready.
+
+config FIT_FULL_CHECK
+	bool "Do a full check of the FIT before using it"
+	default y
+	help
+	 Enable this do a full check of the FIT to make sure it is valid. This
+	 helps to protect against carefully crafted FITs which take advantage
+	 of bugs or omissions in the code. This includes a bad structure,
+	 multiple root nodes and the like.

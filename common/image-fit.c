@@ -8,7 +8,7 @@
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
-
+#define LOG_CATEGORY LOGC_BOOT
 #ifdef USE_HOSTCC
 #include "mkimage.h"
 #include <image.h>
@@ -991,11 +991,22 @@ int fit_image_verify(const void *fit, int image_noffset)
 {
 	const void	*data;
 	size_t		size;
-	int		noffset = 0;
 	char		*err_msg = "";
 	int verify_all = 1;
 	int ret;
+	int noffset = 0;
 
+#if defined(CONFIG_FIT_SIGNATURE)
+	const char *name = fit_get_name(fit, image_noffset, NULL);
+	if (strchr(name, '@')) {
+		/*
+		 * We don't support this since libfdt considers names with the
+		 * name root but different @ suffix to be equal
+		 */
+		err_msg = "Node name contains @";
+		goto error;
+	}
+#endif
 	/* Get image data and data length */
 	if (fit_image_get_data(fit, image_noffset, &data, &size)) {
 		err_msg = "Can't get image data/size";
@@ -1193,6 +1204,33 @@ int fit_image_check_comp(const void *fit, int noffset, uint8_t comp)
 }
 
 /**
+ * fdt_check_no_at() - Check for nodes whose names contain '@'
+ * This checks the parent node and all subnodes recursively
+ * @fit: FIT to check
+ * @parent: Parent node to check
+ * @return 0 if OK, -EADDRNOTAVAIL is a node has a name containing '@'
+ */
+#if defined(CONFIG_FIT_SIGNATURE)
+static int fdt_check_no_at(const void *fit, int parent)
+{
+	const char *name;
+	int node;
+	int ret;
+
+	name = fdt_get_name(fit, parent, NULL);
+	if (!name || strchr(name, '@'))
+		return -EADDRNOTAVAIL;
+
+	fdt_for_each_subnode(fit, node, parent) {
+		ret = fdt_check_no_at(fit, node);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+#endif
+/**
  * fit_check_format - sanity check FIT image format
  * @fit: pointer to the FIT format image header
  *
@@ -1203,29 +1241,71 @@ int fit_image_check_comp(const void *fit, int noffset, uint8_t comp)
  *     1, on success
  *     0, on failure
  */
-int fit_check_format(const void *fit)
+int fit_check_format(const void *fit, ulong size)
 {
+	int ret;
+
+	ret = fdt_check_header(fit);
+	if (ret) {
+		debug("Wrong FIT format: not a flattened device tree\n");
+		return -ENOEXEC;
+	}
+
+#if defined(CONFIG_FIT_FULL_CHECK)
+		/*
+		 * If we are not given the size, make do wtih calculating it.
+		 * This is not as secure, so we should consider a flag to
+		 * control this.
+		 */
+		if (size == IMAGE_SIZE_INVAL)
+			size = fdt_totalsize(fit);
+		ret = fdt_check_full(fit, size);
+		if (ret)
+			ret = -EINVAL;
+
+		/*
+		 * U-Boot stopped using unit addressed in 2017. Since libfdt
+		 * can match nodes ignoring any unit address, signature
+		 * verification can see the wrong node if one is inserted with
+		 * the same name as a valid node but with a unit address
+		 * attached. Protect against this by disallowing unit addresses.
+		 */
+#if defined(CONFIG_FIT_SIGNATURE)
+		if (!ret)
+			ret = fdt_check_no_at(fit, 0);
+
+			if (ret) {
+				debug("FIT check error %d\n", ret);
+				return ret;
+			}
+		}
+#endif
+		if (ret) {
+			debug("FIT check error %d\n", ret);
+			return ret;
+		}
+#endif
 	/* mandatory / node 'description' property */
-	if (fdt_getprop(fit, 0, FIT_DESC_PROP, NULL) == NULL) {
+	if (!fdt_getprop(fit, 0, FIT_DESC_PROP, NULL)) {
 		debug("Wrong FIT format: no description\n");
-		return 0;
+		return -ENOMSG;
 	}
 
 	if (IMAGE_ENABLE_TIMESTAMP) {
 		/* mandatory / node 'timestamp' property */
-		if (fdt_getprop(fit, 0, FIT_TIMESTAMP_PROP, NULL) == NULL) {
+		if (!fdt_getprop(fit, 0, FIT_TIMESTAMP_PROP, NULL)) {
 			debug("Wrong FIT format: no timestamp\n");
-			return 0;
+			return -ENODATA;
 		}
 	}
 
 	/* mandatory subimages parent '/images' node */
 	if (fdt_path_offset(fit, FIT_IMAGES_PATH) < 0) {
 		debug("Wrong FIT format: no images parent node\n");
-		return 0;
+		return -ENOENT;
 	}
 
-	return 1;
+	return 0;
 }
 
 
@@ -1581,10 +1661,15 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 	printf("## Loading %s from FIT Image at %08lx ...\n", prop_name, addr);
 
 	bootstage_mark(bootstage_id + BOOTSTAGE_SUB_FORMAT);
-	if (!fit_check_format(fit)) {
-		printf("Bad FIT %s image format!\n", prop_name);
+	ret = fit_check_format(fit, IMAGE_SIZE_INVAL);
+	if (ret) {
+		printf("Bad FIT %s image format! (err=%d)\n", prop_name, ret);
+#if defined(CONFIG_FIT_SIGNATURE)
+		if (ret == -EADDRNOTAVAIL)
+			printf("Signature checking prevents use of unit addresses (@) in nodes\n");
+#endif
 		bootstage_error(bootstage_id + BOOTSTAGE_SUB_FORMAT);
-		return -ENOEXEC;
+		return ret;
 	}
 	bootstage_mark(bootstage_id + BOOTSTAGE_SUB_FORMAT_OK);
 	if (fit_uname) {
