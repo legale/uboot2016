@@ -28,6 +28,36 @@
 		status = "disabled";
 	};
 
+	serial@78B0000 {
+		compatible = "qca,ipq-uartdm";
+		reg = <0x78B0000 0x200>;
+		bit_rate = <0xff>;
+		m_value = <36>;
+		n_value = <15625>;
+		d_value = <15625>;
+		status = "ok";
+		serial_gpio {
+			gpio1 {
+				gpio = <33>;
+				func = <2>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+			};
+
+			gpio2 {
+				gpio = <35>;
+				func = <2>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	aliases {
+		uart2 = "/serial@78B0000";
+	};
+
+
 	timer {
 		gcnt_cntcv_lo = <0x4a2000>;
 		gcnt_cntcv_hi = <0x4a2004>;
