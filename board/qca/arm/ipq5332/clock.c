@@ -84,7 +84,6 @@ int uart_clock_config(struct ipq_serial_platdata *plat)
 #ifdef CONFIG_QCA_MMC
 void emmc_clock_init(void)
 {
-#ifdef QCA_CLOCK_ENABLE
 	int cfg;
 
 	/* Configure sdcc1_apps_clk_src */
@@ -111,9 +110,7 @@ void emmc_clock_init(void)
 	udelay(10);
 	writel(readl(GCC_SDCC1_AHB_CBCR) | CLK_ENABLE, GCC_SDCC1_AHB_CBCR);
 	udelay(10);
-#else
 	return;
-#endif
 }
 
 void emmc_clock_reset(void)
@@ -126,7 +123,6 @@ void emmc_clock_reset(void)
 #ifdef CONFIG_PCI_IPQ
 void pcie_v2_clock_init(int pcie_id)
 {
-#ifdef QCA_CLOCK_ENABLE
 	int cfg, cfg1,cfg2;
 	static int clk_configure;
 
@@ -215,14 +211,11 @@ void pcie_v2_clock_init(int pcie_id)
 	writel(CLK_ENABLE, GCC_SNOC_PCIE3_1LANE_S_CBCR);
 	writel(CLK_ENABLE, GCC_SNOC_PCIE3_1LANE_1_M_CBCR);
 	writel(CLK_ENABLE, GCC_SNOC_PCIE3_1LANE_1_S_CBCR);
-#else
 	return;
-#endif
 }
 
 void pcie_v2_clock_deinit(int pcie_id)
 {
-#ifdef QCA_CLOCK_ENABLE
 	writel(0x0, GCC_SNOC_PCIE3_2LANE_M_CBCR);
 	writel(0x0, GCC_SNOC_PCIE3_2LANE_S_CBCR);
 	writel(0x0, GCC_SNOC_PCIE3_1LANE_M_CBCR);
@@ -257,15 +250,12 @@ void pcie_v2_clock_deinit(int pcie_id)
 		writel(0x0, GCC_PCIE3X1_1_AUX_CBCR);
 		break;
 	}
-#else
 	return;
-#endif
 }
 #endif
 #ifdef CONFIG_USB_XHCI_IPQ
 void usb_clock_init(void)
 {
-#ifdef QCA_CLOCK_ENABLE
 	int cfg;
 
 	/* Configure usb0_master_clk_src */
@@ -317,23 +307,18 @@ void usb_clock_init(void)
 	writel(CLK_ENABLE, GCC_USB0_PHY_CFG_AHB_CBCR);
 	writel(CLK_ENABLE, GCC_USB0_AUX_CBCR);
 	writel(CLK_ENABLE, GCC_USB0_LFPS_CBCR);
-#else
 	return;
-#endif
 }
 
 void usb_clock_deinit(void)
 {
-#ifdef QCA_CLOCK_ENABLE
 	writel(0x0, GCC_USB0_PHY_CFG_AHB_CBCR);
 	writel(0x4220, GCC_USB0_MASTER_CBCR);
 	writel(0x0, GCC_USB0_SLEEP_CBCR);
 	writel(0x0, GCC_USB0_MOCK_UTMI_CBCR);
 	writel(0x0, GCC_USB0_AUX_CBCR);
 	writel(0x0, GCC_USB0_LFPS_CBCR);
-#else
 	return;
-#endif
 }
 #endif
 
@@ -576,7 +561,6 @@ void fixed_clock_init(void)
 
 void cmbblk_init(void)
 {
-#ifndef CONFIG_IPQ5332_RUMI
 	unsigned int reg_val;
 
 	reg_val = readl(PLL_REFERENCE_CLOCK);
@@ -592,7 +576,6 @@ void cmbblk_init(void)
 	reg_val |= BIT(6);
 	writel(reg_val, PLL_POWER_ON_AND_RESET);
 	mdelay(10);
-#endif
 }
 
 void eth_clock_init(void)

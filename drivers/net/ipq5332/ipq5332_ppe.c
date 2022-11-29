@@ -21,9 +21,7 @@
 #include <common.h>
 #include <asm/global_data.h>
 #include "ipq5332_ppe.h"
-#ifndef CONFIG_IPQ5332_RUMI
 #include "ipq5332_uniphy.h"
-#endif
 #include <fdtdec.h>
 #include "ipq_phy.h"
 
@@ -269,8 +267,6 @@ void ppe_mac_packet_filter_set(uint32_t port)
 	      (port * MAC_PACKET_FILTER_ADDRESS),
 	      0x80000081);
 }
-
-#ifndef CONFIG_IPQ5332_RUMI
 /*
  * ipq5332_port_mac_clock_reset()
  */
@@ -374,7 +370,6 @@ void ipq5332_10g_r_speed_set(int port, int status)
 	ppe_port_rxmac_status_set(port);
 	ppe_mac_packet_filter_set(port);
 }
-#endif
 
 void ppe_xgmac_speed_set(uint32_t port, int speed)
 {
@@ -456,7 +451,6 @@ void ipq5332_xgmac_sgmiiplus_speed_set(int port, int speed, int status)
 void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex,
 				int status)
 {
-#ifndef CONFIG_IPQ5332_RUMI
 	uint32_t uniphy_index;
 
 	if (port == PORT0)
@@ -466,12 +460,9 @@ void ipq5332_uxsgmii_speed_set(int port, int speed, int duplex,
 
 	ppe_uniphy_usxgmii_autoneg_completed(uniphy_index);
 	ppe_uniphy_usxgmii_speed_set(uniphy_index, speed);
-#endif
 	ppe_xgmac_speed_set(port, speed);
-#ifndef CONFIG_IPQ5332_RUMI
 	ppe_uniphy_usxgmii_duplex_set(uniphy_index, duplex);
 	ppe_uniphy_usxgmii_port_reset(uniphy_index);
-#endif
 	ppe_port_bridge_txmac_set(port, status);
 	ppe_port_txmac_status_set(port);
 	ppe_port_rxmac_status_set(port);
@@ -516,7 +507,6 @@ static void ipq5332_ppe_flow_map_tbl_set(int queue, int port)
  */
 static void ipq5332_ppe_tdm_configuration(void)
 {
-#ifndef CONFIG_IPQ5332_RUMI
 	ipq5332_ppe_reg_write(0xc000, 0x22);
 	ipq5332_ppe_reg_write(0xc010, 0x30);
 	ipq5332_ppe_reg_write(0xc020, 0x21);
@@ -564,19 +554,6 @@ static void ipq5332_ppe_tdm_configuration(void)
 	writel(0x303,(void *)0x3a026100);
 	writel(0x303,(void *)0x3a026104);
 	writel(0x303,(void *)0x3a026108);
-#else
-	ipq5332_ppe_reg_write(0xc000, 0x20);
-	ipq5332_ppe_reg_write(0xc010, 0x32);
-	ipq5332_ppe_reg_write(0xc020, 0x21);
-	ipq5332_ppe_reg_write(0xc030, 0x30);
-	ipq5332_ppe_reg_write(0xc040, 0x22);
-	ipq5332_ppe_reg_write(0xc050, 0x31);
-	ipq5332_ppe_reg_write(0xb000, 0x80000006);
-	ipq5332_ppe_reg_write(0x47a000, 0xfa10);
-	ipq5332_ppe_reg_write(0x47a010, 0xfc21);
-	ipq5332_ppe_reg_write(0x47a020, 0xf902);
-	ipq5332_ppe_reg_write(0x400000, 0x3);
-#endif
 }
 
 /*
@@ -777,11 +754,8 @@ void ipq5332_ppe_interface_mode_init(void)
 		return;
 	}
 
-#ifndef CONFIG_IPQ5332_RUMI
 	ppe_uniphy_mode_set(PPE_UNIPHY_INSTANCE0, mode0);
 	ppe_uniphy_mode_set(PPE_UNIPHY_INSTANCE1, mode1);
-#endif
-
 	/*
 	 * Port1 and Port2 can be used as GMAC or XGMAC.
 	 */
