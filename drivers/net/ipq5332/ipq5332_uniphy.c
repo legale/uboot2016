@@ -188,20 +188,20 @@ void ppe_uniphy_set_forceMode(uint32_t uniphy_index)
 
 static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 {
-	if ((uniphy_index == 1) && (mode == EPORT_WRAPPER_SGMII_PLUS)) {
-		writel(UNIPHY_MISC_SRC_PHY_MODE, PPE_UNIPHY_BASE +
-				(uniphy_index * PPE_UNIPHY_REG_INC) +
-				UNIPHY_MISC_SOURCE_SELECTION_REG_OFFSET);
+	uint32_t reg_value;
 
-		ppe_uniphy_set_forceMode(uniphy_index);
+	writel(UNIPHY_MISC_SRC_PHY_MODE, PPE_UNIPHY_BASE +
+			(uniphy_index * PPE_UNIPHY_REG_INC) +
+			UNIPHY_MISC_SOURCE_SELECTION_REG_OFFSET);
 
+	if (mode == EPORT_WRAPPER_SGMII_PLUS) {
 		writel(UNIPHY_MISC2_REG_SGMII_PLUS_MODE, PPE_UNIPHY_BASE +
-				(uniphy_index * PPE_UNIPHY_REG_INC) +
-				UNIPHY_MISC2_REG_OFFSET);
+			(uniphy_index * PPE_UNIPHY_REG_INC) +
+			UNIPHY_MISC2_REG_OFFSET);
 	} else {
 		writel(UNIPHY_MISC2_REG_SGMII_MODE, PPE_UNIPHY_BASE +
-				(uniphy_index * PPE_UNIPHY_REG_INC) +
-				UNIPHY_MISC2_REG_OFFSET);
+			(uniphy_index * PPE_UNIPHY_REG_INC) +
+			UNIPHY_MISC2_REG_OFFSET);
 	}
 
 	writel(UNIPHY_PLL_RESET_REG_VALUE, PPE_UNIPHY_BASE +
@@ -220,8 +220,18 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 
 	writel(0x0, NSS_CC_UNIPHY_PORT1_RX_CBCR + (uniphy_index * 0x8));
 	writel(0x0, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (uniphy_index * 0x8));
-	writel(0x0, NSS_CC_PORT1_RX_CBCR + (uniphy_index * 0x8));
-	writel(0x0, NSS_CC_PORT1_RX_CBCR + 0x4 + (uniphy_index * 0x8));
+
+	mdelay(10);
+	reg_value = readl(NSS_CC_PORT1_RX_CBCR + (uniphy_index * 0x8));
+	reg_value &= ~BIT(0);
+	mdelay(10);
+	writel(reg_value, NSS_CC_PORT1_RX_CBCR + (uniphy_index * 0x8));
+
+	mdelay(10);
+	reg_value = readl(NSS_CC_PORT1_RX_CBCR + 0x8 + (uniphy_index * 0x8));
+	reg_value &= ~BIT(0);
+	mdelay(10);
+	writel(reg_value, NSS_CC_PORT1_RX_CBCR + 0x8 + (uniphy_index * 0x8));
 
 	switch (mode) {
 		case EPORT_WRAPPER_SGMII_FIBER:
@@ -239,14 +249,9 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 			break;
 
 		case EPORT_WRAPPER_SGMII_PLUS:
-			if (uniphy_index == 1)
-				writel(0x20, PPE_UNIPHY_BASE +
-					(uniphy_index * PPE_UNIPHY_REG_INC)
-					 + PPE_UNIPHY_MODE_CONTROL);
-			else
-				writel(0x820, PPE_UNIPHY_BASE +
-					(uniphy_index * PPE_UNIPHY_REG_INC)
-					 + PPE_UNIPHY_MODE_CONTROL);
+			writel(0x820, PPE_UNIPHY_BASE +
+				(uniphy_index * PPE_UNIPHY_REG_INC)
+				+ PPE_UNIPHY_MODE_CONTROL);
 			break;
 
 		default:
@@ -266,10 +271,22 @@ static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 	mdelay(100);
 
 	writel(0x1, NSS_CC_UNIPHY_PORT1_RX_CBCR + (uniphy_index * 0x8));
+	mdelay(10);
 	writel(0x1, NSS_CC_UNIPHY_PORT1_RX_CBCR + 0x4 + (uniphy_index * 0x8));
-	writel(0x1, NSS_CC_PORT1_RX_CBCR + (uniphy_index * 0x8));
-	writel(0x1, NSS_CC_PORT1_RX_CBCR + 0x4 + (uniphy_index * 0x8));
 
+	mdelay(10);
+	reg_value = readl(NSS_CC_PORT1_RX_CBCR + (uniphy_index * 0x8));
+	reg_value |= BIT(0);
+	mdelay(10);
+	writel(reg_value, NSS_CC_PORT1_RX_CBCR + (uniphy_index * 0x8));
+
+	mdelay(10);
+	reg_value = readl(NSS_CC_PORT1_RX_CBCR + 0x8 + (uniphy_index * 0x8));
+	reg_value |= BIT(0);
+	mdelay(10);
+	writel(reg_value, NSS_CC_PORT1_RX_CBCR + 0x8 + (uniphy_index * 0x8));
+
+	mdelay(10);
 	ppe_uniphy_calibration(uniphy_index);
 }
 
