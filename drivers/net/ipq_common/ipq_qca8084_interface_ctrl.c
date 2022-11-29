@@ -663,3 +663,34 @@ void qca8084_interface_sgmii_mode_set(u32 uniphy_index, u32 qca8084_port_id, mac
 	return;
 }
 #endif /* CONFIG_QCA8084_SWT_MODE */
+
+void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode)
+{
+	uint32_t phy_addr_tmp = 0;
+	mac_config_t config = {0};
+
+	if(interface_mode == PHY_SGMII_BASET)
+		config.mac_mode = QCA8084_MAC_MODE_SGMII;
+	else if(interface_mode == PORT_SGMII_PLUS)
+		config.mac_mode = QCA8084_MAC_MODE_SGMII_PLUS;
+	else {
+		printf("Unsupported interface mode \n");
+		return;
+	}
+
+	config.clock_mode = QCA8084_INTERFACE_CLOCK_PHY_MODE;
+	config.auto_neg = 1;
+
+	qca8084_ephy_addr_get(PORT4, &phy_addr_tmp);
+	if(phy_addr_tmp != phy_addr)
+	{
+		printf("phy_addr:0x%x is not matched with port4 phy addr:0x%x\n",
+			phy_addr, phy_addr_tmp);
+		return;
+	}
+
+	qca8084_interface_sgmii_mode_set(QCA8084_UNIPHY_SGMII_0,
+			PORT4, &config);
+	return;
+}
+

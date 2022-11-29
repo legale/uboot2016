@@ -20,6 +20,11 @@
 extern "C" {
 #endif
 
+/*QCA8084 PHY Fixup definitions */
+#define PORT_UQXGMII						0x1
+#define PHY_SGMII_BASET						0x2
+#define PORT_SGMII_PLUS						0x3
+
 /*MII register*/
 #define QCA8084_PHY_FIFO_CONTROL				0x19
 

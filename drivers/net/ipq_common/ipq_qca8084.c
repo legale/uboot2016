@@ -39,6 +39,7 @@ extern void qca8084_port_speed_clock_set(uint32_t qca8084_port_id,
 extern void qca8084_port_clk_en_set(uint32_t qca8084_port_id, uint8_t mask,
 						uint8_t enable);
 extern void qca8084_port_clk_reset(uint32_t qca8084_port_id, uint8_t mask);
+extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode);
 
 #ifdef CONFIG_QCA8084_PHY_MODE
 extern void qca8084_uniphy_xpcs_autoneg_restart(uint32_t qca8084_port_id);
@@ -57,7 +58,10 @@ extern void qca8084_gcc_port_clk_parent_set(qca8084_work_mode_t clk_mode,
 extern void qca8084_uniphy_sgmii_function_reset(u32 uniphy_index);
 extern void qca8084_interface_sgmii_mode_set(u32 uniphy_index, u32
 		qca8084_port_id, mac_config_t *config);
+extern uint8_t qca8084_uniphy_mode_check(uint32_t uniphy_index,
+		qca8084_uniphy_mode_t uniphy_mode);
 extern void qca8084_clk_reset(const char *clock_id);
+extern void qca8084_clk_disable(const char *clock_id);
 
 bool qca8084_port_txfc_forcemode[QCA8084_MAX_PORTS] = {};
 bool qca8084_port_rxfc_forcemode[QCA8084_MAX_PORTS] = {};
@@ -742,13 +746,18 @@ static int ipq_qca8084_work_mode_init(int mac_mode0, int mac_mode1)
 			return -1;
 	}
 
+	if (qca8084_uniphy_mode_check(QCA8084_UNIPHY_SGMII_0, QCA8084_UNIPHY_PHY)){
+		pr_debug("%s %d QCA8084 Uniphy 0 is in SGMII Mode \n",
+				__func__, __LINE__);
+		ipq_qca8084_work_mode_set(QCA8084_SWITCH_BYPASS_PORT5_MODE);
+		return ret;
+	}
+
 	switch (mac_mode1) {
 		case EPORT_WRAPPER_SGMII_PLUS:
-		case EPORT_WRAPPER_SGMII_CHANNEL0:
+		case EPORT_WRAPPER_MAX:
 			ipq_qca8084_work_mode_set(QCA8084_SWITCH_MODE);
 			break;
-		case EPORT_WRAPPER_MAX:
-			ipq_qca8084_work_mode_set(QCA8084_SWITCH_BYPASS_PORT5_MODE);
 		default:
 			printf("%s %d Error: Unsupported mac_mode1 \n", __func__, __LINE__);
 			return -1;
@@ -779,11 +788,21 @@ static int chip_ver_get(void)
 	return ret;
 }
 
+void qca8084_bypass_interface_mode_set(u32 interface_mode)
+{
+	ipq_qca8084_work_mode_set(QCA8084_PHY_SGMII_UQXGMII_MODE);
+	qca8084_phy_sgmii_mode_set(PORT4, interface_mode);
+
+	pr_debug("ethphy3 software reset\n");
+	qca8084_phy_reset(PORT4);
+
+	/*init pinctrl for phy mode to be added later*/
+}
 
 bool qca8084_port_phy_connected(u32 port_id)
 {
 	u32 cpu_bmp = 0x1;
-	if ((cpu_bmp & BIT(port_id)) || (port_id == PORT1) ||
+	if ((cpu_bmp & BIT(port_id)) || (port_id == PORT0) ||
 		(port_id == PORT5))
 		return false;
 
@@ -1186,8 +1205,10 @@ static int _qca8084_interface_mode_init(u32 port_id, u32 mac_mode,
 
 	if(mac_mode == EPORT_WRAPPER_SGMII_PLUS)
 		config.mac_mode = QCA8084_MAC_MODE_SGMII_PLUS;
-	else if(mac_mode == EPORT_WRAPPER_SGMII_CHANNEL0)
+	else if (mac_mode == EPORT_WRAPPER_SGMII_CHANNEL0)
 		config.mac_mode = QCA8084_MAC_MODE_SGMII;
+	else if (mac_mode == EPORT_WRAPPER_MAX)
+		config.mac_mode = QCA8084_MAC_MODE_MAX;
 	else {
 		printf("%s %d Unsupported mac mode \n", __func__, __LINE__);
 		return -1;
@@ -1207,11 +1228,25 @@ static int _qca8084_interface_mode_init(u32 port_id, u32 mac_mode,
 	config.auto_neg = !(phy_info->forced_speed);
 	config.force_speed = force_speed;
 
-	qca8084_interface_sgmii_mode_set(uniphy_index, port_id, &config);
 
-	/*do sgmii function reset*/
-	pr_debug("ipg_tune reset and function reset\n");
-	qca8084_uniphy_sgmii_function_reset(uniphy_index);
+	if (port_id == PORT5) {
+		if (qca8084_uniphy_mode_check(QCA8084_UNIPHY_SGMII_0, QCA8084_UNIPHY_PHY))
+			pr_debug("%s %d QCA8084 Uniphy 0 is in SGMII Mode \n",
+					__func__, __LINE__);
+		else {
+			if (config.mac_mode == QCA8084_MAC_MODE_MAX) {
+				pr_debug("%s %d QCA8084 Port 5 clk disable \n",
+						__func__, __LINE__);
+				qca8084_clk_disable(QCA8084_SRDS0_SYS_CLK);
+			}
+		}
+	} else {
+		qca8084_interface_sgmii_mode_set(uniphy_index, port_id, &config);
+
+		/*do sgmii function reset*/
+		pr_debug("ipg_tune reset and function reset\n");
+		qca8084_uniphy_sgmii_function_reset(uniphy_index);
+	}
 	return 0;
 }
 
@@ -1318,6 +1353,9 @@ int ipq_qca8084_link_update(phy_info_t * phy_info[])
 
 	for (int i=PORT1; i<PORT5; i++) {
 		port_id = phy_info[i]->phy_address;
+		if (phy_info[i]->phy_type == UNUSED_PHY_TYPE)
+			continue;
+
 		rv = qca8084_phy_get_status(port_id, &phy_status);
 		if (rv < 0) {
 			printf("%s %d failed get phy status of idx %d \n",

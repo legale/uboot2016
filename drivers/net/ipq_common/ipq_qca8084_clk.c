@@ -828,7 +828,7 @@ void qca8084_clk_dump(void)
 	struct qca8084_clk_data clk_data;
 	int ret;
 
-	pr_debug("%-31s  Frequency  RCG_VAL  CDIV_VAL  CBC_VAL\n", "Clock Name");
+	printf("%-31s  Frequency  RCG_VAL  CDIV_VAL  CBC_VAL\n", "Clock Name");
 
 	for (i = 0; i < ARRAY_SIZE(qca8084_clk_lookup_table); i++) {
 		clk = &qca8084_clk_lookup_table[i];
@@ -836,8 +836,8 @@ void qca8084_clk_dump(void)
 			ret = qca8084_clk_rate_get(clk->clk_name, &clk_data);
 			if (ret != 0)
 				continue;
-			pr_debug("%-31s  %-9ld  0x%-5x  0x%-6x  0x%-5x\n",
-				clk->clk_name + 8, clk_data.rate,
+			printf("%-31s  %-9ld  0x%-5x  0x%-6x  0x%-5x\n",
+				clk->clk_name, clk_data.rate,
 				clk_data.rcg_val, clk_data.cdiv_val, clk_data.cbc_val);
 		}
 	}
