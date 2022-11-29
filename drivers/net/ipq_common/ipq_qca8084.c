@@ -39,15 +39,15 @@ extern void qca8084_port_speed_clock_set(uint32_t qca8084_port_id,
 extern void qca8084_port_clk_en_set(uint32_t qca8084_port_id, uint8_t mask,
 						uint8_t enable);
 extern void qca8084_port_clk_reset(uint32_t qca8084_port_id, uint8_t mask);
-extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode);
+
+extern u8 qca8081_phy_get_link_status(u32 dev_id, u32 phy_id);
+extern u32 qca8081_phy_get_duplex(u32 dev_id, u32 phy_id, fal_port_duplex_t *duplex);
+extern u32 qca8081_phy_get_speed(u32 dev_id, u32 phy_id, fal_port_speed_t *speed);
 
 #ifdef CONFIG_QCA8084_PHY_MODE
 extern void qca8084_uniphy_xpcs_autoneg_restart(uint32_t qca8084_port_id);
 extern void qca8084_uniphy_xpcs_speed_set(uint32_t qca8084_port_id,
 						fal_port_speed_t speed);
-extern u8 qca8081_phy_get_link_status(u32 dev_id, u32 phy_id);
-extern u32 qca8081_phy_get_duplex(u32 dev_id, u32 phy_id, fal_port_duplex_t *duplex);
-extern u32 qca8081_phy_get_speed(u32 dev_id, u32 phy_id, fal_port_speed_t *speed);
 extern void qca8084_interface_uqxgmii_mode_set(void);
 extern void qca8084_uniphy_uqxgmii_function_reset(uint32_t qca8084_port_id);
 #endif /* CONFIG_QCA8084_PHY_MODE */
@@ -60,12 +60,16 @@ extern void qca8084_interface_sgmii_mode_set(u32 uniphy_index, u32
 		qca8084_port_id, mac_config_t *config);
 extern uint8_t qca8084_uniphy_mode_check(uint32_t uniphy_index,
 		qca8084_uniphy_mode_t uniphy_mode);
-extern void qca8084_clk_reset(const char *clock_id);
 extern void qca8084_clk_disable(const char *clock_id);
+extern void qca8084_clk_reset(const char *clock_id);
 
 bool qca8084_port_txfc_forcemode[QCA8084_MAX_PORTS] = {};
 bool qca8084_port_rxfc_forcemode[QCA8084_MAX_PORTS] = {};
 #endif /* CONFIG_QCA8084_SWT_MODE */
+
+#ifdef CONFIG_QCA8084_BYPASS_MODE
+extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode);
+#endif /* CONFIG_QCA8084_BYPASS_MODE */
 
 static int qca8084_reg_field_get(u32 reg_addr, u32 bit_offset,
 		u32 field_len, u8 value[]);
@@ -494,6 +498,15 @@ int ipq_qca8084_pinctrl_init(void)
 	return 0;
 }
 
+void qca8084_phy_reset(u32 phy_addr)
+{
+	u16 phy_data;
+
+	phy_data = qca8084_phy_reg_read(phy_addr, QCA8084_PHY_CONTROL);
+	qca8084_phy_reg_write(phy_addr, QCA8084_PHY_CONTROL,
+				 phy_data | QCA8084_CTRL_SOFTWARE_RESET);
+}
+
 #ifdef CONFIG_QCA8084_PHY_MODE
 void qca8084_phy_ipg_config(uint32_t phy_id, fal_port_speed_t speed)
 {
@@ -564,6 +577,7 @@ void qca8084_phy_interface_mode_set(void)
 
 	/*init pinctrl for phy mode to be added later*/
 }
+#endif /* CONFIG_QCA8084_PHY_MODE */
 
 void qca8084_cdt_thresh_init(u32 phy_id)
 {
@@ -614,15 +628,6 @@ void qca8084_phy_modify_debug(u32 phy_addr, u32 debug_reg,
 		phy_addr, debug_reg, phy_data);
 }
 
-void qca8084_phy_reset(u32 phy_addr)
-{
-	u16 phy_data;
-
-	phy_data = qca8084_phy_reg_read(phy_addr, QCA8084_PHY_CONTROL);
-	qca8084_phy_reg_write(phy_addr, QCA8084_PHY_CONTROL,
-				 phy_data | QCA8084_CTRL_SOFTWARE_RESET);
-}
-
 void qca8084_phy_adc_edge_set(u32 phy_addr, u32 adc_edge)
 {
 	qca8084_phy_modify_debug(phy_addr,
@@ -664,7 +669,6 @@ void ipq_qca8084_phy_hw_init(struct phy_ops **ops, u32 phy_addr)
 	/* invert ADC clock edge as falling edge to fix link issue */
 	qca8084_phy_adc_edge_set(phy_addr, ADC_FALLING);
 }
-#endif /* CONFIG_QCA8084_PHY_MODE */
 
 static int qca8084_reg_field_get(u32 reg_addr, u32 bit_offset,
 		u32 field_len, u8 value[])
@@ -786,17 +790,6 @@ static int chip_ver_get(void)
 	}
 
 	return ret;
-}
-
-void qca8084_bypass_interface_mode_set(u32 interface_mode)
-{
-	ipq_qca8084_work_mode_set(QCA8084_PHY_SGMII_UQXGMII_MODE);
-	qca8084_phy_sgmii_mode_set(PORT4, interface_mode);
-
-	pr_debug("ethphy3 software reset\n");
-	qca8084_phy_reset(PORT4);
-
-	/*init pinctrl for phy mode to be added later*/
 }
 
 bool qca8084_port_phy_connected(u32 port_id)
@@ -1449,3 +1442,17 @@ void ipq_qca8084_switch_hw_reset(int gpio)
 	writel(0x2, GPIO_IN_OUT_ADDR(gpio));
 }
 #endif /* CONFIG_QCA8084_SWT_MODE */
+
+#ifdef CONFIG_QCA8084_BYPASS_MODE
+void qca8084_bypass_interface_mode_set(u32 interface_mode)
+{
+	ipq_qca8084_work_mode_set(QCA8084_PHY_SGMII_UQXGMII_MODE);
+	qca8084_phy_sgmii_mode_set(PORT4, interface_mode);
+
+	pr_debug("ethphy3 software reset\n");
+	qca8084_phy_reset(PORT4);
+
+	/*init pinctrl for phy mode to be added later*/
+}
+#endif /* CONFIG_QCA8084_BYPASS_MODE */
+

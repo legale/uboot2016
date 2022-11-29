@@ -137,6 +137,15 @@ config QCA8084_SWT_MODE
 	help
 	  Enable QCA8084 Switch Mode support.
 
+if QCA8084_SWT_MODE
+
+config QCA8084_BYPASS_MODE
+	bool "Enable QCA8084 By-pass support"
+	help
+	  Enable QCA808 By-pass support.
+
+endif # QCA8084_SWT_MODE
+
 config QCA8084_DEBUG
 	bool "Enable QCA8084 Debug support"
 	help

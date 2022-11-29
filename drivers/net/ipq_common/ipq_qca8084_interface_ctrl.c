@@ -116,7 +116,6 @@ void qca8084_port_speed_clock_set(uint32_t qca8084_port_id,
 	qca8084_port_clk_rate_set(qca8084_port_id, clk_rate);
 }
 
-#ifdef CONFIG_QCA8084_PHY_MODE
 void qca8084_ephy_addr_get(uint32_t qca8084_port_id, uint32_t *phy_addr)
 {
 	uint32_t data = 0;
@@ -142,6 +141,7 @@ void qca8084_ephy_addr_get(uint32_t qca8084_port_id, uint32_t *phy_addr)
 	}
 }
 
+#ifdef CONFIG_QCA8084_PHY_MODE
 static uint16_t qca8084_uniphy_xpcs_mmd_read(uint16_t mmd_num, uint16_t mmd_reg)
 {
 	uint32_t uniphy_xpcs_addr = 0;
@@ -180,25 +180,6 @@ static void qca8084_uniphy_xpcs_modify_mmd(uint32_t mmd_num, uint32_t mmd_reg,
 	phy_data = qca8084_uniphy_xpcs_mmd_read(mmd_num, mmd_reg);
 	new_phy_data = (phy_data & ~mask) | value;
 	qca8084_uniphy_xpcs_mmd_write(mmd_num, mmd_reg, new_phy_data);
-}
-
-uint8_t qca8084_uniphy_mode_check(uint32_t uniphy_index,
-				  qca8084_uniphy_mode_t uniphy_mode)
-{
-	uint32_t uniphy_addr = 0;
-	uint16_t uniphy_mode_ctrl_data = 0;
-
-	qca8084_serdes_addr_get(uniphy_index, &uniphy_addr);
-
-	uniphy_mode_ctrl_data = qca8084_phy_mmd_read(uniphy_addr,
-		QCA8084_UNIPHY_MMD1, QCA8084_UNIPHY_MMD1_MODE_CTRL);
-	if(uniphy_mode_ctrl_data == PHY_INVALID_DATA)
-		return 0;
-
-	if(!(uniphy_mode & uniphy_mode_ctrl_data))
-		return 0;
-
-	return 1;
 }
 
 static uint32_t qca8084_uniphy_xpcs_port_to_mmd(uint32_t qca8084_port_id)
@@ -662,8 +643,28 @@ void qca8084_interface_sgmii_mode_set(u32 uniphy_index, u32 qca8084_port_id, mac
 
 	return;
 }
+
+uint8_t qca8084_uniphy_mode_check(uint32_t uniphy_index,
+				  qca8084_uniphy_mode_t uniphy_mode)
+{
+	uint32_t uniphy_addr = 0;
+	uint16_t uniphy_mode_ctrl_data = 0;
+
+	qca8084_serdes_addr_get(uniphy_index, &uniphy_addr);
+
+	uniphy_mode_ctrl_data = qca8084_phy_mmd_read(uniphy_addr,
+		QCA8084_UNIPHY_MMD1, QCA8084_UNIPHY_MMD1_MODE_CTRL);
+	if(uniphy_mode_ctrl_data == PHY_INVALID_DATA)
+		return 0;
+
+	if(!(uniphy_mode & uniphy_mode_ctrl_data))
+		return 0;
+
+	return 1;
+}
 #endif /* CONFIG_QCA8084_SWT_MODE */
 
+#ifdef CONFIG_QCA8084_BYPASS_MODE
 void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode)
 {
 	uint32_t phy_addr_tmp = 0;
@@ -693,4 +694,5 @@ void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode)
 			PORT4, &config);
 	return;
 }
+#endif /* CONFIG_QCA8084_BYPASS_MODE */
 
