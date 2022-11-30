@@ -584,14 +584,6 @@ static void usb_init_ssphy(void __iomem *phybase)
 	writel(CLK_ENABLE, GCC_USB0_PHY_CFG_AHB_CBCR);
 	writel(CLK_ENABLE, GCC_USB0_PIPE_CBCR);
 	udelay(100);
-	/*set frequency initial value*/
-	writel(0x1cb9, phybase + SSCG_CTRL_REG_4);
-	writel(0x023a, phybase + SSCG_CTRL_REG_5);
-	/*set spectrum spread count*/
-	writel(0xd360, phybase + SSCG_CTRL_REG_3);
-	/*set fstep*/
-	writel(0x1, phybase + SSCG_CTRL_REG_1);
-	writel(0xeb, phybase + SSCG_CTRL_REG_2);
 	return;
 }
 

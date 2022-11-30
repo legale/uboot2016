@@ -47,7 +47,7 @@
 		};
 	};
 
-	i2c {
+	i2c@78B6000 {
 		i2c_gpio {
 			gpio1 {
 				gpio = <29>;

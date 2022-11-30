@@ -39,8 +39,6 @@ extern const add_node_t add_fdt_node[];
 
 #define TCSR_MODE_CTRL_2PORT_2LANE		0x1947544
 
-#define USB30_GUCTL				0x8A0C12C
-
 #define DLOAD_MAGIC_COOKIE			0x10
 #define DLOAD_DISABLED				0x40
 #define DLOAD_BITS				0xFF
