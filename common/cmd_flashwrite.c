@@ -293,11 +293,13 @@ char * const argv[])
 #endif
 
 #ifdef CONFIG_QCA_MMC
-	} else if (sfi->flash_type == SMEM_BOOT_MMC_FLASH) {
+	} else if (sfi->flash_type == SMEM_BOOT_MMC_FLASH ||
+		sfi->flash_type == SMEM_BOOT_NO_FLASH) {
 
 		blk_dev = mmc_get_dev(mmc_host.dev_num);
 		if (blk_dev != NULL) {
 
+			flash_type = SMEM_BOOT_MMC_FLASH;
 			if (strncmp(GPT_PART_NAME,
 					(const char *)part_name,
 					sizeof(GPT_PART_NAME))  == 0) {
