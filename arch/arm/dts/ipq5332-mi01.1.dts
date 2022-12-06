@@ -23,9 +23,9 @@
 		console = "/serial@78AF000";
 		nand = "/nand-controller@79B0000";
 		mmc = "/sdhci@7804000";
-		usb0 = "xhci@8a00000";
-		i2c0 = "/i2c@78B6000";
+		usb0 = "/xhci@8a00000";
 		pci1 = "/pci@18000000";
+		i2c0 = "/i2c@78B6000";
 	};
 
 	serial@78AF000 {
@@ -78,7 +78,7 @@
 		};
 	};
 
-	i2c {
+	i2c@78B6000 {
 		i2c_gpio {
 			gpio1 {
 				gpio = <29>;
