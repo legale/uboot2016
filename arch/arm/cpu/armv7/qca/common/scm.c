@@ -516,15 +516,27 @@ int qca_scm_dpr(u32 svc_id, u32 cmd_id, void *buf, size_t len)
 {
 	int ret = 0;
 	uint32_t *status;
+
 	if (is_scm_armv8())
 	{
 		struct qca_scm_desc desc = {0};
-		desc.arginfo = QCA_SCM_ARGS(1, SCM_VAL);
+
+		/* args[0] has the dpr load address */
 		desc.args[0] = *((unsigned int *)buf);
+#ifndef CONFIG_IPQ5332
+		/* Only dpr load address is passed */
+		desc.arginfo = QCA_SCM_ARGS(1, SCM_VAL);
+		status = (uint32_t *)(*(((uint32_t *)buf) + 1));
+#else
+		/* Both dpr load address and size are passed */
+		desc.arginfo = QCA_SCM_ARGS(2, SCM_VAL);
+		/* args[1] has the dpr elf size*/
+		desc.args[1] = *(((unsigned int *)buf) + 1);
+		status = (uint32_t *)(*(((uint32_t *)buf) + 2));
+#endif
 
 		ret = scm_call_64(svc_id, cmd_id, &desc);
 
-		status = (uint32_t *)(*(((uint32_t *)buf) + 1));
 		*status = desc.ret[0];
 	}
 	else
