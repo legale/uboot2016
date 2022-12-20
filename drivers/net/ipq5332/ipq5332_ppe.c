@@ -521,23 +521,23 @@ static void ipq5332_ppe_tdm_configuration(void)
 	ipq5332_ppe_reg_write(0xc0b0, 0x32);
 	ipq5332_ppe_reg_write(0xc0c0, 0x20);
 	ipq5332_ppe_reg_write(0xc0d0, 0x30);
-	ipq5332_ppe_reg_write(0xc0e0, 0x21);
+	ipq5332_ppe_reg_write(0xc0e0, 0x20);
 	ipq5332_ppe_reg_write(0xc0f0, 0x31);
 	ipq5332_ppe_reg_write(0xc100, 0x22);
 	ipq5332_ppe_reg_write(0xc110, 0x32);
-	ipq5332_ppe_reg_write(0xc120, 0x20);
+	ipq5332_ppe_reg_write(0xc120, 0x21);
 	ipq5332_ppe_reg_write(0xc130, 0x30);
 	ipq5332_ppe_reg_write(0xc140, 0x22);
 	ipq5332_ppe_reg_write(0xc150, 0x31);
-	ipq5332_ppe_reg_write(0xc160, 0x21);
+	ipq5332_ppe_reg_write(0xc160, 0x20);
 	ipq5332_ppe_reg_write(0xc170, 0x32);
 	ipq5332_ppe_reg_write(0xc180, 0x22);
 	ipq5332_ppe_reg_write(0xc190, 0x30);
-	ipq5332_ppe_reg_write(0xc1a0, 0x20);
+	ipq5332_ppe_reg_write(0xc1a0, 0x21);
 	ipq5332_ppe_reg_write(0xc1b0, 0x31);
-	ipq5332_ppe_reg_write(0xc1c0, 0x22);
+	ipq5332_ppe_reg_write(0xc1c0, 0x20);
 	ipq5332_ppe_reg_write(0xc1d0, 0x32);
-	ipq5332_ppe_reg_write(0xb000, 0x8000001E);
+	ipq5332_ppe_reg_write(0xb000, 0x80000020);
 
 	writel(0x20,(void *)0x3a47a000);
 	writel(0x12,(void *)0x3a47a010);
@@ -771,11 +771,6 @@ void ipq5332_ppe_provision_init(void)
 	int i;
 	uint32_t queue;
 	uint32_t bridge_ctrl;
-
-	/* PPE Reset */
-	writel(0x1, NSS_CC_PPE_BCR);
-	mdelay(10);
-	writel(0x0, NSS_CC_PPE_BCR);
 
 	/* tdm/sched configuration */
 	ipq5332_ppe_tdm_configuration();

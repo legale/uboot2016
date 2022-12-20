@@ -42,6 +42,10 @@
 #define STATUS_OK "status%?okay"
 #define STATUS_DISABLED "status%?disabled"
 
+#define NSS_CC_PPE_BCR			0x39B003E4
+#define GCC_UNIPHY0_BCR			0x1816000
+#define GCC_UNIPHY1_BCR			0x1816014
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static int aq_phy_initialised = 0;
@@ -937,6 +941,10 @@ void ipq5332_eth_initialize(void)
 int board_eth_init(bd_t *bis)
 {
 	int ret = 0;
+
+	set_mdelay_clearbits_le32(NSS_CC_PPE_BCR, 0x1, 100);
+	set_mdelay_clearbits_le32(GCC_UNIPHY0_BCR, 0x1, 10);
+	set_mdelay_clearbits_le32(GCC_UNIPHY1_BCR, 0x1, 10);
 
 	ipq5332_eth_initialize();
 
