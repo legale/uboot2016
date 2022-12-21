@@ -904,9 +904,11 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 	}
 
 	if (ret == CMD_RET_FAILURE) {
+#ifndef CONFIG_IPQ5332
 #ifdef CONFIG_IPQ_ETH_INIT_DEFER
 		puts("\nNet:   ");
 		eth_initialize();
+#endif
 #endif
 	}
 	return ret;
