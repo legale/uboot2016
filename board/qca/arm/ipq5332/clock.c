@@ -64,6 +64,10 @@ int uart_clock_config(struct ipq_serial_platdata *plat)
 	unsigned long cbcr_val;
 	int ret;
 
+	cbcr_val = readl(GCC_APCS_CLOCK_BRANCH_ENA_VOTE);
+	cbcr_val |= BLSP1_AHB_CLK_ENABLE;
+	writel(cbcr_val, GCC_APCS_CLOCK_BRANCH_ENA_VOTE);
+
 	uart_configure_mux(plat->port_id);
 
 	writel(plat->m_value, GCC_BLSP1_UART_APPS_M(plat->port_id));
