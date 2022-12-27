@@ -198,23 +198,29 @@ void athrs17_reg_init(ipq_s17c_swt_cfg_t *swt_cfg)
 {
 	athrs17_reg_write(S17_MAC_PWR_REG, swt_cfg->mac_pwr);
 
-	athrs17_reg_write(S17_P0STATUS_REG, (S17_SPEED_1000M |
-						S17_TXMAC_EN |
-						S17_RXMAC_EN |
-						S17_DUPLEX_FULL));
-
 	athrs17_reg_write(S17_GLOFW_CTRL1_REG, (S17_IGMP_JOIN_LEAVE_DPALL |
 						S17_BROAD_DPALL |
 						S17_MULTI_FLOOD_DPALL |
 						S17_UNI_FLOOD_DPALL));
 
-	athrs17_reg_write(S17_P5PAD_MODE_REG, S17_MAC0_RGMII_RXCLK_DELAY);
+	if (swt_cfg->update) {
+		athrs17_reg_write(S17_P0STATUS_REG, swt_cfg->port0_status);
+		athrs17_reg_write(S17_P5PAD_MODE_REG, swt_cfg->pad5_mode);
+		athrs17_reg_write(S17_P0PAD_MODE_REG, swt_cfg->pad0_mode);
+	} else {
+		athrs17_reg_write(S17_P0STATUS_REG, (S17_SPEED_1000M |
+						S17_TXMAC_EN |
+						S17_RXMAC_EN |
+						S17_DUPLEX_FULL));
 
-	athrs17_reg_write(S17_P0PAD_MODE_REG, (S17_MAC0_RGMII_EN |
+		athrs17_reg_write(S17_P5PAD_MODE_REG, S17_MAC0_RGMII_RXCLK_DELAY);
+
+		athrs17_reg_write(S17_P0PAD_MODE_REG, (S17_MAC0_RGMII_EN |
 						S17_MAC0_RGMII_TXCLK_DELAY |
 						S17_MAC0_RGMII_RXCLK_DELAY |
 					(0x1 << S17_MAC0_RGMII_TXCLK_SHIFT) |
 					(0x2 << S17_MAC0_RGMII_RXCLK_SHIFT)));
+	}
 
 	printf("%s: complete\n", __func__);
 }
@@ -228,33 +234,41 @@ void athrs17_reg_init_lan(ipq_s17c_swt_cfg_t *swt_cfg)
 {
 	uint32_t reg_val;
 
-	athrs17_reg_write(S17_P6STATUS_REG, (S17_SPEED_1000M |
-						S17_TXMAC_EN |
-						S17_RXMAC_EN |
-						S17_DUPLEX_FULL));
+	if (swt_cfg->update) {
+		athrs17_reg_write(S17_P6STATUS_REG, swt_cfg->port6_status);
+		athrs17_reg_write(S17_MAC_PWR_REG, swt_cfg->mac_pwr);
+		athrs17_reg_write(S17_P6PAD_MODE_REG, swt_cfg->pad6_mode);
+		athrs17_reg_write(S17_PWS_REG, swt_cfg->port0);
+		athrs17_reg_write(S17_SGMII_CTRL_REG, swt_cfg->sgmii_ctrl);
+	} else {
 
-	athrs17_reg_write(S17_MAC_PWR_REG, swt_cfg->mac_pwr);
-	reg_val = athrs17_reg_read(S17_P6PAD_MODE_REG);
-	athrs17_reg_write(S17_P6PAD_MODE_REG, (reg_val | S17_MAC6_SGMII_EN));
+		athrs17_reg_write(S17_P6STATUS_REG, (S17_SPEED_1000M |
+							S17_TXMAC_EN |
+							S17_RXMAC_EN |
+							S17_DUPLEX_FULL));
 
-	athrs17_reg_write(S17_PWS_REG, 0x2613a0);
+		athrs17_reg_write(S17_MAC_PWR_REG, swt_cfg->mac_pwr);
+		reg_val = athrs17_reg_read(S17_P6PAD_MODE_REG);
+		athrs17_reg_write(S17_P6PAD_MODE_REG, (reg_val | S17_MAC6_SGMII_EN));
 
-	athrs17_reg_write(S17_SGMII_CTRL_REG,(S17c_SGMII_EN_PLL |
-					S17c_SGMII_EN_RX |
-					S17c_SGMII_EN_TX |
-					S17c_SGMII_EN_SD |
-					S17c_SGMII_BW_HIGH |
-					S17c_SGMII_SEL_CLK125M |
-					S17c_SGMII_TXDR_CTRL_600mV |
-					S17c_SGMII_CDR_BW_8 |
-					S17c_SGMII_DIS_AUTO_LPI_25M |
-					S17c_SGMII_MODE_CTRL_SGMII_PHY |
-					S17c_SGMII_PAUSE_SG_TX_EN_25M |
-					S17c_SGMII_ASYM_PAUSE_25M |
-					S17c_SGMII_PAUSE_25M |
-					S17c_SGMII_HALF_DUPLEX_25M |
-					S17c_SGMII_FULL_DUPLEX_25M));
+		athrs17_reg_write(S17_PWS_REG, 0x2613a0);
 
+		athrs17_reg_write(S17_SGMII_CTRL_REG,(S17c_SGMII_EN_PLL |
+						S17c_SGMII_EN_RX |
+						S17c_SGMII_EN_TX |
+						S17c_SGMII_EN_SD |
+						S17c_SGMII_BW_HIGH |
+						S17c_SGMII_SEL_CLK125M |
+						S17c_SGMII_TXDR_CTRL_600mV |
+						S17c_SGMII_CDR_BW_8 |
+						S17c_SGMII_DIS_AUTO_LPI_25M |
+						S17c_SGMII_MODE_CTRL_SGMII_PHY |
+						S17c_SGMII_PAUSE_SG_TX_EN_25M |
+						S17c_SGMII_ASYM_PAUSE_25M |
+						S17c_SGMII_PAUSE_25M |
+						S17c_SGMII_HALF_DUPLEX_25M |
+						S17c_SGMII_FULL_DUPLEX_25M));
+	}
 	athrs17_reg_write(S17_MODULE_EN_REG, S17_MIB_COUNTER_ENABLE);
 }
 
@@ -355,7 +369,7 @@ int ipq_qca8337_switch_init(ipq_s17c_swt_cfg_t *s17c_swt_cfg)
 
 	if (ipq_athrs17_init(s17c_swt_cfg) != 0) {
 		printf("QCA_8337 switch init failed \n");
-		return 0;
+		return -1;
 	}
 
 	for (port = 0; port < s17c_swt_cfg->port_count; ++port) {
@@ -370,7 +384,7 @@ int ipq_qca8337_switch_init(ipq_s17c_swt_cfg_t *s17c_swt_cfg)
 		mdelay(100);
 	}
 
-	return 1;
+	return 0;
 }
 
 int ipq_qca8337_link_update(ipq_s17c_swt_cfg_t *s17c_swt_cfg)
@@ -389,7 +403,7 @@ int ipq_qca8337_link_update(ipq_s17c_swt_cfg_t *s17c_swt_cfg)
 		if (phy_data & LINK_UP)
 			status = 0;
 
-		printf("Port%d %s ", i + 1, LINK(phy_data));
+		printf("QCA8337: Port%d %s ", i + 1, LINK(phy_data));
 
 		switch(SPEED(phy_data)){
 		case SPEED_1000M:

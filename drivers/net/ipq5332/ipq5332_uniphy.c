@@ -186,6 +186,19 @@ void ppe_uniphy_set_forceMode(uint32_t uniphy_index)
 			+ UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
 }
 
+void ppe_uniphy_refclk_set_25M(uint32_t uniphy_index)
+{
+	uint32_t reg_value;
+
+	reg_value = readl(PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+			+ UNIPHY1_CLKOUT_50M_CTRL_OPTION);
+	reg_value |= (UNIPHY1_CLKOUT_50M_CTRL_CLK50M_DIV2_SEL |
+				UNIPHY1_CLKOUT_50M_CTRL_50M_25M_EN);
+
+	writel(reg_value, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+			+ UNIPHY1_CLKOUT_50M_CTRL_OPTION);
+}
+
 static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 {
 	uint32_t reg_value;

@@ -615,6 +615,14 @@ typedef struct {
 	int port_count;
 	int chip_detect;
 	u32 port_phy_address[S17C_MAX_PORT];
+	bool update;
+	u32 pad0_mode;
+	u32 pad5_mode;
+	u32 pad6_mode;
+	u32 port0;
+	u32 sgmii_ctrl;
+	u32 port0_status;
+	u32 port6_status;
 } ipq_s17c_swt_cfg_t;
 
 #endif

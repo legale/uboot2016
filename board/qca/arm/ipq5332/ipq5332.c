@@ -792,6 +792,27 @@ int get_qca808x_gpio(int qca808x_gpio[2])
 	return res;
 }
 
+int get_qca8033_gpio(int qca8033_gpio[2])
+{
+	int qca8033_gpio_cnt = -1, node;
+	int res = -1;
+
+	node = fdt_path_offset(gd->fdt_blob, "/ess-switch");
+	if (node >= 0) {
+		qca8033_gpio_cnt =
+			fdtdec_get_uint(gd->fdt_blob, node,
+				"qca8033_gpio_cnt", -1);
+		if (qca8033_gpio_cnt >= 1) {
+			res = fdtdec_get_int_array(gd->fdt_blob, node,
+				"qca8033_gpio", (u32 *)qca8033_gpio,
+				qca8033_gpio_cnt);
+			if (res >= 0)
+				return qca8033_gpio_cnt;
+		}
+	}
+
+	return res;
+}
 void aquantia_phy_reset_init(void)
 {
 	int aquantia_gpio[2] = {-1, -1}, aquantia_gpio_cnt, i;
@@ -914,6 +935,29 @@ void qca8081_napa_reset(void)
 			writel(cfg, napa_gpio_base);
 			mdelay(100);
 			gpio_set_value(gpio, 0x1);
+		}
+	}
+}
+
+void qca8033_phy_reset(void)
+{
+	int qca8033_gpio[2] = {-1, -1}, qca8033_gpio_cnt, i;
+	unsigned int *qca8033_gpio_base;
+	uint32_t cfg;
+
+	qca8033_gpio_cnt = get_qca8033_gpio(qca8033_gpio);
+	if (qca8033_gpio_cnt >= 1) {
+		for (i = 0; i < qca8033_gpio_cnt; i++) {
+			if (qca8033_gpio[i] >= 0) {
+				qca8033_gpio_base =
+					(unsigned int *)GPIO_CONFIG_ADDR(
+					qca8033_gpio[i]);
+				cfg = GPIO_OE | GPIO_DRV_2_MA | GPIO_PULL_UP;
+				writel(cfg, qca8033_gpio_base);
+				writel(0x0, GPIO_IN_OUT_ADDR(qca8033_gpio[i]));
+				mdelay(100);
+				writel(0x3, GPIO_IN_OUT_ADDR(qca8033_gpio[i]));
+			}
 		}
 	}
 }
