@@ -103,6 +103,7 @@ extern const add_node_t add_fdt_node[];
 #define APB_REG_UPHY_RX_RESCAL_CODE		(16 << 8)
 #define APB_REG_UPHY_RX_AFE_CAP1		(7 << 4)
 #define APB_REG_UPHY_RX_AFE_RES1		(6 << 0)
+#define TCSR_SOC_HW_VERSION_REG 0x194D000
 
 /*
  * OTP Register
