@@ -180,7 +180,7 @@ static void ipq5332_vsi_setup(int vsi, uint8_t group_mask)
 /*
  * ipq5332_gmac_port_disable()
  */
-static void ipq5332_gmac_port_disable(int port)
+void ipq5332_gmac_port_disable(int port)
 {
 	ipq5332_ppe_reg_write(IPQ5332_PPE_MAC_ENABLE + (0x200 * port), 0x70);
 	ipq5332_ppe_reg_write(IPQ5332_PPE_MAC_SPEED + (0x200 * port), 0x2);
