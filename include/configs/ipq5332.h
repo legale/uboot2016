@@ -448,4 +448,7 @@ extern loff_t board_env_size;
 #define CONFIG_COMPRESSED_DTB_MAX_SIZE		0x40000
 #define CONFIG_COMPRESSED_DTB_BASE		CONFIG_SYS_TEXT_BASE -\
 						CONFIG_COMPRESSED_DTB_MAX_SIZE
+/* Flash Protect */
+#define CONFIG_FLASH_PROTECT
+
 #endif /* _IPQ5332_H */
