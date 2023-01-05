@@ -115,6 +115,7 @@
 				mac_pwr = <0xaa545>;
 				port_count = <3>;
 				update = <1>;
+				skip_vlan = <1>;
 				pad0_mode = <0x80>;
 				pad5_mode = <0>;
 				pad6_mode = <0>;

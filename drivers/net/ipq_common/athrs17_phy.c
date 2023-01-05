@@ -332,7 +332,8 @@ int ipq_athrs17_init(ipq_s17c_swt_cfg_t *swt_cfg)
 	if (ret != -1) {
 		athrs17_reg_init(swt_cfg);
 		athrs17_reg_init_lan(swt_cfg);
-		athrs17_vlan_config();
+		if (!(swt_cfg->skip_vlan))
+			athrs17_vlan_config();
 		printf ("S17c init  done\n");
 	}
 

@@ -616,6 +616,7 @@ typedef struct {
 	int chip_detect;
 	u32 port_phy_address[S17C_MAX_PORT];
 	bool update;
+	bool skip_vlan;
 	u32 pad0_mode;
 	u32 pad5_mode;
 	u32 pad6_mode;
