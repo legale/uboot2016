@@ -1778,6 +1778,8 @@ int ipq5332_edma_init(void *edma_board_cfg)
 				"/ess-switch/qca8337_swt_info");
 		s17c_swt_cfg.update =  fdtdec_get_uint(gd->fdt_blob,
 				phy_node, "update", 0);
+		s17c_swt_cfg.skip_vlan =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "skip_vlan", 0);
 		s17c_swt_cfg.pad0_mode =  fdtdec_get_uint(gd->fdt_blob,
 				phy_node, "pad0_mode", 0);
 		s17c_swt_cfg.pad5_mode =  fdtdec_get_uint(gd->fdt_blob,
