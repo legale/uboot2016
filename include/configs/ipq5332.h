@@ -159,7 +159,7 @@ extern loff_t board_env_size;
 #define CONFIG_ENV_RANGE			board_env_range
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE_MAX + (768 << 10))
 
-#define CONFIG_IPQ_NO_MACS			1
+#define CONFIG_IPQ_NO_MACS			2
 
 /*
  * Block Device & Disk  Partition Config
