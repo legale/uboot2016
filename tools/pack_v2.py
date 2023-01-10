@@ -637,9 +637,18 @@ class Pack(object):
 
 	    machid = int(section.find(".//machid").text, 0)
 	    machid = "%x" % machid
-
-	    machid_list.append(machid)
-        self.__gen_flash_script_update_for_wififw(partition, filename, flinfo, script, machid_list)
+	    if self.flash_type == "nor":
+                is_nor_flash = section.find(".//spi_nor")
+                if is_nor_flash == None:
+                    continue
+                is_nor_flash = section.find(".//spi_nor").text
+                if is_nor_flash != "true":
+                    continue
+                machid_list.append(machid)
+            else:
+                machid_list.append(machid)
+        if machid_list:
+            self.__gen_flash_script_update_for_wififw(partition, filename, flinfo, script, machid_list)
 
     def __gen_flash_script_bootldr(self, entries, partition, flinfo, script):
         for section in entries:
@@ -995,7 +1004,7 @@ class Pack(object):
                             return 0
                         continue
 
-            if flinfo.type != "emmc":
+            if flinfo.type != "emmc" and flinfo.type != "nor":
 		imgs = section.findall('img_name')
 		for img in imgs:
 			memory_attr = img.get('memory')
