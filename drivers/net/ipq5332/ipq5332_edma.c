@@ -1066,7 +1066,8 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 				clk[2] = 0x401;
 			}
 
-			if (phy_info->phy_type == QCA8081_PHY_TYPE) {
+			if ((phy_info->phy_type == QCA8081_PHY_TYPE) ||
+				(phy_info->phy_type == QCA8084_PHY_TYPE)) {
 				sgmii_mode = EPORT_WRAPPER_SGMII_PLUS;
 			}
 		break;
