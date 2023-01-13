@@ -100,6 +100,12 @@ extern const add_node_t add_fdt_node[];
 #define ATERESET				~BIT(0)
 
 /*
+ * OTP Register
+ */
+#define PHYA0_RFA_RFA_RFA_OTP_OTP_XO_0		0xC5D44AC
+#define PHYA0_RFA_RFA_RFA_OTP_OTP_OV_1		0xC5D4484
+
+/*
  * weak function
  */
 __weak void qgic_init(void) {}

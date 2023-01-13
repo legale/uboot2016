@@ -28,6 +28,10 @@
 		status = "disabled";
 	};
 
+	slot_Id {
+		slotId = <0>;
+	};
+
 	serial@78B0000 {
 		compatible = "qca,ipq-uartdm";
 		reg = <0x78B0000 0x200>;
