@@ -511,7 +511,7 @@ void print_fl_msg(char *fname, bool started, int ret)
 static int do_xtract_n_flash(cmd_tbl_t *cmdtp, int flag, int argc,
 char * const argv[])
 {
-	char runcmd[256], fname_stripped[32];
+	char runcmd[256], fname_stripped[256];
 	char *file_name, *part_name;
 	uint32_t load_addr, verbose;
 	int ret = CMD_RET_SUCCESS;
