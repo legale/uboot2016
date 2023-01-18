@@ -439,6 +439,18 @@ void board_pci_init(int id)
 	return;
 }
 
+static void pci_gpio_low(int offset)
+{
+	struct qca_gpio_config gpio_config;
+
+	for (offset = fdt_first_subnode(gd->fdt_blob, offset); offset > 0;
+		offset = fdt_next_subnode(gd->fdt_blob, offset)) {
+		gpio_config.gpio        = fdtdec_get_uint(gd->fdt_blob,
+							offset, "gpio", 0);
+		gpio_set_value(gpio_config.gpio, GPIO_OUT_LOW);
+	}
+}
+
 void board_pci_deinit()
 {
 	int node, gpio_node, i, err, is_x2;
@@ -474,7 +486,7 @@ void board_pci_deinit()
 
 		gpio_node = fdt_subnode_offset(gd->fdt_blob, node, "pci_gpio");
 		if (gpio_node >= 0)
-			qca_gpio_deinit(gpio_node);
+			pci_gpio_low(gpio_node);
 
 		pcie_v2_clock_deinit(i);
 	}
