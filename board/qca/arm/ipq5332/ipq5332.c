@@ -498,6 +498,9 @@ int get_eth_caldata(u32 *caldata, u32 offset)
 	char mmc_blks[512];
 #endif
 
+	if (sfi->flash_type == SMEM_BOOT_NO_FLASH)
+		return -1;
+
 	if ((sfi->flash_type == SMEM_BOOT_SPI_FLASH) ||
 		(sfi->flash_type == SMEM_BOOT_NOR_FLASH) ||
 		(sfi->flash_type == SMEM_BOOT_NORPLUSNAND) ||
