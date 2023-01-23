@@ -363,6 +363,7 @@ extern loff_t board_env_size;
 #ifdef CONFIG_OF_BOARD_SETUP
 #define DLOAD_DISABLE				(~BIT(4))
 #define DLOAD_ENABLE				BIT(4)
+#define CRASHDUMP_RESET                        BIT(11)
 
 #define CLEAR_MAGIC				0x0
 #define SCM_CMD_TZ_CONFIG_HW_FOR_RAM_DUMP_ID	0x9

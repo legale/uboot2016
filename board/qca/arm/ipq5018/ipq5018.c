@@ -657,6 +657,11 @@ void reset_crashdump(void)
 	qca_scm_sdi();
 
 	cookie = ipq_read_tcsr_boot_misc();
+	/* Set CRASHDUMP_RESET in crashdump path,
+	 * for TZ to differentiate it from normal reset */
+	if (cookie & DLOAD_ENABLE) {
+		cookie |= CRASHDUMP_RESET;
+	}
 	cookie &= DLOAD_DISABLE;
 	ret = qca_scm_dload(cookie);
 	if (ret)
