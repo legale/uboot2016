@@ -1168,7 +1168,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 	if (s)
 		fdt_fixup_set_dload_warm_reset(blob);
 	s = getenv("dload_dis");
-	if (s)
+	if ((s != NULL) && (s[0] != '\0'))
 		ipq_fdt_mem_rsvd_fixup(blob);
 	s = getenv("qce_fixed_key");
 	if (s)
