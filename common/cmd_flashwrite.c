@@ -496,6 +496,8 @@ char * const argv[])
 		return CMD_RET_FAILURE;
 	}
 
+	get_kernel_fs_part_details();
+
 	return CMD_RET_SUCCESS;
 }
 #endif
