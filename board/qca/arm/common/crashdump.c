@@ -53,6 +53,7 @@ static qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
 /* USB device id and part index used by usbdump */
 static int usb_dev_indx, usb_dev_part;
 int crashdump_tlv_count=0;
+char *dump_prefix = "";
 
 enum {
     /*Basic DDR segments */
@@ -169,7 +170,7 @@ static int krait_release_secondary(void)
 
 static int dump_to_dst (int is_aligned_access, uint32_t memaddr, uint32_t size, char *name)
 {
-	char runcmd[128];
+	char runcmd[256];
 	char *usb_dump = NULL;
 	ulong is_usb_dump = 0;
 	int ret = 0;
@@ -436,6 +437,32 @@ static int dump_wlan_segments(struct dumpinfo_t *dumpinfo, int indx)
 	return CMD_RET_SUCCESS;
 };
 
+int is_length_valid(struct dumpinfo_t *dumpinfo, int dump_entries)
+{
+	int indx = 0;
+	int ret = 0;
+	for (indx = 0; indx < dump_entries; indx++) {
+		/* max size of name allocated in dumpinfo struct is 256 */
+		if ((strlen(dump_prefix) + strlen(dumpinfo[indx].name) + 1) > 256)
+			ret = 1;
+	}
+	return ret;
+}
+
+void add_prefix(struct dumpinfo_t *dumpinfo, int dump_entries)
+{
+	int indx = 0;
+	char temp[256];
+
+	if (is_length_valid(dumpinfo, dump_entries)) {
+		printf("WARN: Prefix length exceeds size, removing prefix for dumpfiles");
+		dump_prefix = "";
+	}
+	for (indx = 0; indx < dump_entries; indx++) {
+		snprintf(temp, sizeof(temp), "%s%s", dump_prefix, dumpinfo[indx].name);
+		strlcpy(dumpinfo[indx].name, temp, strlen(temp)+1);
+	}
+}
 
 static int do_dumpqca_data(unsigned int dump_level)
 {
@@ -452,6 +479,7 @@ static int do_dumpqca_data(unsigned int dump_level)
 	char wlan_segment_name[32], runcmd[128], *s;
 	char *usb_dump = NULL, *compress = NULL;
 	ulong is_usb_dump = 0, is_compress = 0;
+	char temp[256];
 
 	usb_dump = getenv("dump_to_usb");
 	if (usb_dump) {
@@ -537,6 +565,13 @@ static int do_dumpqca_data(unsigned int dump_level)
 		dump_entries = dump_entries_s;
 	}
 #endif
+
+	dump_prefix = getenv("dump_prefix");
+	if (dump_prefix != NULL)
+		add_prefix(dumpinfo, dump_entries);
+	else
+		dump_prefix = "";
+
 	if (scm_set_boot_addr(false) == 0) {
 		/* Pull Core-1 out of reset, iff scm call succeeds */
 		krait_release_secondary();
@@ -560,7 +595,8 @@ static int do_dumpqca_data(unsigned int dump_level)
 		if (dumpinfo[indx].offset)
 			memaddr += dumpinfo[indx].offset;
 
-		if (!strncmp(dumpinfo[indx].name, "EBICS", strlen("EBICS")))
+		snprintf(temp, sizeof(temp), "%sEBICS", dump_prefix);
+		if (!strncmp(dumpinfo[indx].name, temp, strlen(temp)))
 		{
 			compress = getenv("dump_compressed");
 			if (compress) {
@@ -571,27 +607,31 @@ static int do_dumpqca_data(unsigned int dump_level)
 			}
 
 			if (is_compress == 1) {
-				if (!strncmp(dumpinfo[indx].name, "EBICS2", strlen("EBICS2"))) {
+				snprintf(temp, sizeof(temp), "%sEBICS2", dump_prefix);
+				if (!strncmp(dumpinfo[indx].name, temp, strlen(temp))) {
 					memaddr = CONFIG_SYS_SDRAM_BASE + (gd->ram_size / 2);
 					dumpinfo[indx].size = gd->ram_size / 2;
 					comp_addr = memaddr;
 				}
-				if (!strncmp(dumpinfo[indx].name, "EBICS_S2", strlen("EBICS_S2"))) {
+				snprintf(temp, sizeof(temp), "%sEBICS_S2", dump_prefix);
+				if (!strncmp(dumpinfo[indx].name, temp, strlen(temp))) {
 					dumpinfo[indx].size = gd->ram_size - (dumpinfo[indx].start - CONFIG_SYS_SDRAM_BASE);
 					comp_addr = memaddr;
 				}
-				if (!strncmp(dumpinfo[indx].name, "EBICS1", strlen("EBICS1"))) {
+				snprintf(temp, sizeof(temp), "%sEBICS1", dump_prefix);
+				if (!strncmp(dumpinfo[indx].name, temp, strlen(temp))) {
 					dumpinfo[indx].size = (gd->ram_size / 2)
 								- (dumpinfo[indx + 1].size + 0x400000);
 				}
 			}
 			else {
+				snprintf(temp, sizeof(temp), "%sEBICS0", dump_prefix);
 				if (!strncmp(dumpinfo[indx].name,
-					     "EBICS0", strlen("EBICS0")))
+					     temp, strlen(temp)))
 					dumpinfo[indx].size = gd->ram_size;
-
+				snprintf(temp, sizeof(temp), "%sEBICS_S1", dump_prefix);
 				if (!strncmp(dumpinfo[indx].name,
-					     "EBICS_S1", strlen("EBICS_S1")))
+					     temp, strlen(temp)))
 					dumpinfo[indx].size = gd->ram_size
 							      - dumpinfo[indx - 1].size
 							      - CONFIG_TZ_SIZE;
@@ -625,8 +665,8 @@ static int do_dumpqca_data(unsigned int dump_level)
 			else {
 				remaining = dumpinfo[indx].size;
 				while (remaining > 0) {
-					snprintf(dumpinfo[indx].name, sizeof(dumpinfo[indx].name), "EBICS%d.BIN", ebi_indx);
-
+					snprintf(dumpinfo[indx].name, sizeof(dumpinfo[indx].name),
+								"%sEBICS%d.BIN", dump_prefix, ebi_indx);
 					if (remaining > MAX_TFTP_SIZE) {
 						dumpinfo[indx].size = MAX_TFTP_SIZE;
 					}

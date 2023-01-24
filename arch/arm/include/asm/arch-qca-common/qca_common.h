@@ -126,7 +126,7 @@ int get_soc_hw_version(void);
 int is_atf_enabled(void);
 
 struct dumpinfo_t{
-	char name[16]; /* use only file name in 8.3 format */
+	char name[256]; /* use only file name in 8.3 format */
 	uint32_t start;
 	uint32_t size;
 	int is_aligned_access; /* non zero represent 4 byte access */
