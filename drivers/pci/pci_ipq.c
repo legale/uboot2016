@@ -425,10 +425,10 @@ DECLARE_GLOBAL_DATA_PTR;
 #define MAX_SOC_GLOBAL_RESET_WAIT_CNT 		50 /* x 20msec */
 
 #define QCN9224_TCSR_PBL_LOGGING_REG		0x01B00094
-#define QCN9224_SECURE_BOOT0_AUTH_EN 		0x01e20010
-#define QCN9224_OEM_MODEL_ID			0x01e20018
-#define QCN9224_ANTI_ROLL_BACK_FEATURE 		0x01e2001c
-#define QCN9224_OEM_PK_HASH 			0x01e20060
+#define QCN9224_SECURE_BOOT0_AUTH_EN 		0x01e24010
+#define QCN9224_OEM_MODEL_ID			0x01e24018
+#define QCN9224_ANTI_ROLL_BACK_FEATURE 		0x01e2401c
+#define QCN9224_OEM_PK_HASH 			0x01e24060
 #define QCN9224_SECURE_BOOT0_AUTH_EN_MASK 	(0x1)
 #define QCN9224_OEM_ID_MASK 			GENMASK(31,16)
 #define QCN9224_OEM_ID_SHIFT 			16
@@ -442,6 +442,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #define QCN9224_ROT_ACTIVATION_MASK 		GENMASK(21,18)
 #define QCN9224_ROT_ACTIVATION_SHIFT 		18
 #define QCN9224_OEM_PK_HASH_SIZE 		36
+#define QCN9224_JTAG_ID				0x01e22b3c
+#define QCN9224_SERIAL_NUM			0x01e22b40
+#define QCN9224_PART_TYPE_EXTERNAL		0x01f94090
+#define QCN9224_PART_TYPE_EXTERNAL_MASK 	BIT(3)
+#define QCN9224_PART_TYPE_EXTERNAL_SHIFT 	3
 
 #define MHICTRL (0x38)
 #define BHI_STATUS (0x12C)
@@ -462,6 +467,18 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define NO_MASK (0xFFFFFFFF)
 
+struct jtag_ids {
+	u32 id;
+	char *name;
+};
+
+struct jtag_ids qcn9224_jtag_ids[] = {
+	{ 0x101D50E1, "QCN9274" },
+	{ 0x101D80E1, "QCN9272" },
+	{ 0x101ED0E1, "QCN6214" },
+	{ 0x101EE0E1, "QCN6224" },
+	{ 0x101EF0E1, "QCN6274" },
+};
 #endif
 
 static unsigned int local_buses[] = { 0, 0 };
@@ -2276,6 +2293,33 @@ static int do_list_qcn9224_fuse(cmd_tbl_t *cmdtp, int flag,
 
 			printf("OEM PK hash \t\t   0x%x \t 0x%x\n",QCN9224_OEM_PK_HASH + i, val);
 		}
+
+		pci_select_window(bar0_base, QCN9224_JTAG_ID);
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_JTAG_ID & WINDOW_RANGE_MASK));
+
+		for(i = 0; i < ARRAY_SIZE(qcn9224_jtag_ids); i++) {
+			if(qcn9224_jtag_ids[i].id == val) {
+				printf("JTAG ID\t\t\t   0x%x \t 0x%x(%s)\n",
+						QCN9224_JTAG_ID, val, qcn9224_jtag_ids[i].name);
+				break;
+			}
+		}
+		if(i >= ARRAY_SIZE(qcn9224_jtag_ids))
+			printf("JTAG ID\t\t\t   0x%x \t 0x%x\n", QCN9224_JTAG_ID, val);
+
+		pci_select_window(bar0_base, QCN9224_SERIAL_NUM);
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_SERIAL_NUM & WINDOW_RANGE_MASK));
+		printf("Serial Number\t\t   0x%x \t 0x%x\n", QCN9224_SERIAL_NUM, val);
+
+		pci_select_window(bar0_base, QCN9224_PART_TYPE_EXTERNAL);
+		val = readl(bar0_base + WINDOW_START +
+				(QCN9224_PART_TYPE_EXTERNAL & WINDOW_RANGE_MASK));
+		val = (val & QCN9224_PART_TYPE_EXTERNAL_MASK) >> QCN9224_PART_TYPE_EXTERNAL_SHIFT;
+		printf("Part Type\t\t   0x%x \t 0x%x(%s)\n", QCN9224_PART_TYPE_EXTERNAL, val,
+				val?"EXT":"INT");
+
 		printf("------------------------------------------------------\n\n");
 	}
 
