@@ -1333,6 +1333,7 @@ class Pack(object):
 					    if filename == "":
 					        continue
 				except KeyError, e:
+				    partition = ""
 				    print "Skipping partition '%s'" % section.attrib['label']
 				    pass
 
