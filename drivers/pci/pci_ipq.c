@@ -1853,6 +1853,7 @@ void pci_init_board (void)
 	struct ipq_pcie *pcie;
 	int i, bus = 0, ret;
 	const struct udevice_id *of_match = pcie_ver_ids;
+	unsigned int skip_pci_mask;
 
 	pcie = malloc(sizeof(*pcie));
 	if (pcie == NULL) {
@@ -1871,8 +1872,14 @@ void pci_init_board (void)
 		break;
 	}
 
+	skip_pci_mask = getenv_hex("skip_pci_mask", 0UL);
+
 	ipq_wifi_pci_power_enable();
 	for (i = 0; i < PCI_MAX_DEVICES; i++) {
+		if (skip_pci_mask & (1UL << i)) {
+			printf("Skipping PCI%d\n", i);
+			continue;
+		}
 		pcie->linkup = 0;
 		pci_ipq_ofdata_to_platdata(i, pcie);
 		if (pcie->linkup) {
