@@ -210,21 +210,6 @@
 		};
 	};
 
-	pci3: pci@18000000 {
-		status = "ok";
-		perst_gpio = <32>;
-		pci_gpio {
-			pci_rst {
-				gpio = <32>;
-				func = <0>;
-				pull = <GPIO_PULL_UP>;
-				oe = <GPIO_OD_ENABLE>;
-				od_en = <GPIO_OD_DISABLE>;
-				drvstr = <GPIO_8MA>;
-			};
-		};
-	};
-
 	ess-switch {
 		switch_mac_mode0 = <PORT_WRAPPER_PSGMII>;
 		switch_mac_mode1 = <PORT_WRAPPER_USXGMII>;
