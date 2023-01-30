@@ -744,6 +744,8 @@ static void usb_init_ssphy(void __iomem *phybase)
 	writel(CLK_ENABLE, GCC_USB0_PHY_CFG_AHB_CBCR);
 	writel(CLK_ENABLE, GCC_USB0_PIPE_CBCR);
 	udelay(100);
+	writel(APB_REG_UPHY_RX_RESCAL_CODE | APB_REG_UPHY_RX_AFE_CAP1 |
+		APB_REG_UPHY_RX_AFE_RES1, PCIE_USB_COMBO_PHY_CFG_RX_AFE_2);
 	return;
 }
 

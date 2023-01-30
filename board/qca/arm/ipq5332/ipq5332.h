@@ -99,6 +99,11 @@ extern const add_node_t add_fdt_node[];
 #define CLKCORE					BIT(1)
 #define ATERESET				~BIT(0)
 
+#define PCIE_USB_COMBO_PHY_CFG_RX_AFE_2		0x4B07C4
+#define APB_REG_UPHY_RX_RESCAL_CODE		(16 << 8)
+#define APB_REG_UPHY_RX_AFE_CAP1		(7 << 4)
+#define APB_REG_UPHY_RX_AFE_RES1		(6 << 0)
+
 /*
  * OTP Register
  */
