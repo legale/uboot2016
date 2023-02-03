@@ -38,4 +38,9 @@
 	};
 
 	/delete-node/ pci@18000000;
+
+	sdx-gpio {
+		power_on = <40>;
+		reset = <47>;
+	};
 };

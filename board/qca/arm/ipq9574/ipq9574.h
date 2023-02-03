@@ -387,4 +387,5 @@ extern const add_node_t add_fdt_node[];
 int ipq_get_tz_version(char *version_name, int buf_size);
 void ipq_fdt_fixup_socinfo(void *blob);
 int ipq_board_usb_init(void);
+void power_cycle_sdx(void);
 #endif /* _IPQ9574_CDP_H_ */

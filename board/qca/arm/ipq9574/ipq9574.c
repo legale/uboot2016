@@ -1191,6 +1191,35 @@ void reset_cpu(unsigned long a)
 	while (1);
 }
 
+void power_cycle_sdx(void)
+{
+	int node, power_on_gpio = -1, reset_gpio = -1;
+	unsigned int *power_on_gpio_base, *reset_gpio_base;
+
+	unsigned int machid = gd->bd->bi_arch_number;
+	if (machid != 0x8050201 && machid != 0x8051201)
+		return;
+
+	node = fdt_path_offset(gd->fdt_blob, "/sdx-gpio");
+	if (node >= 0)
+		power_on_gpio = fdtdec_get_uint(gd->fdt_blob, node, "power_on", -1);
+
+	node = fdt_path_offset(gd->fdt_blob, "/sdx-gpio");
+	if (node >= 0)
+		reset_gpio = fdtdec_get_uint(gd->fdt_blob, node, "reset", -1);
+
+	if (power_on_gpio >= 0 && reset_gpio >= 0) {
+		power_on_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(power_on_gpio);
+		reset_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(reset_gpio);
+		writel(0x2c1, power_on_gpio_base);
+		writel(0x2c1, reset_gpio_base);
+		gpio_set_value(power_on_gpio, 0x1);
+		gpio_set_value(reset_gpio, 0x1);
+		gpio_set_value(power_on_gpio, 0x0);
+		gpio_set_value(reset_gpio, 0x0);
+	}
+}
+
 void reset_board(void)
 {
 	run_command("reset", 0);
@@ -1259,8 +1288,10 @@ int apps_iscrashed_crashdump_disabled(void)
 {
 	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (dmagic & DLOAD_DISABLED)
+	if (dmagic & DLOAD_DISABLED) {
+		power_cycle_sdx();
 		return 1;
+	}
 
 	return 0;
 }
@@ -1269,8 +1300,10 @@ int apps_iscrashed(void)
 {
 	u32 dmagic = ipq_read_tcsr_boot_misc();
 
-	if (dmagic & DLOAD_MAGIC_COOKIE)
+	if (dmagic & DLOAD_MAGIC_COOKIE) {
+		power_cycle_sdx();
 		return 1;
+	}
 
 	return 0;
 }
