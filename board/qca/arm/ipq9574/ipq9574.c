@@ -1215,6 +1215,7 @@ void power_cycle_sdx(void)
 		writel(0x2c1, reset_gpio_base);
 		gpio_set_value(power_on_gpio, 0x1);
 		gpio_set_value(reset_gpio, 0x1);
+		mdelay(1000);
 		gpio_set_value(power_on_gpio, 0x0);
 		gpio_set_value(reset_gpio, 0x0);
 	}
