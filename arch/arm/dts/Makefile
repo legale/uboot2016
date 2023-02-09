@@ -121,6 +121,7 @@ dtb-$(CONFIG_ARCH_IPQ9574) += ipq9574-al01-c1.dtb \
 			ipq9574-al02-c9.dtb \
 			ipq9574-al02-c10.dtb \
 			ipq9574-al02-c13.dtb \
+			ipq9574-al02-c17.dtb \
 			ipq9574-al02-c18.dtb \
 			ipq9574-al02-c19.dtb \
 			ipq9574-db-al01-c1.dtb \
