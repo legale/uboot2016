@@ -45,6 +45,7 @@
 #define SBL_HDR_RESERVED	12
 #define UBI_EC_HDR_MAGIC  0x55424923
 #define UBI_VID_HDR_MAGIC 0x55424921
+#define NO_OF_PROGRAM_HDRS   3
 
 struct image_section sections[] = {
 	{
@@ -60,6 +61,19 @@ struct image_section sections[] = {
 		.section_type		= HLOS_TYPE,
 		.type			= "hlos",
 		.max_version		= MAX_HLOS_VERSION,
+		.tmp_file		= TMP_FILE_DIR,
+		.pre_op			= parse_elf_image_phdr,
+		.file			= TMP_FILE_DIR,
+		.version_file		= HLOS_VERSION_FILE,
+		.is_present		= NOT_PRESENT,
+		.img_code		= "0x17"
+	},
+	{
+		.section_type		= HLOS_TYPE,
+		.type			= "rootfs",
+		.max_version		= MAX_HLOS_VERSION,
+		.tmp_file		= TMP_FILE_DIR,
+		.pre_op			= compute_sha384,
 		.file			= TMP_FILE_DIR,
 		.version_file		= HLOS_VERSION_FILE,
 		.is_present		= NOT_PRESENT,
@@ -215,6 +229,7 @@ int get_sections(void)
 			if (data_size == -1 && !strncmp(sec->type, "ubi", strlen("ubi")))
 				continue;
 			if (!strncmp(file->d_name, sec->type, strlen(sec->type))) {
+				strlcat(sec->file, file->d_name, sizeof(sec->file));
 				if (sec->pre_op) {
 					strlcat(sec->tmp_file, file->d_name,
 							sizeof(sec->tmp_file));
@@ -222,9 +237,6 @@ int get_sections(void)
 						printf("Error extracting kernel from ubi\n");
 						return 0;
 					}
-				} else {
-					strlcat(sec->file, file->d_name,
-							sizeof(sec->file));
 				}
 				if (!check_mbn_elf(&sec)) {
 					closedir(dir);
@@ -264,6 +276,8 @@ int load_sections(void)
 			if (data_size == -1 && !strncmp(sec->type, "ubi", strlen("ubi")))
 				continue;
 			if (!strncmp(file->d_name, sec->type, strlen(sec->type))) {
+				strlcat(sec->file, file->d_name, sizeof(sec->file));
+
 				if (sec->pre_op) {
 					strlcat(sec->tmp_file, file->d_name,
 							sizeof(sec->tmp_file));
@@ -273,9 +287,6 @@ int load_sections(void)
 						closedir(dir);
 						return 0;
 					}
-				} else {
-					strlcat(sec->file, file->d_name,
-							sizeof(sec->file));
 				}
 				sec->is_present = PRESENT;
 				break;
@@ -870,6 +881,27 @@ int extract_kernel_binary(struct image_section *section)
 }
 
 /**
+ * The digest functions output the message digest of a supplied file and
+ * write sha384 to /tmp/sha384_keyXXXXXX file
+ */
+int compute_sha384(struct image_section *section)
+{
+	char sha384_hash[] = "/tmp/sha384_keyXXXXXX";
+	char command[300];
+	int retval;
+
+	snprintf(command, sizeof(command),
+		"openssl dgst -sha384 -binary -out %s %s", sha384_hash, section->tmp_file);
+	retval = system(command);
+	if (retval != 0) {
+		printf("Error generating sha384 hash\n");
+		return 0;
+	}
+
+	printf("sha384_hash file is created: %s \n",sha384_hash);
+	return 1;
+}
+/**
  * is_image_version_higher() iterates through each component and check
  * versions against locally installed version.
  * If newer component version is lower than locally insatlled image,
@@ -1148,6 +1180,75 @@ int split_code_signature_cert_from_component_bin_elf64(struct image_section *sec
 	memcpy(*cert, fp + phdr->p_offset + cert_offset, CERT_SIZE);
 	(*cert)[CERT_SIZE] = '\0';
 
+	return 1;
+}
+
+/**
+ * parse_elf_image_phdr() parses the ELF32 program header to get the
+ * ELF header of rootfs metadata. It parses the metadata and writes
+ * to a new /tmp/metadata.bin file.
+ */
+int parse_elf_image_phdr(struct image_section *section)
+{
+	Elf32_Ehdr *ehdr; /* Elf header structure pointer */
+	Elf32_Phdr *phdr; /* Program header structure pointer */
+        struct stat sb;
+        uint8_t *fp;
+	int i;
+
+        int fd = open(section->file, O_RDONLY);
+
+        if (fd < 0) {
+                perror(section->file);
+                return 0;
+        }
+
+        memset(&sb, 0, sizeof(struct stat));
+        if (fstat(fd, &sb) == -1) {
+                perror("fstat");
+                close(fd);
+                return 0;
+        }
+
+        fp = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (fp == MAP_FAILED) {
+                perror("mmap");
+                close(fd);
+                return 0;
+        }
+
+        ehdr = (Elf32_Ehdr *)fp;
+	phdr = (Elf32_Phdr *)(((char*)fp) + ehdr->e_phoff);
+	printf(" ELF headers are initialized\n");
+
+	if (ehdr->e_type != ET_EXEC) {
+		printf("Not a valid elf image\n");
+		close(fd);
+		return 0;
+	}
+
+	/* Load each program header */
+	for (i = 0; i < NO_OF_PROGRAM_HDRS; ++i) {
+		if(phdr->p_type == PT_LOAD) {
+			printf(" PT_LOAD Segment Found\n");
+			printf("Parsing img_info load addr 0x%x offset 0x%x size 0x%x type 0x%x\n",
+			phdr->p_paddr, phdr->p_offset, phdr->p_filesz, phdr->p_type);
+
+			int size = sb.st_size - (phdr->p_offset + phdr->p_filesz );
+			if (size < 0x4000) {
+				printf("rootfs metada is not available\n");
+				return 1;
+			}
+			create_file("/tmp/metadata.bin", (char *)(fp + phdr->p_offset + phdr->p_filesz), size);
+			printf("rootfs meta data file: %s created with size:%x\n","/tmp/metadata.bin", size);
+
+			close(fd);
+			return 1;
+		}
+		++phdr;
+	}
+
+	close(fd);
 	return 1;
 }
 
@@ -1502,6 +1603,16 @@ int sec_image_auth(void)
 		}
 
 		len = snprintf(buf, SIG_SIZE, "%s %s", sections[i].img_code, sections[i].file);
+
+		if (!strncmp(sections[i].type, "rootfs", strlen("rootfs"))) {
+			struct stat sb;
+			if (stat("/tmp/metadata.bin", &sb) == -1)
+				continue;
+
+			len = snprintf(buf, SIG_SIZE, "%s %s %s", sections[i].img_code,
+						"/tmp/metadata.bin", "/tmp/sha384_keyXXXXXX");
+		}
+
 		if (len < 0 || len > SIG_SIZE) {
 			perror("Array out of Index\n");
 			free(buf);
