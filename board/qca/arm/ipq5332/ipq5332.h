@@ -84,7 +84,17 @@ extern const add_node_t add_fdt_node[];
 #define USB_PHY_HS_PHY_CTRL_COMMON0		0x54
 #define USB_PHY_REFCLK_CTRL			0xA0
 #define USB_PHY_HS_PHY_CTRL2			0x64
+#define USB2PHY_USB_PHY_M31_XCFGI_1		0xBC
+#define USB2PHY_USB_PHY_M31_XCFGI_4		0xC8
+#define USB2PHY_USB_PHY_M31_XCFGI_5		0xCC
 #define USB2PHY_USB_PHY_M31_XCFGI_11		0xE4
+
+#define USB2_0_TX_ENABLE			BIT(2)
+#define HSTX_SLEW_RATE_565PS			3
+#define PLL_CHARGING_PUMP_CURRENT_35UA		(3 << 3)
+#define ODT_VALUE_38_02_OHM			(3 << 6)
+#define ODT_VALUE_45_02_OHM			BIT(2)
+#define HSTX_PRE_EMPHASIS_LEVEL_0_55MA		(1)
 
 #define UTMI_PHY_OVERRIDE_EN			BIT(1)
 #define SLEEPM					BIT(1)
