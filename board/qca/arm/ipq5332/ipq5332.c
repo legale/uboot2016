@@ -318,7 +318,6 @@ int board_mmc_init(bd_t *bis)
 #ifdef CONFIG_PCI_IPQ
 void pcie_reset(int pcie_id)
 {
-#ifdef QCA_CLOCK_ENABLE
 	u32 reg_val;
 
 	switch(pcie_id) {
@@ -359,10 +358,6 @@ void pcie_reset(int pcie_id)
 
 		break;
 	}
-
-#else
-	return;
-#endif
 }
 
 int ipq_validate_qfrom_fuse(unsigned int reg_add, int pos)
@@ -464,6 +459,7 @@ void board_pci_deinit()
 			qca_gpio_deinit(gpio_node);
 
 		pcie_v2_clock_deinit(i);
+		pcie_reset(i);
 	}
 
 	return;
