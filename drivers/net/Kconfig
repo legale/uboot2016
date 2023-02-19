@@ -153,3 +153,6 @@ config QCA8084_DEBUG
 
 endif # QCA8084_PHY
 
+config IPQ_QTI_BIT_BANGMII
+	bool "Enable MDIO Gpio bit bang support"
+	depends on BITBANGMII

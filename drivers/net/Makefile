@@ -101,6 +101,7 @@ obj-$(CONFIG_IPQ5332_EDMA) += ipq5332/ipq5332_uniphy.o
 endif
 
 obj-$(CONFIG_IPQ_MDIO) += ipq_common/ipq_mdio.o
+obj-$(CONFIG_IPQ_QTI_BIT_BANGMII) += ipq_common/ipq_bitbangmii.o
 obj-$(CONFIG_GEPHY) += ipq_common/ipq_gephy.o
 obj-$(CONFIG_QCA8075_PHY) += ipq_common/ipq_qca8075.o
 obj-$(CONFIG_QCA8084_PHY) += ipq_common/ipq_qca8084.o
