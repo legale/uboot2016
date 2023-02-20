@@ -22,7 +22,7 @@
 		/* Overriding config to support QCA8084 Switch instead of
 		 * QCA8084 PHY
 		 */
-		qca8084_switch_enable = <1>;
+		qca8084_swt_port = <0>;
 		switch_mac_mode0 = <PORT_WRAPPER_SGMII_PLUS>;
 
 		qca8084_swt_info {

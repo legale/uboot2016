@@ -402,4 +402,11 @@ extern loff_t board_env_size;
 #undef CONFIG_BOOTM_RTEMS
 #undef CONFIG_BOOTM_VXWORKS
 
+#define CONFIG_BITBANGMII
+#ifdef CONFIG_BITBANGMII
+#define CONFIG_IPQ_QTI_BIT_BANGMII
+#define GPIO_IN_OUT_BIT			9
+#define CONFIG_BITBANGMII_MULTI
+#endif
+
 #endif /* _IPQ9574_H */
