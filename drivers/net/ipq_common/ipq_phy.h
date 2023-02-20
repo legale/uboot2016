@@ -159,6 +159,11 @@ typedef struct {
 	u32 forced_duplex;
 }phy_info_t;
 
+typedef struct {
+	u32 mode;
+	u32 bus_no;
+}mdio_info_t;
+
 struct phy_ops {
 	u8 (*phy_get_link_status) (u32 dev_id, u32 phy_id);
 	u32 (*phy_get_duplex) (u32 dev_id, u32 phy_id,
