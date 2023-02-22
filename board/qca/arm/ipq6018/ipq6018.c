@@ -261,25 +261,6 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
-#ifdef CONFIG_QCA_SPI
-static void spi_clock_init(void)
-{
-	int cfg;
-
-	/* Configure qup1_spi_apps_clk_src */
-	cfg = (GCC_BLSP1_QUP1_SPI_APPS_CFG_RCGR_SRC_SEL |
-		GCC_BLSP1_QUP1_SPI_APPS_CFG_RCGR_SRC_DIV);
-	writel(cfg, GCC_BLSP1_QUP1_SPI_APPS_CFG_RCGR);
-
-	writel(CMD_UPDATE, GCC_BLSP1_QUP1_SPI_APPS_CMD_RCGR);
-	mdelay(100);
-	writel(ROOT_EN, GCC_BLSP1_QUP1_SPI_APPS_CMD_RCGR);
-
-	/* Configure CBCR */
-	writel(CLK_ENABLE, GCC_BLSP1_QUP1_SPI_APPS_CBCR);
-}
-#endif
-
 void board_nand_init(void)
 {
 #ifdef CONFIG_QCA_SPI
@@ -289,10 +270,10 @@ void board_nand_init(void)
 	qpic_nand_init(NULL);
 
 #ifdef CONFIG_QCA_SPI
-	spi_clock_init();
 	gpio_node = fdt_path_offset(gd->fdt_blob, "/spi/spi_gpio");
 	if (gpio_node >= 0) {
 		qca_gpio_init(gpio_node);
+		spi_clock_init(0);
 		ipq_spi_init(CONFIG_IPQ_SPI_NOR_INFO_IDX);
 	}
 #ifdef CONFIG_SPI_NAND
