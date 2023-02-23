@@ -788,55 +788,6 @@ class Pack(object):
 
 	return 1
 
-    def __gen_flash_script_wififw_ubi_volume_qcn9224_v1(self, entries, fw_filename, wifi_fw_type, script):
-
-	machid_list = []
-	for section in entries:
-
-	    wififw_type = section.find('.//wififw_type')
-	    if wififw_type == None:
-		continue
-            wififw_type = str(section.find(".//wififw_type").text)
-
-            if str(1) == str(wififw_type):
-                continue
-
-	    machid = int(section.find(".//machid").text, 0)
-	    machid = "%x" % machid
-
-	    machid_list.append(machid)
-
-        script.start_if_or("machid", machid_list)
-        script.append("setenv qcn9224_version 1 && detect_qcn9224", fatal=False)
-        script.append('if test "$qcn9224_version" = "1"; then\n', fatal=False)
-
-        script.start_activity("Flashing " + fw_filename[:-13] + ":")
-	script.imxtract(fw_filename[:-13] + "-" + sha1(fw_filename))
-
-	rootfs_info = self.__get_part_info("rootfs")
-	rootfs_offset = rootfs_info.offset
-	rootfs_len = rootfs_info.length
-
-	wifi_fw_cmd = "setenv mtdids nand0=nand0\n"
-	wifi_fw_cmd += "setenv mtdparts mtdparts=nand0:0x%x@0x%x(rootfs)\n" % (rootfs_len,rootfs_offset)
-	wifi_fw_cmd += "ubi part rootfs\n"
-	img_size = self.__get_img_size(fw_filename)
-	wifi_fw_cmd += "ubi write $fileaddr wifi_fw %x" % img_size
-	script.append(wifi_fw_cmd, fatal=False)
-
-	#Enable the below lines for debugging purpose
-	"""
-	script.append("mtdparts", fatal=False)
-	script.append("ubi info layout", fatal=False)
-	"""
-
-	script.finish_activity()
-        script.end_if()
-
-        script.end_if()
-
-	return 1
-
     def __gen_flash_script_wififw(self, entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check):
 
 	machid_list = []
@@ -936,113 +887,6 @@ class Pack(object):
 
 	script.finish_activity()
 	script.end_if()
-
-        return 1
-
-    def __gen_flash_script_wififw_qcn9224_v1(self, entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check):
-
-	machid_list = []
-	for section in entries:
-
-	    wififw_type = section.find('.//wififw_type')
-	    if wififw_type == None:
-		continue
-            wififw_type = str(section.find(".//wififw_type").text)
-
-            if str(1) == str(wififw_type):
-                continue
-
-	    machid = int(section.find(".//machid").text, 0)
-	    machid = "%x" % machid
-
-	    machid_list.append(machid)
-
-        img_size = self.__get_img_size(filename)
-	part_info = self.__get_part_info(partition)
-
-	section_label = partition.split(":")
-        if len(section_label) != 1:
-	    section_conf = section_label[1]
-	else:
-	    section_conf = section_label[0]
-	section_conf = section_conf.lower()
-
-	if self.flinfo.type == 'nand':
-	    size = roundup(img_size, flinfo.pagesize)
-	    tr = ' | tr \"\\000\" \"\\377\"'
-
-	if self.flinfo.type == 'emmc':
-	    size = roundup(img_size, flinfo.blocksize)
-	    tr = ''
-
-	if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-	    pad_size = size - img_size
-	    filename_abs = os.path.join(self.images_dname, filename)
-	    filename_abs_pad = filename_abs + ".padded"
-	    cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
-	    ret = subprocess.call(cmd, shell=True)
-	    if ret != 0:
-		error("failed to copy image")
-	    cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
-	    cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
-	    ret = subprocess.call(cmd, shell=True)
-	    if ret != 0:
-		error("failed to create padded image from script")
-
-	if self.flinfo.type != "emmc":
-	    if part_info == None:
-		if self.flinfo.type == 'norplusnand':
-		    if count > 2:
-			error("More than 2 NAND images for NOR+NAND is not allowed")
-	    elif img_size > part_info.length:
-		print "img size is larger than part. len in '%s'" % section_conf
-		return 0
-	else:
-            if (skip_size_check == "" or wifi_fw_type < skip_size_check):
-	        if part_info != None:
-		    if (img_size > 0):
-                        if img_size > (part_info.length * self.flinfo.blocksize):
-			    print "img size is larger than part. len in '%s'" % section_conf
-			    return 0
-            else:
-                print "EMMC: size check skipped for '%s'" % filename
-
-	if part_info == None and self.flinfo.type != 'norplusnand':
-	    print "Flash type is norplusemmc"
-	    return 1
-
-        script.start_if_or("machid", machid_list)
-        script.append("setenv qcn9224_version 1 && detect_qcn9224", fatal=False)
-        script.append('if test "$qcn9224_version" = "1"; then\n', fatal=False)
-
-	script.start_activity("Flashing %s:" % ( filename[:-13] ))
-
-	if img_size > 0:
-	    filename_pad = filename + ".padded"
-	    if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
-		script.imxtract(filename[:-13] + "-" + sha1(filename_pad))
-	    else:
-		script.imxtract(filename[:-13] + "-" + sha1(filename))
-
-	part_size = Pack.norplusnand_rootfs_img_size
-	if part_info == None:
-	    if self.flinfo.type == 'norplusnand':
-		offset = count * Pack.norplusnand_rootfs_img_size
-		script.nand_write(offset, part_size, img_size, spi_nand)
-		count = count + 1
-	else:
-	    if part_info.which_flash == 0:
-		offset = part_info.offset
-		script.erase(offset, part_info.length)
-		script.write(offset, img_size)
-	    else:
-		offset = part_info.offset
-		script.nand_write(offset, part_info.length, img_size, spi_nand)
-
-        script.finish_activity()
-        script.end_if()
-
-        script.end_if()
 
         return 1
 
@@ -1592,22 +1436,17 @@ class Pack(object):
                    for fw_type in range(int(wifi_fw_type_min), int(wifi_fw_type_max) + 1):
 
 			if image_type == "all" or section.attrib['image_type'] == image_type:
-                           if 'filename_img' + str(fw_type) in section.attrib:
-			      filename = section.attrib['filename_img' + str(fw_type)]
+                            if 'filename_img' + str(fw_type) in section.attrib:
+			        filename = section.attrib['filename_img' + str(fw_type)]
 
-			   if filename == "":
-				continue
-			   wifi_fw_type = str(fw_type)
-                           if wifi_fw_type < "7":
-			        ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
-			        if ret == 0:
-			            return 0
-                           elif wifi_fw_type == "7":
-                                ret = self.__gen_flash_script_wififw_qcn9224_v1(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
-                                if ret == 0:
-                                    return 0
-			   wifi_fw_type = ""
-                           filename = ""
+			    if filename == "":
+			        continue
+		            wifi_fw_type = str(fw_type)
+			    ret = self.__gen_flash_script_wififw(entries, partition, filename, wifi_fw_type, flinfo, script, skip_size_check)
+			    if ret == 0:
+			        return 0
+			    wifi_fw_type = ""
+                            filename = ""
 
 		   wifi_fw_type_min = ""
 		   wifi_fw_type_max = "" # Clear for next partition
@@ -1650,18 +1489,12 @@ class Pack(object):
 		fw_imgs = section.findall('img_name')
 		for fw_img in fw_imgs:
 		    wifi_fw_type = fw_img.get('wififw_type')
-		    if wifi_fw_type != None and wifi_fw_type < "7":
+		    if wifi_fw_type != None:
 			fw_filename = fw_img.text
 			if fw_filename != "":
 			    ret = self.__gen_flash_script_wififw_ubi_volume(entries, fw_filename, wifi_fw_type, script)
 			    if ret == 0:
 				return 0
-                    if wifi_fw_type == "7":
-                         fw_filename = fw_img.text
-                         if fw_filename != "":
-                             ret = self.__gen_flash_script_wififw_ubi_volume_qcn9224_v1(entries, fw_filename, wifi_fw_type, script)
-                             if ret == 0:
-                                return 0
 		    wifi_fw_type = ""
 		continue
 
