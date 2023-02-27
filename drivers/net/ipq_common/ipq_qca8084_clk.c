@@ -1220,7 +1220,6 @@ void qca8084_gcc_clock_init(qca8084_work_mode_t clk_mode, u32 pbmp)
 	uint32_t qca8084_port_id = 0;
 	/* clock type mask value for 6 manhattan ports */
 	uint8_t clk_mask[PORT5 + 1] = {0};
-	static uint8_t gcc_common_clk_init = 0;
 	uint8_t switch_flag = 0;
 	qca8084_clk_parent_t uniphy_index = QCA8084_P_UNIPHY0_RX;
 
@@ -1267,22 +1266,19 @@ void qca8084_gcc_clock_init(qca8084_work_mode_t clk_mode, u32 pbmp)
 			return;
 	}
 
-	if (!gcc_common_clk_init) {
-		qca8084_gcc_common_clk_parent_enable(clk_mode);
-		gcc_common_clk_init = 1;
+	qca8084_gcc_common_clk_parent_enable(clk_mode);
 
-		/* Initialize the uniphy raw clock, if the port4 is in bypass mode, the uniphy0
-		 * raw clock need to be dynamically updated between UQXGMII_SPEED_2500M_CLK and
-		 * UQXGMII_SPEED_1000M_CLK according to the realtime link speed.
-		 */
-		uniphy_index = QCA8084_P_UNIPHY0_RX;
-		while (uniphy_index <= QCA8084_P_UNIPHY1_TX) {
-			/* the uniphy raw clock may be already initialized. */
-			if (0 == qca8084_uniphy_raw_clock_get(uniphy_index))
-				qca8084_uniphy_raw_clock_set(uniphy_index,
-						UQXGMII_SPEED_2500M_CLK);
-			uniphy_index++;
-		}
+	/* Initialize the uniphy raw clock, if the port4 is in bypass mode, the uniphy0
+	 * raw clock need to be dynamically updated between UQXGMII_SPEED_2500M_CLK and
+	 * UQXGMII_SPEED_1000M_CLK according to the realtime link speed.
+	 */
+	uniphy_index = QCA8084_P_UNIPHY0_RX;
+	while (uniphy_index <= QCA8084_P_UNIPHY1_TX) {
+		/* the uniphy raw clock may be already initialized. */
+		if (0 == qca8084_uniphy_raw_clock_get(uniphy_index))
+			qca8084_uniphy_raw_clock_set(uniphy_index,
+					UQXGMII_SPEED_2500M_CLK);
+		uniphy_index++;
 	}
 
 	qca8084_port_id = 0;
