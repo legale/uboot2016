@@ -27,6 +27,8 @@
 #include <fdtdec.h>
 #include "ipq_phy.h"
 
+extern int uniphy_force_mode;
+
 extern int is_uniphy_enabled(int uniphy_index);
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -235,29 +237,35 @@ static void ppe_uniphy_qsgmii_mode_set(uint32_t uniphy_index)
 	mdelay(100);
 }
 
-void ppe_uniphy_set_forceMode(void)
+void ppe_uniphy_set_forceMode(uint32_t uniphy_index)
 {
 	uint32_t reg_value;
 
-	reg_value = readl(PPE_UNIPHY_BASE + UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
+	reg_value = readl(PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+				+ UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
 	reg_value |= UNIPHY_FORCE_SPEED_25M;
 
-	writel(reg_value, PPE_UNIPHY_BASE + UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
+	writel(reg_value, PPE_UNIPHY_BASE + (uniphy_index * PPE_UNIPHY_REG_INC)
+				+ UNIPHY_DEC_CHANNEL_0_INPUT_OUTPUT_4);
 }
 
 static void ppe_uniphy_sgmii_mode_set(uint32_t uniphy_index, uint32_t mode)
 {
-	if (uniphy_index == 0) {
-		writel(UNIPHY_MISC_SRC_PHY_MODE, PPE_UNIPHY_BASE +
-				(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC_SOURCE_SELECTION_REG_OFFSET);
+	writel(UNIPHY_MISC_SRC_PHY_MODE, PPE_UNIPHY_BASE +
+			(uniphy_index * PPE_UNIPHY_REG_INC) +
+			UNIPHY_MISC_SOURCE_SELECTION_REG_OFFSET);
 
-		ppe_uniphy_set_forceMode();
+	if (uniphy_force_mode == uniphy_index)
+		ppe_uniphy_set_forceMode(uniphy_index);
 
+	if (mode == EPORT_WRAPPER_SGMII_PLUS) {
 		writel(UNIPHY_MISC2_REG_SGMII_PLUS_MODE, PPE_UNIPHY_BASE +
-				(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC2_REG_OFFSET);
+			(uniphy_index * PPE_UNIPHY_REG_INC) +
+			UNIPHY_MISC2_REG_OFFSET);
 	} else {
 		writel(UNIPHY_MISC2_REG_SGMII_MODE, PPE_UNIPHY_BASE +
-				(uniphy_index * PPE_UNIPHY_REG_INC) + UNIPHY_MISC2_REG_OFFSET);
+			(uniphy_index * PPE_UNIPHY_REG_INC) +
+			UNIPHY_MISC2_REG_OFFSET);
 	}
 
 	writel(UNIPHY_PLL_RESET_REG_VALUE, PPE_UNIPHY_BASE +

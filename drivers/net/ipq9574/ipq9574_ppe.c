@@ -32,6 +32,8 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define pr_info(fmt, args...) printf(fmt, ##args);
 
+int uniphy_force_mode;
+
 extern int is_uniphy_enabled(int uniphy_index);
 extern void uniphy_port5_clock_source_set(void);
 
@@ -1011,6 +1013,9 @@ void ipq9574_ppe_interface_mode_init(void)
 		printf("\nError: switch_mac_mode2 not specified in dts");
 		return;
 	}
+
+	uniphy_force_mode = fdtdec_get_uint(gd->fdt_blob, node,
+				"uniphy_force_mode", -1);
 
 	ppe_uniphy_mode_set(PPE_UNIPHY_INSTANCE0, mode0);
 	ppe_uniphy_mode_set(PPE_UNIPHY_INSTANCE1, mode1);
