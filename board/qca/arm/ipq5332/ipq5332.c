@@ -943,6 +943,11 @@ void set_flash_secondary_type(qca_smem_flash_info_t *smem)
 	return;
 };
 
+int get_soc_hw_version(void)
+{
+	return readl(TCSR_SOC_HW_VERSION_REG);
+}
+
 #ifdef CONFIG_IPQ5332_EDMA
 void set_function_select_as_mdc_mdio(void)
 {
