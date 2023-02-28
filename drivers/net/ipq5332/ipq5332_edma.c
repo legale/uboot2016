@@ -56,6 +56,7 @@ typedef struct {
 uchar ipq5332_def_enetaddr[6] = {0x00, 0x03, 0x7F, 0xBA, 0xDB, 0xAD};
 phy_info_t *swt_info[QCA8084_MAX_PORTS] = {0};
 ipq5332_edma_port_info_t *port_info[IPQ5332_PHY_MAX] = {0};
+mdio_info_t *mdio_info[IPQ5332_PHY_MAX] = {0};
 int sgmii_mode[2] = {0};
 
 extern void ipq_phy_addr_fixup(void);
@@ -77,20 +78,16 @@ extern void ipq5332_xgmac_sgmiiplus_speed_set(int port, int speed, int status);
 extern void ppe_uniphy_refclk_set_25M(uint32_t uniphy_index);
 extern void qca8033_phy_reset(void);
 extern void ipq5332_gmac_port_disable(int port);
+extern void ipq_set_mdio_mode(const int mode, const int bus);
 #ifdef CONFIG_ATHRS17C_SWITCH
 extern void ppe_uniphy_set_forceMode(uint32_t uniphy_index);
 extern int ipq_qca8337_switch_init(ipq_s17c_swt_cfg_t *s17c_swt_cfg);
 extern int ipq_qca8337_link_update(ipq_s17c_swt_cfg_t *s17c_swt_cfg);
 extern void ipq_s17c_switch_reset(int gpio);
-ipq_s17c_swt_cfg_t s17c_swt_cfg;
+ipq_s17c_swt_cfg_t s17c_swt_cfg[IPQ5332_PHY_MAX];
 #endif
 
 static int tftp_acl_our_port;
-
-#ifdef CONFIG_QCA8084_SWT_MODE
-static int qca8084_swt_enb = 0;
-static int qca8084_chip_detect = 0;
-#endif /* CONFIG_QCA8084_SWT_MODE */
 
 #ifdef CONFIG_QCA8084_BYPASS_MODE
 extern void qca8084_bypass_interface_mode_set(u32 interface_mode);
@@ -957,16 +954,18 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 			 */
 			continue;
 		}
+		/*
+		 * set mdio mode and bus no
+		 */
+		ipq_set_mdio_mode(mdio_info[i]->mode, mdio_info[i]->bus_no);
 
 		phy_info = port_info[i]->phy_info;
 		if (phy_info->phy_type == UNUSED_PHY_TYPE)
 			continue;
 #ifdef CONFIG_QCA8084_SWT_MODE
-		else if ((qca8084_swt_enb && qca8084_chip_detect) &&
-#ifdef CONFIG_QCA8084_BYPASS_MODE
-				(!(qca8084_bypass_enb & i)) &&
-#endif /* CONFIG_QCA8084_BYPASS_MODE */
-				(phy_info->phy_type == QCA8084_PHY_TYPE)) {
+		else if ((phy_info->phy_type == QCA8084_PHY_TYPE) &&
+				(priv->ops[i] == NULL)) {
+			printf("eth0 PHY%d ", i);
 			if (!ipq_qca8084_link_update(swt_info))
 				linkup++;
 			continue;
@@ -974,8 +973,8 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 #endif
 #ifdef CONFIG_ATHRS17C_SWITCH
 		else if (phy_info->phy_type == ATHRS17C_SWITCH_TYPE) {
-			if (s17c_swt_cfg.chip_detect) {
-				if (!ipq_qca8337_link_update(&s17c_swt_cfg))
+			if (s17c_swt_cfg[i].chip_detect) {
+				if (!ipq_qca8337_link_update(&s17c_swt_cfg[i]))
 					linkup++;
 				continue;
 			}
@@ -1751,6 +1750,73 @@ void ipq5332_prepare_switch_info(int offset, phy_info_t * phy_info[],
 	}
 }
 
+void get_mdio_info(int offset, mdio_info_t * mdio_info[], int max_phy_ports)
+{
+	int mode;
+	int bus_no;
+	int i;
+
+	for (i = 0; i < max_phy_ports; i++)
+		mdio_info[i] = ipq5332_alloc_mem(sizeof(mdio_info_t));
+	i = 0;
+	for (offset = fdt_first_subnode(gd->fdt_blob, offset); offset > 0;
+	     offset = fdt_next_subnode(gd->fdt_blob, offset)) {
+		mode = fdtdec_get_uint(gd->fdt_blob,
+					      offset, "mdio_mode", 0);
+		bus_no = fdtdec_get_uint(gd->fdt_blob,
+					   offset, "bus_no", 0);
+		mdio_info[i]->mode = mode;
+		mdio_info[i]->bus_no = bus_no;
+		++i;
+	}
+}
+
+#ifdef CONFIG_ATHRS17C_SWITCH
+void ipq5332_prepare_qca8337_info(int phy_node, int max_phy_ports)
+{
+	int i, s17c_rst_gpio;
+
+	for (i = 0, phy_node = fdt_first_subnode(gd->fdt_blob, phy_node);
+		phy_node > 0 && i < max_phy_ports; ++i,
+		phy_node = fdt_next_subnode(gd->fdt_blob, phy_node)) {
+
+		s17c_swt_cfg[i].chip_detect = 0;
+
+		s17c_rst_gpio = fdtdec_get_uint(gd->fdt_blob, phy_node,
+			"qca8337_rst_gpio", 0);
+
+		ipq_s17c_switch_reset(s17c_rst_gpio);
+
+		s17c_swt_cfg[i].update =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "update", 0);
+		s17c_swt_cfg[i].skip_vlan =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "skip_vlan", 0);
+		s17c_swt_cfg[i].pad0_mode =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "pad0_mode", 0);
+		s17c_swt_cfg[i].pad5_mode =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "pad5_mode", 0);
+		s17c_swt_cfg[i].pad6_mode =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "pad6_mode", 0);
+		s17c_swt_cfg[i].port0 =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "port0", 0);
+		s17c_swt_cfg[i].sgmii_ctrl =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "sgmii_ctrl", 0);
+		s17c_swt_cfg[i].port0_status =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "port0_status", 0);
+		s17c_swt_cfg[i].port6_status =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "port6_status", 0);
+		s17c_swt_cfg[i].port_count =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "port_count", 0);
+		s17c_swt_cfg[i].mac_pwr =  fdtdec_get_uint(gd->fdt_blob,
+				phy_node, "mac_pwr", 0);
+		fdtdec_get_int_array(gd->fdt_blob, phy_node,
+				"port_phy_address",
+				s17c_swt_cfg[i].port_phy_address,
+				s17c_swt_cfg[i].port_count);
+	}
+}
+#endif
+
 int ipq5332_edma_init(void *edma_board_cfg)
 {
 	struct eth_device *dev[IPQ5332_EDMA_DEV];
@@ -1763,15 +1829,15 @@ int ipq5332_edma_init(void *edma_board_cfg)
 	phy_info_t *phy_info;
 	int phy_id;
 	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
+	int clk[4] = {0};
+	int qca8084_swt_enb = 0;
+	int qca8084_chip_detect = 0;
+
 #ifdef CONFIG_IPQ5332_QCA8075_PHY
 	static int sw_init_done = 0;
 #endif
-#ifdef CONFIG_QCA8084_SWT_MODE
-	static int qca8084_init_done = 0;
-	int qca8084_gpio, clk[4] = {0};
-#endif
 #ifdef CONFIG_ATHRS17C_SWITCH
-	int s17c_swt_enb = 0, s17c_rst_gpio = 0;
+	int s17c_swt_enb = 0;
 #endif
 	int node, phy_addr, mode, phy_node = -1;
 	/*
@@ -1787,12 +1853,6 @@ int ipq5332_edma_init(void *edma_board_cfg)
 #endif /* CONFIG_QCA8084_BYPASS_MODE */
 	qca8084_swt_enb = fdtdec_get_uint(gd->fdt_blob, node,
 				"qca8084_switch_enable", 0);
-	if (qca8084_swt_enb) {
-		qca8084_gpio =  fdtdec_get_uint(gd->fdt_blob, node,
-					"qca808x_gpio", 0);
-		if (qca8084_gpio)
-			ipq_qca8084_switch_hw_reset(qca8084_gpio);
-	}
 
 	phy_node = fdt_path_offset(gd->fdt_blob,
 					"/ess-switch/qca8084_swt_info");
@@ -1805,44 +1865,17 @@ int ipq5332_edma_init(void *edma_board_cfg)
 	s17c_swt_enb = fdtdec_get_uint(gd->fdt_blob, node,
 			"qca8337_switch_enable", 0);
 	if (s17c_swt_enb) {
-		s17c_swt_cfg.chip_detect = 0;
-		s17c_rst_gpio = fdtdec_get_uint(gd->fdt_blob, node,
-				"qca8337_rst_gpio", 0);
-		ipq_s17c_switch_reset(s17c_rst_gpio);
-
 		phy_node = fdt_path_offset(gd->fdt_blob,
 				"/ess-switch/qca8337_swt_info");
-		s17c_swt_cfg.update =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "update", 0);
-		s17c_swt_cfg.skip_vlan =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "skip_vlan", 0);
-		s17c_swt_cfg.pad0_mode =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "pad0_mode", 0);
-		s17c_swt_cfg.pad5_mode =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "pad5_mode", 0);
-		s17c_swt_cfg.pad6_mode =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "pad6_mode", 0);
-		s17c_swt_cfg.port0 =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "port0", 0);
-		s17c_swt_cfg.sgmii_ctrl =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "sgmii_ctrl", 0);
-		s17c_swt_cfg.port0_status =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "port0_status", 0);
-		s17c_swt_cfg.port6_status =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "port6_status", 0);
-		s17c_swt_cfg.port_count =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "port_count", 0);
-		s17c_swt_cfg.mac_pwr =  fdtdec_get_uint(gd->fdt_blob,
-				phy_node, "mac_pwr", 0);
-		fdtdec_get_int_array(gd->fdt_blob, phy_node,
-				"port_phy_address",
-				s17c_swt_cfg.port_phy_address,
-				s17c_swt_cfg.port_count);
+
+		ipq5332_prepare_qca8337_info(phy_node, IPQ5332_PHY_MAX);
 	}
 #endif
 	phy_node = fdt_path_offset(gd->fdt_blob, "/ess-switch/port_phyinfo");
-	if (phy_node >= 0)
+	if (phy_node >= 0) {
 		ipq5332_prepare_port_info(phy_node, IPQ5332_PHY_MAX);
+		get_mdio_info(phy_node, mdio_info, IPQ5332_PHY_MAX);
+	}
 
 	mode = fdtdec_get_uint(gd->fdt_blob, node, "switch_mac_mode0", -1);
 	if (mode < 0) {
@@ -1929,15 +1962,34 @@ int ipq5332_edma_init(void *edma_board_cfg)
 		if (ret)
 			goto init_failed;
 
+		ret = ipq5332_edma_hw_init(hw[i]);
+
+		if (ret)
+			goto init_failed;
+
+		/*
+		 * setup force mode clk for QCA8084 & QCA8337
+		 */
+		clk[0] = 0x301;
+		clk[1] = 0x0;
+		clk[2] = 0x401;
+		clk[3] = 0x0;
+
 		for (phy_id =  0; phy_id < IPQ5332_PHY_MAX; phy_id++) {
 			phy_info = port_info[phy_id]->phy_info;
 			phy_addr = phy_info->phy_address;
+
+			ipq_set_mdio_mode(mdio_info[phy_id]->mode,
+						mdio_info[phy_id]->bus_no);
+
+			if(phy_info->phy_type == UNUSED_PHY_TYPE)
+				continue;
+
 #ifdef CONFIG_QCA8084_SWT_MODE
 			if (phy_info->phy_type == QCA8084_PHY_TYPE &&
-				!qca8084_init_done) {
+				phy_addr == PORT1) {
 				ipq_phy_addr_fixup();
 				ipq_clock_init();
-				qca8084_init_done = 1;
 			}
 #endif
 #ifdef CONFIG_QCA8033_PHY
@@ -2013,15 +2065,21 @@ int ipq5332_edma_init(void *edma_board_cfg)
 #endif
 #ifdef CONFIG_QCA8084_SWT_MODE
 			case QCA8084_PHY:
-				qca8084_chip_detect = 1;
 #ifdef CONFIG_QCA8084_BYPASS_MODE
 				if (qca8084_bypass_enb &&
 						(phy_addr == PORT4)) {
 					ipq_qca8084_phy_hw_init(
 						&ipq5332_edma_dev[i]->ops[phy_id],
 						phy_addr);
-				}
+
+					qca8084_bypass_interface_mode_set(
+						PHY_SGMII_BASET);
+				} else
 #endif /* CONFIG_QCA8084_BYPASS_MODE */
+				{
+					if (qca8084_swt_enb)
+						++qca8084_chip_detect;
+				}
 			break;
 #endif
 #ifdef CONFIG_ATHRS17C_SWITCH
@@ -2031,7 +2089,18 @@ int ipq5332_edma_init(void *edma_board_cfg)
 						port_info[phy_id]->uniphy_id);
 					ppe_uniphy_refclk_set_25M(
 						port_info[phy_id]->uniphy_id);
-					s17c_swt_cfg.chip_detect = 1;
+					++s17c_swt_cfg[phy_id].chip_detect;
+					ipq5332_port_mac_clock_reset(phy_id);
+					/*Force Link-speed: 1000M */
+					ipq5332_pqsgmii_speed_set(phy_id,
+						0x2, 0);
+					ipq5332_speed_clock_set(phy_id, clk);
+					ret = ipq_qca8337_switch_init(
+							&s17c_swt_cfg[phy_id]);
+					if (ret < 0) {
+						printf("qca8337 init failed"
+							"_%d\n", phy_id);
+					}
 				}
 			break;
 #endif
@@ -2064,66 +2133,28 @@ int ipq5332_edma_init(void *edma_board_cfg)
 			}
 		}
 
-		ret = ipq5332_edma_hw_init(hw[i]);
+		for (phy_id = 0; phy_id < qca8084_chip_detect; ++phy_id) {
 
-		if (ret)
-			goto init_failed;
+			ipq_set_mdio_mode(mdio_info[phy_id]->mode,
+						mdio_info[phy_id]->bus_no);
 
-#if defined(CONFIG_QCA8084_SWT_MODE) || defined(CONFIG_ATHRS17C_SWITCH)
-		/** QCA8084 & QCA8337 switch specific configurations */
-		if ((qca8084_swt_enb && qca8084_chip_detect) ||
-			(s17c_swt_cfg.chip_detect == 1)) {
-
-#ifdef CONFIG_QCA8084_BYPASS_MODE
-			if (qca8084_bypass_enb)
-				qca8084_bypass_interface_mode_set(PHY_SGMII_BASET);
-#endif /* CONFIG_QCA8084_BYPASS_MODE */
-
-			/*
-			 * Force speed ipq5332 1st port
-			 * for QCA8084 switch mode
+			ipq5332_port_mac_clock_reset(phy_id);
+			/* Force Link-speed: 2500M
+			 * Force Link-status: enable
 			 */
-			clk[0] = 0x301;
-			clk[1] = 0x0;
-			clk[2] = 0x401;
-			clk[3] = 0x0;
+			ipq5332_xgmac_sgmiiplus_speed_set(phy_id, 0x4, 0);
 
-			pr_debug("Force speed for QCA8084 & QCA8337 "
-					"switch mode \n");
-			ipq5332_port_mac_clock_reset(PORT0);
-#if defined(CONFIG_QCA8084_SWT_MODE)
-			if (qca8084_chip_detect) {
-				/** Force Link-speed: 2500M
-				*  Force Link-status: enable */
-				ipq5332_xgmac_sgmiiplus_speed_set(PORT0,
-					0x4, 0);
-			} else
-#endif
-			{
-				/*Force Link-speed: 1000M */
-				ipq5332_pqsgmii_speed_set(PORT0, 0x2, 0);
+			ipq5332_speed_clock_set(phy_id, clk);
+
+			ret = ipq_qca8084_hw_init(swt_info);
+			if (ret < 0) {
+				printf("qca8084 switch mode hw"
+					"_init failed %d\n",
+					phy_id);
 			}
 
-			ipq5332_speed_clock_set(PORT0, clk);
-
-#if defined(CONFIG_QCA8084_SWT_MODE)
-			if (qca8084_chip_detect) {
-				ret = ipq_qca8084_hw_init(swt_info);
-				if (ret < 0) {
-					printf("Error: qca8084 switch mode"
-						"hw_init failed \n");
-					goto init_failed;
-				}
-			}
-			else
-#endif
-			{
-				ret = ipq_qca8337_switch_init(&s17c_swt_cfg);
-				if (ret < 0)
-					goto init_failed;
-			}
 		}
-#endif
+
 		eth_register(dev[i]);
 	}
 

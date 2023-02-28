@@ -76,7 +76,6 @@
 	ess-switch {
 		switch_mac_mode0 = <PORT_WRAPPER_SGMII0_RGMII4>;
 		switch_mac_mode1 = <PORT_WRAPPER_SGMII0_RGMII4>;
-		qca8337_rst_gpio = <22>;
 		qca8033_gpio_cnt = <1>;
 		qca8033_gpio = <31>;
 		qca8337_switch_enable = <1>;
@@ -112,6 +111,8 @@
 		};
 
 		qca8337_swt_info {
+			switch@0 {
+				qca8337_rst_gpio = <22>;
 				mac_pwr = <0xaa545>;
 				port_count = <3>;
 				update = <1>;
@@ -124,6 +125,7 @@
 				port0_status = <0x4e>;
 				port6_status = <0>;
 				port_phy_address = <2 3 4>;
+			};
 		};
 	};
 };

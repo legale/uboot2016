@@ -1344,6 +1344,7 @@ int ipq_qca8084_link_update(phy_info_t * phy_info[])
 	struct port_phy_status phy_status = {0};
 	int rv, port_id, status = 1;
 
+	printf("QCA8084-switch status:\n");
 	for (int i=PORT1; i<PORT5; i++) {
 		port_id = phy_info[i]->phy_address;
 		if (phy_info[i]->phy_type == UNUSED_PHY_TYPE)
@@ -1356,7 +1357,7 @@ int ipq_qca8084_link_update(phy_info_t * phy_info[])
 			return status;
 		}
 
-		printf("QCA8084-switch PORT%d %s Speed :%d %s duplex\n", port_id,
+		printf("PORT%d %s Speed :%d %s duplex\n", port_id,
 			(phy_status.link_status?"Up":"Down"),
 			phy_status.speed, (phy_status.duplex?"Full":"Half"));
 

@@ -51,3 +51,6 @@
 #define UNUSED_PHY_TYPE 		0xFF
 #endif
 
+/* MDIO config */
+#define MDIO_MODE_DEFAULT		0
+#define MDIO_MODE_BITBANG		1

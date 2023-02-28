@@ -1062,15 +1062,14 @@ void qca808x_phy_reset_init(void)
 {
 	int qca808x_gpio[2] = {-1, -1}, qca808x_gpio_cnt, i;
 	unsigned int *qca808x_gpio_base;
-	uint32_t cfg;
 
 	qca808x_gpio_cnt = get_qca808x_gpio(qca808x_gpio);
 	if (qca808x_gpio_cnt >= 1) {
 		for (i = 0; i < qca808x_gpio_cnt; i++) {
 			if (qca808x_gpio[i] >= 0) {
-				qca808x_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(qca808x_gpio[i]);
-				cfg = GPIO_OE | GPIO_DRV_8_MA | GPIO_PULL_UP;
-				writel(cfg, qca808x_gpio_base);
+				qca808x_gpio_base = (unsigned int *)
+					GPIO_CONFIG_ADDR(qca808x_gpio[i]);
+				writel(0x203, qca808x_gpio_base);
 				gpio_set_value(qca808x_gpio[i], 0x0);
 			}
 		}
@@ -1097,7 +1096,7 @@ void qca808x_phy_reset_init_done(void)
 	qca808x_gpio_cnt = get_qca808x_gpio(qca808x_gpio);
 	if (qca808x_gpio_cnt >= 1) {
 		for (i = 0; i < qca808x_gpio_cnt; i++)
-			gpio_set_value(qca808x_gpio[i], 0x1);
+			gpio_set_value(qca808x_gpio[i], 0x3);
 	}
 }
 
