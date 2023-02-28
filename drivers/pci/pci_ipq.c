@@ -670,7 +670,7 @@ static const struct phy_regs pcie_phy_v2_x2_init_seq_ipq[] = {
 };
 
 static const struct phy_regs pcie_phy_v2_init_seq_ipq[] = {
-#if !defined(CONFIG_IPQ6018)
+#if defined(CONFIG_IPQ807x)
 	{ PCS_COM_POWER_DOWN_CONTROL,				0x00000001},
 	{ PCIE_0_QSERDES_PLL_BIAS_EN_CLKBUFLR_EN,		0x00000018},
 	{ PCIE_0_QSERDES_PLL_BIAS_EN_CTRL_BY_PSM,		0x00000001},
@@ -928,7 +928,7 @@ static const struct phy_regs pcie_phy_v2_init_seq_ipq[] = {
 	{ PCIE_0_PCS_COM_SW_RESET,				0x00000000},
 	{ PCIE_0_PCS_COM_START_CONTROL,				0x00000002},
 	{ PCIE_0_PCS_COM_START_CONTROL,				0x00000003},
-#else
+#elif defined(CONFIG_IPQ6018)
 	{ PCIE_0_PCS_COM_POWER_DOWN_CONTROL,			0x03 },
 	{ PCIE_0_QSERDES_PLL_SSC_PER1,				0x7D },
 	{ PCIE_0_QSERDES_PLL_SSC_PER2,				0x01 },
