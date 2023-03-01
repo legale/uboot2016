@@ -727,6 +727,23 @@ static void usb_init_hsphy(void __iomem *phybase, int ssphy)
 	writel(XCFG_COARSE_TUNE_NUM | XCFG_FINE_TUNE_NUM,
 		phybase + USB2PHY_USB_PHY_M31_XCFGI_11);
 
+	/* Adjust HSTX slew rate to 565 ps*/
+	/* Adjust PLL lock Time counter for release clock to 35uA */
+	/* Adjust Manual control ODT value to 38.02 Ohm */
+	writel(HSTX_SLEW_RATE_565PS | PLL_CHARGING_PUMP_CURRENT_35UA |
+		ODT_VALUE_38_02_OHM, phybase + USB2PHY_USB_PHY_M31_XCFGI_4);
+
+	/*
+	* Enable to always turn on USB 2.0 TX driver
+	* when system is in USB 2.0 HS mode
+	*/
+	writel(USB2_0_TX_ENABLE, phybase + USB2PHY_USB_PHY_M31_XCFGI_1);
+
+	/* Adjust Manual control ODT value to 45.02 Ohm */
+	/* Adjust HSTX Pre-emphasis level to 0.55mA */
+	writel(ODT_VALUE_45_02_OHM | HSTX_PRE_EMPHASIS_LEVEL_0_55MA,
+		phybase + USB2PHY_USB_PHY_M31_XCFGI_5);
+
 	udelay(10);
 
 	writel(0, phybase + USB_PHY_UTMI_CTRL5);
