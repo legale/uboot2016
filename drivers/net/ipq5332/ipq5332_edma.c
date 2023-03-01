@@ -76,6 +76,7 @@ extern void ipq_qca8084_switch_hw_reset(int gpio);
 extern void ipq5332_xgmac_sgmiiplus_speed_set(int port, int speed, int status);
 extern void ppe_uniphy_refclk_set_25M(uint32_t uniphy_index);
 extern void qca8033_phy_reset(void);
+extern void ipq5332_gmac_port_disable(int port);
 #ifdef CONFIG_ATHRS17C_SWITCH
 extern void ppe_uniphy_set_forceMode(uint32_t uniphy_index);
 extern int ipq_qca8337_switch_init(ipq_s17c_swt_cfg_t *s17c_swt_cfg);
@@ -909,6 +910,7 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 	static fal_port_speed_t old_speed[IPQ5332_PHY_MAX] =
 				{[0 ... IPQ5332_PHY_MAX-1] = FAL_SPEED_BUTT};
 	static fal_port_speed_t curr_speed[IPQ5332_PHY_MAX];
+	static int current_active_port = -1, previous_active_port = -1;
 	fal_port_duplex_t duplex;
 	char *lstatus[] = {"up", "Down"};
 	char *dp[] = {"Half", "Full"};
@@ -917,12 +919,45 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 	int phy_addr = -1, ret = -1;
 	phy_info_t *phy_info;
 	int sgmii_mode = EPORT_WRAPPER_SGMII0_RGMII4, sfp_mode = -1;
+	char *active_port = NULL;
+
+	active_port = getenv("active_port");
+	if (active_port != NULL) {
+		current_active_port = simple_strtol(active_port, NULL, 10);
+		if (current_active_port < 0 || current_active_port > 1)
+			printf("active_port must be either 0 or 1\n");
+	} else {
+		current_active_port = -1;
+	}
+
+	if (previous_active_port != current_active_port && current_active_port != -1) {
+		previous_active_port = current_active_port;
+		printf("Port%d has been set as the active_port\n", current_active_port);
+	}
+
 	/*
 	 * Check PHY link, speed, Duplex on all phys.
 	 * we will proceed even if single link is up
 	 * else we will return with -1;
 	 */
 	for (i =  0; i < IPQ5332_PHY_MAX; i++) {
+		if (current_active_port != -1 && i != current_active_port) {
+			ipq5332_gmac_port_disable(i);
+			ppe_port_bridge_txmac_set(i + 1, 1);
+			old_speed[i] = FAL_SPEED_BUTT;
+			/*
+			 * Old speed has been set as FAL_SPEED_BUTT here so that
+			 * if again the previous active_port is made as active,
+			 * the configurations required will be done again and MAC
+			 * would be enabled.
+			 *
+			 * Note that only for the active port TX/RX MAC would be
+			 * enabled and for all other ports, the same would be
+			 * disabled.
+			 */
+			continue;
+		}
+
 		phy_info = port_info[i]->phy_info;
 		if (phy_info->phy_type == UNUSED_PHY_TYPE)
 			continue;
