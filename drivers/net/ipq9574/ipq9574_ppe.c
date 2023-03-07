@@ -475,6 +475,9 @@ void ipq9574_uxsgmii_speed_set(int port, int speed, int duplex,
 
 	switch(port) {
 	case 0:
+	case 1:
+	case 2:
+	case 3:
 		uniphy_index = PPE_UNIPHY_INSTANCE0;
 	break;
 	case 4:
