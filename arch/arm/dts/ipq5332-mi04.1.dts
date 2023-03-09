@@ -166,4 +166,62 @@
 			};
 		};
 	};
+
+	ess-switch {
+		switch_mac_mode0 = <PORT_WRAPPER_SGMII_PLUS>;
+		switch_mac_mode1 = <PORT_WRAPPER_SGMII_PLUS>;
+		qca808x_gpio = <51>;
+		qca808x_gpio_cnt = <1>;
+		napa_gpio = <22>;
+		qca8084_switch_enable = <1>;
+
+		port_phyinfo {
+			port@0 {
+				phy_address = <1>;
+				phy_type = <QCA8084_PHY_TYPE>;
+				uniphy_id = <0>;
+				uniphy_mode = <PORT_WRAPPER_SGMII_PLUS>;
+			};
+			port@1 {
+				phy_address = <12>;
+				phy_type = <QCA8081_PHY_TYPE>;
+				uniphy_id = <1>;
+				uniphy_mode = <PORT_WRAPPER_SGMII_PLUS>;
+			};
+		};
+
+		qca8084_swt_info {
+			switch_mac_mode0 = <PORT_WRAPPER_SGMII_PLUS>;
+			switch_mac_mode1 = <PORT_WRAPPER_SGMII_PLUS>;
+
+			port@0 {
+				phy_address = <0xff>;
+				phy_type = <UNUSED_PHY_TYPE>;
+				forced-speed = <2500>;
+				forced-duplex = <1>;
+			};
+			port@1 {
+				phy_address = <1>;
+				phy_type = <QCA8084_PHY_TYPE>;
+			};
+			port@2 {
+				phy_address = <2>;
+				phy_type = <QCA8084_PHY_TYPE>;
+			};
+			port@3 {
+				phy_address = <3>;
+				phy_type = <QCA8084_PHY_TYPE>;
+			};
+			port@4 {
+				phy_address = <0x4>;
+				phy_type = <QCA8084_PHY_TYPE>;
+			};
+			port@5 {
+				phy_address = <0xff>;
+				phy_type = <UNUSED_PHY_TYPE>;
+				forced-speed = <2500>;
+				forced-duplex = <1>;
+			};
+		};
+	};
 };
