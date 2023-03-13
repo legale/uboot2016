@@ -1235,7 +1235,7 @@ int parse_elf_image_phdr(struct image_section *section)
 			phdr->p_paddr, phdr->p_offset, phdr->p_filesz, phdr->p_type);
 
 			int size = sb.st_size - (phdr->p_offset + phdr->p_filesz );
-			if (size < 0x4000) {
+			if (size < 0x1000) {
 				printf("rootfs metada is not available\n");
 				return 1;
 			}
