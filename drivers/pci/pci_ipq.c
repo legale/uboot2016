@@ -1988,7 +1988,7 @@ pci_dev_t pci_find_ipq_devices(struct pci_device_id *ids, int device_id)
 {
 	struct pci_controller * hose;
 	pci_dev_t bdf;
-	int bus, index;
+	int bus, index = 0;
 
 	hose = pci_get_hose_head();
 
