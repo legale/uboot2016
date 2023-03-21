@@ -405,7 +405,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define PCIE_PHY_DELAY_MS			0xFFFFFFFF
 
-#if defined(CONFIG_IPQ9574)
+#if defined(CONFIG_IPQ9574) || defined(CONFIG_IPQ5332)
 #define QCN_VENDOR_ID				0x17CB
 #define QCN9224_DEVICE_ID			0x1109
 #define QCN9000_DEVICE_ID 			0x1104
@@ -1915,7 +1915,7 @@ void pci_init_board (void)
 	}
 }
 
-#if defined(CONFIG_IPQ9574)
+#if defined(CONFIG_IPQ9574) || defined(CONFIG_IPQ5332)
 static struct pci_device_id supported_device[] = {
 	{QCN_VENDOR_ID, QCN9224_DEVICE_ID},
 	{}
