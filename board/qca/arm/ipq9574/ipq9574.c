@@ -1194,6 +1194,7 @@ void reset_cpu(unsigned long a)
 void power_cycle_sdx(void)
 {
 	int node, power_on_gpio = -1, reset_gpio = -1;
+	int e911_gpio = -1;
 	unsigned int *power_on_gpio_base, *reset_gpio_base;
 
 	unsigned int machid = gd->bd->bi_arch_number;
@@ -1201,14 +1202,14 @@ void power_cycle_sdx(void)
 		return;
 
 	node = fdt_path_offset(gd->fdt_blob, "/sdx-gpio");
-	if (node >= 0)
+	if (node >= 0) {
 		power_on_gpio = fdtdec_get_uint(gd->fdt_blob, node, "power_on", -1);
-
-	node = fdt_path_offset(gd->fdt_blob, "/sdx-gpio");
-	if (node >= 0)
 		reset_gpio = fdtdec_get_uint(gd->fdt_blob, node, "reset", -1);
+		e911_gpio = fdtdec_get_uint(gd->fdt_blob, node, "e911", -1);
+	}
 
-	if (power_on_gpio >= 0 && reset_gpio >= 0) {
+	if (power_on_gpio > 0 && reset_gpio > 0 &&
+		(e911_gpio <= 0 || !gpio_get_value(e911_gpio))) {
 		power_on_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(power_on_gpio);
 		reset_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(reset_gpio);
 		writel(0x2c1, power_on_gpio_base);

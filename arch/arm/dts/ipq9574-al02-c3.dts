@@ -42,5 +42,6 @@
 	sdx-gpio {
 		power_on = <40>;
 		reset = <47>;
+		e911 = <43>;
 	};
 };
