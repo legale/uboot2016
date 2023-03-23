@@ -142,7 +142,7 @@ static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
 		.name = "MT29F1G01ABBFDWB-IT",
 	},
 	{
-		.id = { 0xef, 0xbc },
+		.id = { 0xef, 0xbc, 0x21 },
 		.page_size = 2048,
 		.erase_blk_size = 0x00020000,
 		.pgs_per_blk = 64,
@@ -222,7 +222,7 @@ static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
 		.name = "GD5F1GQ5REYIH",
 	},
 	{
-		.id = { 0xef, 0xbf },
+		.id = { 0xef, 0xbf, 0x22 },
 		.page_size = 2048,
 		.erase_blk_size = 0x00020000,
 		.pgs_per_blk = 64,
@@ -238,7 +238,7 @@ static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
 		.name = "W25N02JWZEIF",
 	},
 	{
-		.id = { 0xef, 0xba },
+		.id = { 0xef, 0xba, 0x21 },
 		.page_size = 2048,
 		.erase_blk_size = 0x00020000,
 		.pgs_per_blk = 64,
@@ -252,6 +252,38 @@ static struct qpic_serial_nand_params qpic_serial_nand_tbl[] = {
 		.quad_mode = true,
 		.check_quad_config = false,
 		.name = "W25N01GWZEIG",
+	},
+	{
+		.id = { 0xef, 0xba, 0x20 },
+		.page_size = 2048,
+		.erase_blk_size = 0x00020000,
+		.pgs_per_blk = 64,
+		.no_of_blocks = 512,
+		.spare_size = 64,
+		.density = 0x4000000,
+		.otp_region = 0x2000,
+		.no_of_addr_cycle = 0x3,
+		.num_bits_ecc_correctability = 4,
+		.timing_mode_support = 0,
+		.quad_mode = true,
+		.check_quad_config = false,
+		.name = "W25N512GW",
+	},
+	{
+		.id = { 0xef, 0xba, 0x22 },
+		.page_size = 2048,
+		.erase_blk_size = 0x00020000,
+		.pgs_per_blk = 64,
+		.no_of_blocks = 2048,
+		.spare_size = 128,
+		.density = 0x10000000,
+		.otp_region = 0x2000,
+		.no_of_addr_cycle = 0x3,
+		.num_bits_ecc_correctability = 8,
+		.timing_mode_support = 0,
+		.quad_mode = true,
+		.check_quad_config = false,
+		.name = "W25N02KWZEIR",
 	},
 	{
 		.id = { 0xc2, 0x92 },
@@ -1343,18 +1375,30 @@ static int qpic_nand_read_id_serial(struct mtd_info *mtd)
 	uint32_t nand_ret;
 	uint32_t serial_dev_id[2] = {0x0};
 	int i;
+	int is_idfound;
 	struct qpic_nand_dev *dev = MTD_QPIC_NAND_DEV(mtd);
 
 	nand_ret = qpic_nand_fetch_id(mtd);
 	if (!nand_ret) {
 
 		serial_dev_id[0] = dev->id & 0x000000ff;
-		serial_dev_id[1] = (dev->id >> 8) & 0x000000ff;
+		if (serial_dev_id[0] == WINBOND_MFR_ID)
+			serial_dev_id[1] = (dev->id >> 8) & 0x0000ffff;
+		else
+			serial_dev_id[1] = (dev->id >> 8) & 0x000000ff;
 
 		for (i = 0; i < ARRAY_SIZE(qpic_serial_nand_tbl); i++) {
 			serial_params = &qpic_serial_nand_tbl[i];
-			if ((serial_params->id[0] == serial_dev_id[0]) &&
-			   (serial_params->id[1] == serial_dev_id[1])) {
+
+			if (serial_dev_id[0] == WINBOND_MFR_ID)
+				is_idfound = ((serial_params->id[0] == serial_dev_id[0]) &&
+				   (serial_params->id[1] == (serial_dev_id[1] & 0xff)) &&
+				   (serial_params->id[2] == (serial_dev_id[1] >> 8)));
+			else
+				is_idfound = ((serial_params->id[0] == serial_dev_id[0]) &&
+					(serial_params->id[1] == serial_dev_id[1]));
+
+			if (is_idfound) {
 				printf("Serial Nand Device Found With ID : 0x%02x 0x%02x\n",
 						serial_dev_id[0],serial_dev_id[1]);
 
