@@ -91,7 +91,8 @@ static int tftp_acl_our_port;
 
 #ifdef CONFIG_QCA8084_BYPASS_MODE
 extern void qca8084_bypass_interface_mode_set(u32 interface_mode);
-extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode);
+extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode,
+		u32 link, fal_port_speed_t speed);
 static int qca8084_bypass_enb = 0;
 #endif /* CONFIG_QCA8084_BYPASS_MODE */
 
@@ -1166,11 +1167,11 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 		if (phy_info->phy_type == QCA8084_PHY_TYPE) {
 			if (curr_speed[i] == FAL_SPEED_2500) {
 				qca8084_phy_sgmii_mode_set(PORT4,
-						PORT_SGMII_PLUS);
+						PORT_SGMII_PLUS, status, curr_speed[i]);
 			}
 			else {
 				qca8084_phy_sgmii_mode_set(PORT4,
-						PHY_SGMII_BASET);
+						PHY_SGMII_BASET, status, curr_speed[i]);
 			}
 		}
 #endif /* CONFIG_QCA8084_BYPASS_MODE */
