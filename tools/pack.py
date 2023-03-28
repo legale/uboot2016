@@ -98,7 +98,7 @@ soc_hw_version_ipq807x = { 0x200D0100, 0x200D0101, 0x200D0102, 0x200D0200 };
 soc_hw_version_ipq6018 = { 0x20170100 };
 soc_hw_version_ipq5018 = { 0x20180100, 0x20180101 };
 soc_hw_version_ipq9574 = { 0x20190100 };
-soc_hw_version_ipq5332 = { 0x201A0100 };
+soc_hw_version_ipq5332 = { 0x201A0100, 0x201A0101 };
 
 #
 # Python 2.6 and earlier did not have OrderedDict use the backport
