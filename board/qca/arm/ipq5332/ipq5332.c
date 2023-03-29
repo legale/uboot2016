@@ -1172,6 +1172,11 @@ void bring_phy_out_of_reset(void)
 	qca808x_phy_reset_init_done();
 }
 
+void fdt_fixup_for_atf(void *blob)
+{
+	parse_fdt_fixup("/qti,tzlog/%compatible%?qti,tzlog",blob);
+}
+
 void ipq5332_eth_initialize(void)
 {
 	eth_clock_init();
