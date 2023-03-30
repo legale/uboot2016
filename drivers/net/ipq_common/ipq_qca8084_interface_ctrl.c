@@ -50,6 +50,11 @@ extern void qca8084_uniphy_raw_clock_set(qca8084_clk_parent_t uniphy_clk,
 		uint64_t rate);
 #endif
 
+#ifdef CONFIG_QCA8084_BYPASS_MODE
+extern void qca8084_phy_sgmii_speed_fixup (u32 phy_addr, u32 link,
+		fal_port_speed_t new_speed);
+#endif
+
 void qca8084_serdes_addr_get(uint32_t serdes_id, uint32_t *address)
 {
 	uint32_t data = 0;
@@ -665,7 +670,8 @@ uint8_t qca8084_uniphy_mode_check(uint32_t uniphy_index,
 #endif /* CONFIG_QCA8084_SWT_MODE */
 
 #ifdef CONFIG_QCA8084_BYPASS_MODE
-void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode)
+void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode,
+		u32 link, fal_port_speed_t speed)
 {
 	uint32_t phy_addr_tmp = 0;
 	mac_config_t config = {0};
@@ -692,6 +698,8 @@ void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode)
 
 	qca8084_interface_sgmii_mode_set(QCA8084_UNIPHY_SGMII_0,
 			PORT4, &config);
+
+	qca8084_phy_sgmii_speed_fixup(phy_addr, link, speed);
 	return;
 }
 #endif /* CONFIG_QCA8084_BYPASS_MODE */

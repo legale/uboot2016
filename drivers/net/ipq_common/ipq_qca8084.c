@@ -68,7 +68,8 @@ bool qca8084_port_rxfc_forcemode[QCA8084_MAX_PORTS] = {};
 #endif /* CONFIG_QCA8084_SWT_MODE */
 
 #ifdef CONFIG_QCA8084_BYPASS_MODE
-extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode);
+extern void qca8084_phy_sgmii_mode_set(uint32_t phy_addr, u32 interface_mode,
+		u32 link, fal_port_speed_t speed);
 #endif /* CONFIG_QCA8084_BYPASS_MODE */
 
 static int qca8084_reg_field_get(u32 reg_addr, u32 bit_offset,
@@ -1449,10 +1450,45 @@ void ipq_qca8084_switch_hw_reset(int gpio)
 #endif /* CONFIG_QCA8084_SWT_MODE */
 
 #ifdef CONFIG_QCA8084_BYPASS_MODE
+void qca8084_phy_sgmii_speed_fixup (u32 phy_addr, u32 link,
+		fal_port_speed_t new_speed)
+{
+	/*disable ethphy3 and uniphy0 clock*/
+	pr_debug("disable ethphy3 and uniphy0 clock\n");
+	qca8084_port_clk_en_set(PORT4, QCA8084_CLK_TYPE_EPHY, false);
+	qca8084_port_clk_en_set(PORT5, QCA8084_CLK_TYPE_UNIPHY, false);
+
+	/*set gmii clock for ethphy3 and uniphy0*/
+	pr_debug("set speed clock for eth3 and uniphy0\n");
+	qca8084_port_speed_clock_set(PORT4, new_speed);
+
+	/*uniphy and ethphy gmii clock enable/disable*/
+	pr_debug("uniphy and ethphy GMII clock enable/disable\n");
+	if(!link)
+	{
+		pr_debug("enable ethphy3 and uniphy0 clock\n");
+		qca8084_port_clk_en_set(PORT4, QCA8084_CLK_TYPE_EPHY, true);
+		qca8084_port_clk_en_set(PORT5, QCA8084_CLK_TYPE_UNIPHY, true);
+	}
+	/*uniphy and ethphy gmii reset and release*/
+	pr_debug("uniphy and ethphy GMII interface reset and release\n");
+	qca8084_port_clk_reset(PORT4, QCA8084_CLK_TYPE_EPHY);
+	qca8084_port_clk_reset(PORT5, QCA8084_CLK_TYPE_UNIPHY);
+
+	/*uniphy and ethphy ipg_tune reset, function reset*/
+	pr_debug("uniphy and ethphy ipg_tune reset, function reset\n");
+	qca8084_uniphy_sgmii_function_reset(QCA8084_UNIPHY_SGMII_0);
+
+	/*do ethphy function reset*/
+	pr_debug("do ethphy function reset\n");
+	qca8084_phy_function_reset(phy_addr);
+	return;
+}
+
 void qca8084_bypass_interface_mode_set(u32 interface_mode)
 {
 	ipq_qca8084_work_mode_set(QCA8084_PHY_SGMII_UQXGMII_MODE);
-	qca8084_phy_sgmii_mode_set(PORT4, interface_mode);
+	qca8084_phy_sgmii_mode_set(PORT4, interface_mode, false, FAL_SPEED_1000);
 
 	pr_debug("ethphy3 software reset\n");
 	qca8084_phy_reset(PORT4);
