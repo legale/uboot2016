@@ -198,7 +198,7 @@
 	pci1: pci@18000000 {
 		status = "ok";
 		perst_gpio = <47>;
-		lane = <2>;
+		lane = <1>;
 		pci_gpio {
 			pci_rst {
 				gpio = <47>;
