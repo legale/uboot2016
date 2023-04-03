@@ -349,6 +349,108 @@ qca8084_adc_edge_t;
 
 #define QCA8084_HEADER_TYPE_VAL	0xaaaa
 
+/* Global Forward Control1 Register */
+#define FORWARD_CTL1
+#define FORWARD_CTL1_OFFSET             0x0624
+#define FORWARD_CTL1_E_LENGTH           4
+#define FORWARD_CTL1_E_OFFSET           0
+#define FORWARD_CTL1_NR_E               1
+
+#define BC_FLOOD_DP
+#define FORWARD_CTL1_BC_FLOOD_DP_BOFFSET      16
+#define FORWARD_CTL1_BC_FLOOD_DP_BLEN         7
+#define FORWARD_CTL1_BC_FLOOD_DP_FLAG         HSL_RW
+
+//#######
+#define ISISC_PHY_MODE_PHY_ID  4
+#define ISISC_LPI_PORT1_OFFSET 4
+#define ISISC_LPI_BIT_STEP     2
+
+/* ISIS Mask Control Register */
+#define MASK_CTL
+#define MASK_CTL_ID               0
+#define MASK_CTL_OFFSET           0x0000
+#define MASK_CTL_E_LENGTH         4
+#define MASK_CTL_E_OFFSET         0
+#define MASK_CTL_NR_E             1
+
+#define DEVICE_ID
+#define MASK_CTL_DEVICE_ID_BOFFSET            8
+#define MASK_CTL_DEVICE_ID_BLEN               8
+#define MASK_CTL_DEVICE_ID_FLAG               HSL_RO
+
+#define REV_ID
+#define MASK_CTL_REV_ID_BOFFSET               0
+#define MASK_CTL_REV_ID_BLEN                  8
+#define MASK_CTL_REV_ID_FLAG                  HSL_RO
+
+/* EEE control Register */
+#define EEE_CTL
+#define EEE_CTL_OFFSET    0x0100
+#define EEE_CTL_E_LENGTH  4
+#define EEE_CTL_E_OFFSET  0
+#define EEE_CTL_NR_E      1
+
+/* Port Status Register */
+#define PORT_STATUS
+#define PORT_STATUS_OFFSET        0x007c
+#define PORT_STATUS_E_LENGTH      4
+#define PORT_STATUS_E_OFFSET      0x0004
+#define PORT_STATUS_NR_E          7
+
+#define FLOW_LINK_EN
+#define PORT_STATUS_FLOW_LINK_EN_BOFFSET        12
+#define PORT_STATUS_FLOW_LINK_EN_BLEN           1
+#define PORT_STATUS_FLOW_LINK_EN_FLAG           HSL_RW
+
+#define DUPLEX_MODE
+#define PORT_STATUS_DUPLEX_MODE_BOFFSET         6
+#define PORT_STATUS_DUPLEX_MODE_BLEN            1
+#define PORT_STATUS_DUPLEX_MODE_FLAG            HSL_RW
+
+#define SPEED_MODE
+#define PORT_STATUS_SPEED_MODE_BOFFSET          0
+#define PORT_STATUS_SPEED_MODE_BLEN             2
+#define PORT_STATUS_SPEED_MODE_FLAG             HSL_RW
+
+#define LEAVE_EN_OFFSET     2
+#define JOIN_EN_OFFSET      1
+#define IGMP_MLD_EN_OFFSET  0
+
+/* Port HOL CTL0 Register */
+#define PORT_HOL_CTL0
+#define PORT_HOL_CTL0_OFFSET         0x0970
+#define PORT_HOL_CTL0_E_LENGTH       4
+#define PORT_HOL_CTL0_E_OFFSET       0x0008
+#define PORT_HOL_CTL0_NR_E           7
+
+#define PORT_DESC_NR
+#define PORT_HOL_CTL0_PORT_DESC_NR_BOFFSET           24
+#define PORT_HOL_CTL0_PORT_DESC_NR_BLEN              8
+#define PORT_HOL_CTL0_PORT_DESC_NR_FLAG              HSL_RW
+
+/* Port HOL CTL1 Register */
+#define PORT_HOL_CTL1
+#define PORT_HOL_CTL1_OFFSET         0x0974
+#define PORT_HOL_CTL1_E_LENGTH       4
+#define PORT_HOL_CTL1_E_OFFSET       0x0008
+#define PORT_HOL_CTL1_NR_E           7
+
+#define PORT_RED_EN
+#define PORT_HOL_CTL1_PORT_RED_EN_BOFFSET            8
+#define PORT_HOL_CTL1_PORT_RED_EN_BLEN               1
+#define PORT_HOL_CTL1_PORT_RED_EN_FLAG               HSL_RW
+
+#define PORT_IN_DESC_EN
+#define PORT_HOL_CTL1_PORT_IN_DESC_EN_BOFFSET        0
+#define PORT_HOL_CTL1_PORT_IN_DESC_EN_BLEN           6
+#define PORT_HOL_CTL1_PORT_IN_DESC_EN_FLAG           HSL_RW
+
+#define ISISC_QOS_PORT_RX_BUFFER_MAX  504
+#define ISISC_QOS_PORT_TX_BUFFER_MAX  2040
+#define ISISC_QOS_HOL_STEP       8
+#define ISISC_QOS_HOL_MOD        3
+
 typedef enum {
 	FAL_NO_HEADER_EN = 0,
 	FAL_ONLY_MANAGE_FRAME_EN,

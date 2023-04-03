@@ -1311,14 +1311,95 @@ void port_link_update(u32 port_id, struct port_phy_status phy_status)
 	return;
 }
 
+static void port_3az_status_set(u32 port_id, bool enable)
+{
+	u32 reg = 0, field, offset, device_id, reverse = 0;
+	u32 eee_mask = 0;
+
+	QCA8084_REG_ENTRY_GET(MASK_CTL, 0, (u8 *) (&reg));
+
+	SW_GET_FIELD_BY_REG(MASK_CTL, DEVICE_ID, device_id, reg);
+	switch (device_id) {
+		case QCA_VER_QCA8084:
+			eee_mask = 3;
+			reverse = 0;
+			break;
+		default:
+			printf("%s %d Unsupported DEV_ID \n", __func__, __LINE__);
+			return;
+	}
+
+	QCA8084_REG_ENTRY_GET(EEE_CTL, 0, (u8 *) (&reg));
+
+	if (true == enable)
+	{
+		field  = eee_mask;
+	}
+	else if (false == enable)
+	{
+		field  = 0;
+	}
+
+	if (reverse)
+	{
+		field = (~field) & eee_mask;
+	}
+
+	offset = (port_id - 1) * ISISC_LPI_BIT_STEP + ISISC_LPI_PORT1_OFFSET;
+	reg &= (~(eee_mask << offset));
+	reg |= (field << offset);
+
+	QCA8084_REG_ENTRY_SET(EEE_CTL, 0, (u8 *) (&reg));
+	return;
+}
+
+static void qos_port_tx_buf_nr_set(u32 port_id, u32 * number)
+{
+	u32 val = 0;
+	if (ISISC_QOS_PORT_TX_BUFFER_MAX < *number)
+	{
+		printf("%s %d Bad param \n", __func__, __LINE__);
+		return;
+	}
+
+	val = *number / ISISC_QOS_HOL_STEP;
+	*number = val << ISISC_QOS_HOL_MOD;
+	QCA8084_REG_FIELD_SET(PORT_HOL_CTL0, port_id, PORT_DESC_NR,
+			(u8 *) (&val));
+	return;
+}
+
+static void qos_port_rx_buf_nr_set(u32 port_id, u32 * number)
+{
+	u32 val = 0;
+	if (ISISC_QOS_PORT_RX_BUFFER_MAX < *number)
+	{
+		printf("%s %d Bad param \n", __func__, __LINE__);
+		return;
+	}
+
+	val = *number / ISISC_QOS_HOL_STEP;
+	*number = val << ISISC_QOS_HOL_MOD;
+	QCA8084_REG_FIELD_SET(PORT_HOL_CTL1, port_id, PORT_IN_DESC_EN,
+			(u8 *) (&val));
+	return;
+}
+
 void qca_switch_init(u32 port_bmp, u32 cpu_bmp, phy_info_t * phy_info[])
 {
+	u32 port_hol_ctrl[2] = {0};
 	int i = 0;
+	u32 temp;
 
 	port_bmp |= cpu_bmp;
 	while (port_bmp) {
 		pr_debug("configuring port: %d \n", i);
 		if (port_bmp & 1) {
+			temp = 0;
+			QCA8084_REG_FIELD_GET(FORWARD_CTL1, 0, BC_FLOOD_DP, (u8 *) (&temp));
+			temp |= (0x1 << i);
+			QCA8084_REG_FIELD_SET(FORWARD_CTL1, 0, BC_FLOOD_DP, (u8 *) (&temp));
+
 			qca8084_port_txmac_status_set(i, false);
 			qca8084_port_rxmac_status_set(i, false);
 
@@ -1329,10 +1410,24 @@ void qca_switch_init(u32 port_bmp, u32 cpu_bmp, phy_info_t * phy_info[])
 				header_type_set(true, QCA8084_HEADER_TYPE_VAL);
 				port_rxhdr_mode_set(i, FAL_ONLY_MANAGE_FRAME_EN);
 				port_txhdr_mode_set(i, FAL_NO_HEADER_EN);
+
+				/* port tx buf number */
+				port_hol_ctrl[0] = 600;
+				/* port rx buf number */
+				port_hol_ctrl[1] = 48;
 			} else {
 				qca8084_port_flowctrl_set(i, true);
 				qca8084_port_flowctrl_forcemode_set(i, false);
 			}
+
+			port_3az_status_set(i, false);
+
+			temp=1;
+			QCA8084_REG_FIELD_SET(PORT_HOL_CTL1, i, PORT_RED_EN, (u8 *) (&temp));
+
+			qos_port_tx_buf_nr_set(i, &port_hol_ctrl[0]);
+			qos_port_rx_buf_nr_set(i, &port_hol_ctrl[1]);
+
 		}
 		port_bmp >>=1;
 		i++;
