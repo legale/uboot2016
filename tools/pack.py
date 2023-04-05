@@ -1504,7 +1504,7 @@ class Pack(object):
 			diff_files = "" # Clear for next iteration
 
             # Get machID
-            if partition != "0:CDT" and partition != "0:DDRCONFIG":
+            if partition != "0:CDT" and partition != "0:CDT_1" and partition != "0:DDRCONFIG":
                 machid = None
             else:
 		try:
@@ -1980,7 +1980,7 @@ class Pack(object):
 
             section_conf = section_conf.lower()
 
-            if section_conf == "cdt" or section_conf == "ddrconfig":
+            if section_conf == "cdt" or section_conf == "cdt_1" or section_conf == "ddrconfig":
 		try:
 		    if image_type == "all" or section[8].attrib['image_type'] == image_type:
 	                self.__gen_script_cdt(images, flinfo, root, section_conf, partition)
