@@ -1059,6 +1059,11 @@ static int ipq5332_eth_init(struct eth_device *eth_dev, bd_t *this)
 				clk[1] = 3;
 				clk[3] = 3;
 			}
+
+			if (phy_info->phy_type == QCA8084_PHY_TYPE) {
+				clk[0] = 0x309;
+				clk[2] = 0x409;
+			}
 		break;
 		case FAL_SPEED_100:
 			mac_speed = 0x1;
