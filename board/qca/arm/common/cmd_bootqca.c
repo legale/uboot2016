@@ -304,7 +304,6 @@ static int parse_elf_image_phdr(image_info *img_info, unsigned int addr)
 }
 #endif
 
-#ifdef CONFIG_IPQ_ROOTFS_AUTH
 static int copy_rootfs(unsigned int request, uint32_t size)
 {
 	char runcmd[256];
@@ -411,8 +410,8 @@ static int authenticate_rootfs(unsigned int kernel_addr)
 
 	return CMD_RET_SUCCESS;
 }
-
 #else
+
 static int authenticate_rootfs_elf(unsigned int rootfs_hdr)
 {
 	int ret;
@@ -447,8 +446,6 @@ static int authenticate_rootfs_elf(unsigned int rootfs_hdr)
 	return CMD_RET_SUCCESS;
 }
 #endif
-#endif
-
 
 static int do_boot_signedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
@@ -665,22 +662,22 @@ static int do_boot_signedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const a
 #else
 	memset((void *)kernel_img_info.kernel_load_addr,  0, img_info.img_offset);
 #endif
-#ifdef CONFIG_IPQ_ROOTFS_AUTH
+	if (getenv("rootfs_auth")) {
 #ifdef CONFIG_IPQ_ELF_AUTH
-	if (authenticate_rootfs_elf(img_info.img_load_addr +
+		if (authenticate_rootfs_elf(img_info.img_load_addr +
 				img_info.img_size) != CMD_RET_SUCCESS) {
-		printf("Rootfs elf image authentication failed\n");
-		BUG();
-	}
+			printf("Rootfs elf image authentication failed\n");
+			BUG();
+		}
 #else
-	/* Rootfs's header and certificate at end of kernel image, copy from
-	 * there and pack with rootfs image and authenticate rootfs */
-	if (authenticate_rootfs(CONFIG_SYS_LOAD_ADDR) != CMD_RET_SUCCESS) {
-		printf("Rootfs image authentication failed\n");
-		BUG();
+		/* Rootfs's header and certificate at end of kernel image, copy from
+		 * there and pack with rootfs image and authenticate rootfs */
+		if (authenticate_rootfs(CONFIG_SYS_LOAD_ADDR) != CMD_RET_SUCCESS) {
+			printf("Rootfs image authentication failed\n");
+			BUG();
+		}
+#endif
 	}
-#endif
-#endif
 	/*
 	* This sys call will switch the CE1 channel to ADM usage
 	* so that HLOS can use it.
