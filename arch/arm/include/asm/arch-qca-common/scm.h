@@ -119,6 +119,11 @@ struct scm_response {
 	u32	is_complete;
 };
 
+struct fuse_payload {
+	u32 fuse_addr;
+	u32 lsb_val;
+	u32 msb_val;
+};
 
 int scm_init(void);
 extern int scm_call(u32 svc_id, u32 cmd_id, const void *cmd_buf, size_t cmd_len,
@@ -133,6 +138,7 @@ int qca_scm_crypto(int, void *, u32);
 int qca_scm_sdi(void);
 int qca_scm_dload(u32);
 int qca_scm_fuseipq(u32, u32, void *, size_t);
+int qca_scm_list_ipq5332_fuse(u32, u32, struct fuse_payload *, size_t);
 bool is_scm_armv8(void);
 int qca_scm_secure_authenticate(void *cmd_buf, size_t cmd_len);
 int qca_scm_part_info(void *cmd_buf, size_t cmd_len);

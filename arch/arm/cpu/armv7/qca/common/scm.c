@@ -17,6 +17,7 @@
 #include <asm-generic/errno.h>
 #include <asm/io.h>
 #include <asm/arch-qca-common/scm.h>
+#include <asm/dma-mapping.h>
 #include <common.h>
 
 /**
@@ -490,6 +491,29 @@ int qca_scm_fuseipq(u32 svc_id, u32 cmd_id, void *buf, size_t len)
 	return ret;
 }
 
+int qca_scm_list_ipq5332_fuse(u32 svc_id, u32 cmd_id,
+		struct fuse_payload *fuse, size_t len)
+{
+	int ret = 0;
+	if (is_scm_armv8())
+	{
+		struct qca_scm_desc desc = {0};
+		dma_addr_t dma_fuse;
+		dma_fuse = dma_map_single(fuse, len,
+                                  DMA_FROM_DEVICE);
+		desc.arginfo = QCA_SCM_ARGS(2, SCM_IO_WRITE, SCM_VAL);
+		desc.args[0] = dma_fuse;
+		desc.args[1] = len;
+
+		ret = scm_call_64(svc_id, cmd_id, &desc);
+	}
+	else
+	{
+		ret = scm_call(svc_id, cmd_id, fuse, len, NULL, 0);
+	}
+	return ret;
+}
+
 int qca_scm_part_info(void *cmd_buf,
 			size_t cmd_len)
 {
@@ -748,6 +772,10 @@ int qca_scm_call(u32 svc_id, u32 cmd_id, void *buf, size_t len)
 	return 0;
 }
 int qca_scm_fuseipq(u32 svc_id, u32 cmd_id, void *buf, size_t len)
+{
+	return 0;
+}
+int qca_scm_list_ipq5332_fuse(u32 svc_id, u32 cmd_id, void *buf, size_t len)
 {
 	return 0;
 }
