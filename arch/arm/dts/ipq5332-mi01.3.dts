@@ -25,6 +25,8 @@
 		mmc = "/sdhci@7804000";
 		usb0 = "/xhci@8a00000";
 		i2c0 = "/i2c@78B6000";
+		pci0 = "/pci@20000000";
+		pci1 = "/pci@18000000";
 	};
 
 	serial@78AF000 {
@@ -174,6 +176,34 @@
 				gpio = <13>;
 				func = <1>;
 				pull = <GPIO_NO_PULL>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	pci0: pci@20000000 {
+		status = "ok";
+		perst_gpio = <38>;
+		lane = <1>;
+		pci_gpio {
+			pci_rst {
+				gpio = <38>;
+				pull = <GPIO_PULL_UP>;
+				oe = <GPIO_OE_ENABLE>;
+				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	pci1: pci@18000000 {
+		status = "ok";
+		perst_gpio = <47>;
+		lane = <1>;
+		pci_gpio {
+			pci_rst {
+				gpio = <47>;
+				pull = <GPIO_PULL_UP>;
+				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
 			};
 		};
