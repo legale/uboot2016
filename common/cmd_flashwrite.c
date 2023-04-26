@@ -52,6 +52,8 @@ struct header {
 } __attribute__ ((__packed__));
 #endif
 
+uint32_t flash_type_new = -1;
+
 static int write_to_flash(int flash_type, uint32_t address, uint32_t offset,
 uint32_t part_size, uint32_t file_size, char *layout)
 {
@@ -204,7 +206,7 @@ char * const argv[])
 	uint32_t file_size = 0;
 	uint32_t size_block, start_block, file_size_cpy;
 	char *part_name = NULL, *filesize, *loadaddr;
-	int flash_type, ret, retn;
+	int flash_type, ret;
 	unsigned int active_part = 0;
 	char *layout = NULL;
 #ifdef CONFIG_IPQ806X
@@ -214,13 +216,14 @@ char * const argv[])
 	offset = 0;
 	part_size = 0;
 	layout = "default";
-	retn = CMD_RET_FAILURE;
+	ret = CMD_RET_USAGE;
 
 #ifdef CONFIG_QCA_MMC
 	block_dev_desc_t *blk_dev;
 #endif
 	disk_partition_t disk_info = {0};
 	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
+	flash_type = (flash_type_new != -1) ? flash_type_new : sfi->flash_type;
 #ifdef CONFIG_CMD_NAND
 	nand_info_t *nand = &nand_info[CONFIG_NAND_FLASH_INFO_IDX];
 #endif
@@ -229,49 +232,48 @@ char * const argv[])
 
 	if (flash_cmd) {
 		if ((argc < 2) || (argc > 4))
-			return CMD_RET_USAGE;
+			goto exit;
 
 		if (argc == 2) {
 			loadaddr = getenv("fileaddr");
 			if (loadaddr != NULL)
 				load_addr = simple_strtoul(loadaddr, NULL, 16);
 			else
-				return CMD_RET_USAGE;
+				goto exit;
 
 			filesize = getenv("filesize");
 			if (filesize != NULL)
 				file_size = simple_strtoul(filesize, NULL, 16);
 			else
-				return CMD_RET_USAGE;
+				goto exit;
 
 		} else if (argc == 4) {
 			load_addr = simple_strtoul(argv[2], NULL, 16);
 			file_size = simple_strtoul(argv[3], NULL, 16);
 
 		} else
-			return CMD_RET_USAGE;
+			goto exit;
 
 		file_size_cpy = file_size;
 	}
 	else {
 		if (argc != 2)
-			return CMD_RET_USAGE;
+			goto exit;
 	}
 
-	flash_type = sfi->flash_type;
 	part_name = argv[1];
 
-	if (((sfi->flash_type == SMEM_BOOT_NAND_FLASH) ||
-		(sfi->flash_type == SMEM_BOOT_QSPI_NAND_FLASH))) {
+	if (((flash_type == SMEM_BOOT_NAND_FLASH) ||
+		(flash_type == SMEM_BOOT_QSPI_NAND_FLASH))) {
 
 		ret = smem_getpart(part_name, &start_block, &size_block);
 		if (ret) {
 #ifdef IPQ_UBI_VOL_WRITE_SUPPORT
 			if (ubi_vol_present(part_name))
-				return write_ubi_vol(part_name, load_addr,
+				ret = write_ubi_vol(part_name, load_addr,
 								file_size);
 #endif
-			return retn;
+			goto exit;
 		}
 
 		offset = sfi->flash_block_size * start_block;
@@ -293,8 +295,8 @@ char * const argv[])
 #endif
 
 #ifdef CONFIG_QCA_MMC
-	} else if (sfi->flash_type == SMEM_BOOT_MMC_FLASH ||
-		sfi->flash_type == SMEM_BOOT_NO_FLASH) {
+	} else if (flash_type == SMEM_BOOT_MMC_FLASH ||
+		flash_type == SMEM_BOOT_NO_FLASH) {
 
 		blk_dev = mmc_get_dev(mmc_host.dev_num);
 		if (blk_dev != NULL) {
@@ -319,14 +321,13 @@ char * const argv[])
 				ret = get_partition_info_efi_by_name(blk_dev,
 				part_name, &disk_info);
 				if (ret)
-					return retn;
-
+					goto exit;
 				offset = (ulong)disk_info.start;
 				part_size = (ulong)disk_info.size;
 			}
 		}
 #endif
-	} else if (sfi->flash_type == SMEM_BOOT_SPI_FLASH) {
+	} else if (flash_type == SMEM_BOOT_SPI_FLASH) {
 
 		if (get_which_flash_param(part_name)) {
 
@@ -334,7 +335,7 @@ char * const argv[])
 			flash_type = SMEM_BOOT_NAND_FLASH;
 			ret = getpart_offset_size(part_name, &offset, &part_size);
 			if (ret)
-				return retn;
+				goto exit;
 
 		} else if (((sfi->flash_secondary_type == SMEM_BOOT_NAND_FLASH)||
 				(sfi->flash_secondary_type == SMEM_BOOT_QSPI_NAND_FLASH))
@@ -379,7 +380,7 @@ char * const argv[])
 					ret = get_partition_info_efi_by_name(blk_dev,
 							part_name, &disk_info);
 					if (ret)
-						return retn;
+						goto exit;
 
 					offset = (ulong)disk_info.start;
 					part_size = (ulong)disk_info.size;
@@ -387,16 +388,15 @@ char * const argv[])
 			}
 #endif
 		} else {
-
 			ret = smem_getpart(part_name, &start_block,
 							&size_block);
 			if (ret) {
 #ifdef IPQ_UBI_VOL_WRITE_SUPPORT
 				if (ubi_vol_present(part_name))
-					return write_ubi_vol(part_name,
+					ret = write_ubi_vol(part_name,
 						load_addr, file_size);
 #endif
-				return retn;
+				goto exit;
 			}
 
 			offset = sfi->flash_block_size * start_block;
@@ -409,9 +409,11 @@ char * const argv[])
 		if (((flash_type == SMEM_BOOT_NAND_FLASH) ||
 			(flash_type == SMEM_BOOT_QSPI_NAND_FLASH))) {
 
-			adj_size = file_size % nand->writesize;
-			if (adj_size)
-				file_size = file_size + (nand->writesize - adj_size);
+			if (nand->writesize) {
+				adj_size = file_size % nand->writesize;
+				if (adj_size)
+					file_size = file_size + (nand->writesize - adj_size);
+			}
 		}
 #endif
 		if (flash_type == SMEM_BOOT_MMC_FLASH) {
@@ -426,15 +428,18 @@ char * const argv[])
 
 		if (file_size > part_size) {
 			printf("Image size is greater than partition memory\n");
-			return CMD_RET_FAILURE;
+			ret = CMD_RET_FAILURE;
+			goto exit;
 		}
 
 		ret = write_to_flash(flash_type, load_addr, offset, part_size,
 							file_size, layout);
 	} else
 		ret = fl_erase(flash_type, offset, part_size, layout);
-
-return ret;
+exit:
+	if (ret)
+		flash_type_new = -1;
+	return ret;
 }
 
 #ifdef CONFIG_IPQ_MIBIB_RELOAD
@@ -597,6 +602,39 @@ char * const argv[])
 	return ret;
 }
 #endif
+
+static int do_flupdate(cmd_tbl_t *cmdtp, int flag, int argc,
+char * const argv[])
+{
+	int ret = CMD_RET_USAGE;
+
+	if (argc < 2 || argc > 3)
+		goto quit;
+
+	if (!strncmp(argv[1], "set", 3)) {
+		if(argc != 3)
+			goto quit;
+		if (!strncmp(argv[2], "mmc", 3))
+			flash_type_new = SMEM_BOOT_MMC_FLASH;
+		else if (!strncmp(argv[2], "nor", 3))
+			flash_type_new = SMEM_BOOT_SPI_FLASH;
+		else if (!strncmp(argv[2], "nand", 4))
+			flash_type_new = SMEM_BOOT_QSPI_NAND_FLASH;
+		else {
+			flash_type_new = -1;
+			goto quit;
+		}
+	}
+	else if (!strncmp(argv[1], "clear", 5)) /* set flash type to default */
+		flash_type_new = -1;
+	else
+		goto quit;
+
+	ret = CMD_RET_SUCCESS;
+quit:
+	return ret;
+}
+
 U_BOOT_CMD(
 	flash,       4,      0,      do_flash,
 	"flash part_name \n"
@@ -633,3 +671,9 @@ U_BOOT_CMD(
 	"Init the flash \n"
 );
 #endif
+
+U_BOOT_CMD(
+	flupdate,       3,       0,       do_flupdate,
+	"flupdate set mmc/nand/nor ; flupdate clear \n",
+	"flash type update \n"
+);
