@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -15,7 +17,7 @@
 #include "ipq9574-soc.dtsi"
 / {
 	machid = <0x8050001>;
-	config_name = "config@al02-c1";
+	config_name = "config@al02-c1", "config@rdp418";
 
 	aliases {
 		console = "/serial@78B1000";

@@ -40,7 +40,9 @@
 
 #define FLASH_SEL_BIT	7
 #define LINUX_NAND_DTS "/soc/nand@79b0000/"
+#define LINUX6_1_NAND_DTS "/soc@0/nand@79b0000/"
 #define LINUX_MMC_DTS "/soc/sdhci@7804000/"
+#define LINUX6_1_MMC_DTS "/soc@0/mmc@7804000/"
 #define STATUS_OK "status%?okay"
 #define STATUS_DISABLED "status%?disabled"
 
@@ -109,13 +111,19 @@ int dump_entries_n = ARRAY_SIZE(dumpinfo_n);
 void fdt_fixup_flash(void *blob)
 {
 	uint32_t flash_type = SMEM_BOOT_NO_FLASH;
+	int nand_nodeoff = fdt_path_offset(blob, LINUX_NAND_DTS);
+	int mmc_nodeoff = fdt_path_offset(blob, LINUX_MMC_DTS);
 
 	get_current_flash_type(&flash_type);
 	if (flash_type == SMEM_BOOT_NORPLUSEMMC ||
 		flash_type == SMEM_BOOT_MMC_FLASH ) {
-		parse_fdt_fixup(LINUX_NAND_DTS"%"STATUS_DISABLED, blob);
-		parse_fdt_fixup(LINUX_MMC_DTS"%"STATUS_OK, blob);
-
+		(nand_nodeoff >= 0) ?
+			parse_fdt_fixup(LINUX_NAND_DTS"%"STATUS_DISABLED, blob) :
+			parse_fdt_fixup(LINUX6_1_NAND_DTS"%"STATUS_DISABLED,
+					blob);
+		(mmc_nodeoff >= 0) ?
+			parse_fdt_fixup(LINUX_MMC_DTS"%"STATUS_OK, blob) :
+			parse_fdt_fixup(LINUX6_1_MMC_DTS"%"STATUS_OK, blob);
 	}
 	return;
 }

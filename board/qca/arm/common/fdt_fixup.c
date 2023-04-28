@@ -78,8 +78,12 @@ int ipq_fdt_fixup_spi_nor_params(void *blob)
 	nodeoff = fdt_node_offset_by_compatible(blob, -1, "n25q128a11");
 
 	if (nodeoff < 0) {
-		printf("fdt-fixup: unable to find compatible node\n");
-		return nodeoff;
+		nodeoff = fdt_node_offset_by_compatible(blob,
+				-1, "micron,n25q128a11");
+		if (nodeoff < 0) {
+			printf("fdt-fixup: unable to find compatible node\n");
+			return nodeoff;
+		}
 	}
 
 	val = cpu_to_fdt32(sfi.flash_block_size);
@@ -339,6 +343,7 @@ void ipq_fdt_fixup_mtdparts(void *blob, struct flash_node_info *ni)
 
 	for (; ni->compat; ni++) {
 		noff = fdt_node_offset_by_compatible(blob, -1, ni->compat);
+
 		while (noff != -FDT_ERR_NOTFOUND) {
 			dev = device_find(ni->type, ni->idx);
 			if (dev) {
@@ -1075,6 +1080,8 @@ int ft_board_setup(void *blob, bd_t *bd)
 		{ "spinand,mt29f", MTD_DEV_TYPE_NAND, 1 },
 		{ "n25q128a11", MTD_DEV_TYPE_NAND,
 				CONFIG_IPQ_SPI_NOR_INFO_IDX },
+		{ "micron,n25q128a11", MTD_DEV_TYPE_NAND,
+				CONFIG_IPQ_SPI_NOR_INFO_IDX},
 		{ "s25fl256s1", MTD_DEV_TYPE_NAND, 1 },
 		{ NULL, 0, -1 },	/* Terminator */
 	};
