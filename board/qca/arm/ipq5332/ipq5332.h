@@ -110,9 +110,21 @@ extern const add_node_t add_fdt_node[];
 #define ATERESET				~BIT(0)
 
 #define PCIE_USB_COMBO_PHY_CFG_RX_AFE_2		0x4B07C4
+#define PCIE_USB_COMBO_PHY_CFG_RX_DLF_DEMUX_2	0x4B07E8
+#define PCIE_USB_COMBO_PHY_CFG_MISC1		0x4B0214
+
 #define APB_REG_UPHY_RX_RESCAL_CODE		(16 << 8)
 #define APB_REG_UPHY_RX_AFE_CAP1		(7 << 4)
 #define APB_REG_UPHY_RX_AFE_RES1		(6 << 0)
+
+#define APB_REG_UPHY_RXD_BIT_WIDTH	(2 << 0)
+#define APB_REG_UPHY_RX_PLOOP_GAIN	(4 << 4)
+#define APB_REG_UPHY_RX_DLF_RATE	(1 << 8)
+#define APB_UPHY_RX_PLOOP_EN		(1 << 12)
+#define APB_REG_UPHY_RX_CDR_EN		(1 << 13)
+
+#define APB_REG_FLOOP_GAIN		(3 << 0)
+
 #define TCSR_SOC_HW_VERSION_REG 0x194D000
 
 /*
