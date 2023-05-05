@@ -24,6 +24,7 @@
 #define AUTHENTICATE_FILE	"/sys/devices/system/qfprom/qfprom0/authenticate"
 #define SEC_AUTHENTICATE_FILE  "/sys/sec_upgrade/sec_auth"
 #define TEMP_KERNEL_PATH	"/tmp/tmp_kernel.bin"
+#define TEMP_ROOTFS_PATH	"/tmp/rootfs.bin"
 #define MAX_SBL_VERSION	11
 #define MAX_HLOS_VERSION	32
 #define MAX_TZ_VERSION		14
@@ -83,7 +84,7 @@ struct image_section sections[] = {
 		.section_type		= HLOS_TYPE,
 		.type			= "ubi",
 		.tmp_file		= TMP_FILE_DIR,
-		.pre_op			= extract_kernel_binary,
+		.pre_op			= extract_binary,
 		.max_version		= MAX_HLOS_VERSION,
 		.file			= TEMP_KERNEL_PATH,
 		.version_file		= HLOS_VERSION_FILE,
@@ -222,7 +223,7 @@ int get_sections(void)
 		return 0;
 	}
 
-	data_size = find_mtd_part_size();
+	data_size = find_mtd_part_size("kernel");
 	while ((file = readdir(dir)) != NULL) {
 		for (i = 0, sec = &sections[0]; i < NO_OF_SECTIONS; i++, sec++) {
 			/* Skip loading of ubi section if board is not from nand boot */
@@ -269,7 +270,7 @@ int load_sections(void)
 		return 0;
 	}
 
-	data_size = find_mtd_part_size();
+	data_size = find_mtd_part_size("kernel");
 	while ((file = readdir(dir)) != NULL) {
 		for (i = 0, sec = &sections[0]; i < NO_OF_SECTIONS; i++, sec++) {
 			/* Skip loading of ubi section if board is not from nand boot */
@@ -277,7 +278,6 @@ int load_sections(void)
 				continue;
 			if (!strncmp(file->d_name, sec->type, strlen(sec->type))) {
 				strlcat(sec->file, file->d_name, sizeof(sec->file));
-
 				if (sec->pre_op) {
 					strlcat(sec->tmp_file, file->d_name,
 							sizeof(sec->tmp_file));
@@ -701,9 +701,8 @@ int get_sw_id_from_component_bin_elf64(struct image_section *section)
 	return 1;
 }
 
-int find_mtd_part_size(void)
+int find_mtd_part_size(char *mtdname)
 {
-	char *mtdname = "kernel";
 	char prefix[] = "/dev/mtd";
 	char dev[PATH_MAX];
 	int i = -1, fd;
@@ -754,7 +753,7 @@ int find_mtd_part_size(void)
 /**
  * Helper function to dynamically get volume id
  */
-int get_kernel_volume_id(void)
+int get_ubi_volume_id(char *vol_name)
 {
 	int i, number_of_ubi_volumes;
 	char ubi_vol_count[] = "/sys/class/ubi/ubi0/volumes_count";
@@ -775,13 +774,29 @@ int get_kernel_volume_id(void)
 		snprintf(ubi_vol, sizeof(ubi_vol), "%s%d%s", prefix, i, suffix);
 		fp = fopen(ubi_vol, "r");
 		fgets(ubi_vol_name, sizeof(ubi_vol_name), fp);
-		if (strstr(ubi_vol_name, "kernel")) {
-			printf("kernel ubi volume id = %d\n", i);
+		if (strstr(ubi_vol_name, vol_name)) {
+			printf("%s volume id = %d\n", vol_name, i);
+			close(fp);
 			return i;
 		}
 	}
 
 	return -1;
+}
+
+/**
+ * For NAND image, kernel and rootfs image is ubinized.
+ * Hence need to un-ubinize the ubi image and extract both kernel
+ * and rootfs images. Kernel image section and volume name are passed as
+ * argument in extract_kernel_binary(). After kernel extraction,
+ * parse_elf_image_phdr() is called which parses the ELF32 program header
+ * to get the ELF header of rootfs metadata.
+ */
+
+void extract_binary(struct image_section *section)
+{
+	extract_kernel_binary(section, "kernel");
+	parse_elf_image_phdr(section);
 }
 
 /**
@@ -798,18 +813,47 @@ int get_kernel_volume_id(void)
  *
  * @bin_file: struct image_section *
  */
-int extract_kernel_binary(struct image_section *section)
+
+int extract_kernel_binary(struct image_section *section, char *volname)
+{
+	char *ifname, *ofname;
+
+	ifname = section->tmp_file;
+	ofname = section->file;
+
+	if (extract_ubi_volume(volname, ifname, ofname) != 1) {
+		printf("Image extraction failed\n");
+		return 0;
+	}
+	return 1;
+}
+
+/**
+ * extract_ubi_volume() extracts both kernel image and rootfs image
+ * from UBI image. extract_kernel_binary() passes volume name,
+ * UBI image as Input file name, kernel or rootfs as Output file name.
+ * This function finds respective UBI volume ID, identifies each eraseble
+ * block. Parses UBI header and gets Volume ID header offset as well as
+ * Data offset. When volume ID matches for kernel and rootfs, Uses data offset
+ * to extract both images separately.
+ */
+
+int extract_ubi_volume(char *vol_name, char *if_name, char *of_name)
 {
 	struct ubi_ec_hdr *ubi_ec;
 	struct ubi_vid_hdr *ubi_vol;
 	uint8_t *fp;
 	int fd, ofd, magic, data_size, vid_hdr_offset, data_offset;
-	int kernel_vol_id, curr_vol_id;
+	int ret_vol_id, curr_vol_id;
 	struct stat sb;
 
-	fd = open(section->tmp_file, O_RDONLY);
+	if (if_name == NULL) {
+		return 0;
+	}
+
+	fd = open(if_name, O_RDONLY);
 	if (fd < 0) {
-		perror(section->tmp_file);
+		perror(if_name);
 		return 0;
 	}
 
@@ -827,21 +871,21 @@ int extract_kernel_binary(struct image_section *section)
 		return 0;
 	}
 
-	ofd = open(section->file, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+	ofd = open(of_name, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
 	if (ofd == -1) {
-		perror(section->file);
+		perror(of_name);
 		close(fd);
 		return 0;
 	}
 
-	data_size = find_mtd_part_size();
+	data_size = find_mtd_part_size(vol_name);
 	if (data_size == -1) {
 		printf("Error finding data size\n");
 		return 0;
 	}
 
-	kernel_vol_id = get_kernel_volume_id();
-	if (kernel_vol_id == -1) {
+	ret_vol_id = get_ubi_volume_id(vol_name);
+	if (ret_vol_id == -1) {
 		printf("Wrong ubi volume id for kernel\n");
 		return 0;
 	}
@@ -861,7 +905,22 @@ int extract_kernel_binary(struct image_section *section)
 		}
 
 		curr_vol_id = be32_to_cpu(ubi_vol->vol_id);
-		if (curr_vol_id == kernel_vol_id) {
+		if (curr_vol_id == ret_vol_id) {
+			if (ret_vol_id == 2) {
+				struct ubi_ec_hdr *ubi_ec_next  = (struct ubi_ec_hdr *)((uint8_t *)ubi_ec + data_offset + data_size);
+				int magic = be32_to_cpu(ubi_ec_next->magic);
+				if(magic != UBI_EC_HDR_MAGIC) {
+					uint8_t *tmp = (uint8_t *)ubi_ec + data_offset;
+					int max_limit = data_size;
+					int byte = 0;
+					while (byte < max_limit) {
+						if ((*(tmp+byte) == 0xde) && (*(tmp+byte+1) == 0xad) && (*(tmp+byte+2) == 0xc0) && (*(tmp+byte+3) == 0xde)) {
+							data_size = byte + 4;
+						}
+						byte = byte + 1;
+					}
+				}
+			}
 			if (write(ofd, (void *)((uint8_t *)ubi_ec + data_offset), data_size) == -1) {
 				printf("Write error\n");
 				close(fd);
@@ -869,14 +928,125 @@ int extract_kernel_binary(struct image_section *section)
 				return 0;
 			}
 		}
-
 		ubi_ec = (struct ubi_ec_hdr *)((uint8_t *)ubi_ec + data_offset + data_size);
 		magic = be32_to_cpu(ubi_ec->magic);
 	}
-
+	if (munmap(fp, sb.st_size) == -1) {
+		perror("munmap");
+		close(ofd);
+		close(fd);
+		return 0;
+	}
 	close(ofd);
 	close(fd);
-	printf("Kernel extracted from ubi image\n");
+	printf("%s extracted from ubi image\n", vol_name);
+	return 1;
+}
+
+/**
+ * check_image_exist() used to check whether the ubi image for NAND
+ * or rootfs image for EMMC are available in /tmp directory.
+ * If respective image was found, the filename will be passed. If
+ * not found, it returns NULL
+ */
+
+char * check_image_exist(char *imgname) {
+	DIR* FD;
+	struct dirent* in_file;
+	char extension[256] = "/tmp/";
+
+	/* Scanning the in directory */
+	if (NULL == (FD = opendir ("/tmp")))
+	{
+		fprintf(stderr, "Error : Failed to open input directory\n");
+		return NULL;
+	}
+
+	while ((in_file = readdir(FD)))
+	{
+		if (strstr(in_file->d_name, imgname)) {
+			printf("%s file found\n", in_file->d_name);
+			strlcat(extension, in_file->d_name, sizeof(extension));
+			strlcpy(in_file->d_name, extension, sizeof(extension));
+			return in_file->d_name;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * In case of EMMC, extract_rootfs_binary() extracts the rootfs image
+ * till Deadcode from existing rootfs image. After extraction, the new rootfs
+ * image will replace old rootfs image. This function removes padded
+ * binaries and helps to authenticate rootfs image using sec_auth
+ */
+
+int extract_rootfs_binary(char *filename)
+{
+	int ifd, ofd;
+	uint8_t *fp;
+	struct stat sb;
+
+	if (filename == NULL) {
+		return 0;
+	}
+
+	ifd = open(filename, O_RDONLY);
+	if (ifd < 0) {
+		perror(filename);
+		return 0;
+	}
+
+	memset(&sb, 0, sizeof(struct stat));
+	if (fstat(ifd, &sb) == -1) {
+		perror("fstat");
+		close(ifd);
+		return 0;
+	}
+
+	fp = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, ifd, 0);
+	if (fp == MAP_FAILED) {
+		perror("mmap");
+		close(fp);
+		return 0;
+	}
+
+	ofd = open(TEMP_ROOTFS_PATH, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+	if (ofd < 0) {
+		perror("fopen");
+		close(ifd);
+		return 0;
+	}
+
+	int offset = 0,dead_off;
+	while ( offset < sb.st_size)
+	{
+		if ((fp[offset] == 0xde) && (fp[offset+1] == 0xad) && (fp[offset+2] == 0xc0) && (fp[offset+3] == 0xde)) {
+			dead_off=offset;
+		}
+		offset = offset + 4096;
+	}
+
+	if((write(ofd, fp, dead_off+4)) == -1) {
+		printf("Write error\n");
+		close(ifd);
+		close(ofd);
+		return 0;
+	}
+
+	if (munmap(fp, sb.st_size) == -1) {
+		perror("munmap");
+		close(ifd);
+		close(ofd);
+		return 0;
+	}
+
+	close(ifd);
+	close(ofd);
+
+	if (rename(TEMP_ROOTFS_PATH, filename) != 0) {
+		printf("Error renaming file\n");
+	}
 	return 1;
 }
 
@@ -1635,6 +1805,9 @@ int sec_image_auth(void)
 int do_board_upgrade_check(char *img)
 {
 	if (is_tz_authentication_enabled()) {
+		/* If image is having signed rootfs image, then extract kernel and rootfs binary for parsing metadata. */
+		extract_rootfs_binary(check_image_exist("rootfs-"));
+		extract_ubi_volume("ubi_rootfs", check_image_exist("ubi-"), TEMP_ROOTFS_PATH);
 		printf("TZ authentication enabled ...\n");
 		if (!load_sections()) {
 			printf("Error: Failed to load sections from image: %s\n", img);
