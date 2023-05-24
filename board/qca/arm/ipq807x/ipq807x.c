@@ -797,6 +797,7 @@ void board_nand_init(void)
 	gpio_node = fdt_path_offset(gd->fdt_blob, "/spi/spi_gpio");
 	if (gpio_node >= 0) {
 		qca_gpio_init(gpio_node);
+		spi_clock_init(0);
 	} else {
 		/* Setting default values */
 		for (i = 0; i < gboard_param.spi_nor_cfg.gpio_count; i++)
