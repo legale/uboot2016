@@ -33,6 +33,11 @@
 #define DLOAD_MAGIC_COOKIE	0x10
 #define DLOAD_DISABLED		0x40
 
+#define LINUX6_1_NAND_DTS "/soc@0/nand@79b0000/"
+#define LINUX6_1_MMC_DTS "/soc@0/mmc@7804000/"
+#define STATUS_OK "status%?okay"
+#define STATUS_DISABLED "status%?disabled"
+
 DECLARE_GLOBAL_DATA_PTR;
 
 struct sdhci_host mmc_host;
@@ -43,6 +48,24 @@ unsigned int qpic_frequency = 0, qpic_phase = 0;
 static int aq_phy_initialised = 0;
 
 extern	int qca_scm_dpr(u32, u32, void *, size_t);
+
+void fdt_fixup_flash(void *blob)
+{
+	uint32_t flash_type = SMEM_BOOT_NO_FLASH;
+	int nand_nodeoff = fdt_path_offset(blob, LINUX6_1_NAND_DTS);
+	int mmc_nodeoff = fdt_path_offset(blob, LINUX6_1_MMC_DTS);
+
+	get_current_flash_type(&flash_type);
+	if (flash_type == SMEM_BOOT_NORPLUSEMMC ||
+		flash_type == SMEM_BOOT_MMC_FLASH ) {
+		if(nand_nodeoff >= 0)
+			parse_fdt_fixup(LINUX6_1_NAND_DTS"%"STATUS_DISABLED,
+					blob);
+		if(mmc_nodeoff >= 0)
+			parse_fdt_fixup(LINUX6_1_MMC_DTS"%"STATUS_OK, blob);
+	}
+	return;
+}
 
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
