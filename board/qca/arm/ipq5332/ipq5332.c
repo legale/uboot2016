@@ -811,6 +811,48 @@ int ipq_board_usb_init(void)
 }
 #endif
 
+unsigned int get_dts_machid(unsigned int machid)
+{
+	switch (machid)
+	{
+		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
+			return MACH_TYPE_IPQ5332_AP_MI04_1;
+		default:
+			return machid;
+	}
+}
+
+void ipq_uboot_fdt_fixup(void)
+{
+	int ret, len;
+	char *config = NULL;
+
+	switch (gd->bd->bi_arch_number)
+	{
+		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
+			config = "config@mi04.1-c2";
+			break;
+	}
+
+	if (config != NULL)
+	{
+		len = fdt_totalsize(gd->fdt_blob) + strlen(config) + 1;
+
+		/*
+		 * Open in place with a new length.
+		*/
+		ret = fdt_open_into(gd->fdt_blob, (void *)gd->fdt_blob, len);
+		if (ret)
+			 printf("uboot-fdt-fixup: Cannot expand FDT: %s\n", fdt_strerror(ret));
+
+		ret = fdt_setprop((void *)gd->fdt_blob, 0, "config_name",
+				config, (strlen(config)+1));
+		if (ret)
+			printf("uboot-fdt-fixup: unable to set config_name(%d)\n", ret);
+	}
+	return;
+}
+
 __weak int ipq_get_tz_version(char *version_name, int buf_size)
 {
 	return 1;
