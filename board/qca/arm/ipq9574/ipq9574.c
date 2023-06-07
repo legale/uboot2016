@@ -1411,25 +1411,25 @@ void ipq_uboot_fdt_fixup(void)
 			config = "config@al02-c5";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C6:
-			config = "config@al02-c6", "config@rdp449";
+			config = "config@al02-c6", "config@rdp449", "config-rdp449";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C11:
-			config = "config@al02-c11", "config@rdp467";
+			config = "config@al02-c11", "config@rdp467", "config-rdp467";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C12:
-                        config = "config@al02-c12", "config@rdp455";
+                        config = "config@al02-c12", "config@rdp455", "config-rdp455";
                         break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C14:
                         config = "config@al02-c14";
                         break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C15:
-			config = "config@al02-c15", "config@rdp457";
+			config = "config@al02-c15", "config@rdp457", "config-rdp457";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C16:
-			config = "config@al02-c16", "config@rdp456";
+			config = "config@al02-c16", "config@rdp456", "config-rdp456";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL03_C2:
-			config = "config@al03-c2", "config@rdp458";
+			config = "config@al03-c2", "config@rdp458", "config-rdp458";
 			break;
 	}
 
