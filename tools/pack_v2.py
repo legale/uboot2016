@@ -812,6 +812,7 @@ class Pack(object):
 	global MODE
 	global SRC_DIR
 	global ARCH_NAME
+	global flash_size
 
 	diff_files = ""
         count = 0
@@ -821,9 +822,9 @@ class Pack(object):
 	wifi_fw_type = ""
 
         if self.flash_type == "norplusemmc" and flinfo.type == "emmc":
-            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
+            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition"+ flash_size +".xml"
         else:
-            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition.xml"
+            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition"+ flash_size +".xml"
 
         root_part = ET.parse(srcDir_part)
         if self.flash_type != "emmc" and flinfo.type != "emmc":
@@ -1236,6 +1237,7 @@ class Pack(object):
         """
 	global MODE
 	global SRC_DIR
+	global flash_size
 
 	soc_version = 0
 	diff_soc_ver_files = 0
@@ -1251,9 +1253,9 @@ class Pack(object):
             script.end()
 
         if self.flash_type == "norplusemmc" and flinfo.type == "emmc":
-            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
+            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition"+ flash_size +".xml"
         else:
-            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition.xml"
+            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + self.flash_type.lower() + "-partition"+ flash_size +".xml"
 
         root_part = ET.parse(srcDir_part)
         if self.flash_type != "emmc" and flinfo.type != "emmc":
@@ -1483,6 +1485,7 @@ class Pack(object):
     def __gen_board_script(self, flinfo, part_fname, images, root):
 	global SRC_DIR
 	global ARCH_NAME
+	global flash_size
 
         """Generate the flashing script for one board.
 
@@ -1512,7 +1515,7 @@ class Pack(object):
             blocks_per_chip = int(flash_param.find(".//total_block").text)
             chipsize = blocks_per_chip * blocksize
 
-            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition.xml"
+            srcDir_part = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + flinfo.type + "-partition"+ flash_size +".xml"
             root_part = ET.parse(srcDir_part)
 
             mibib = MIBIB(part_fname, flinfo, blocksize, chipsize, root_part)
@@ -1575,6 +1578,7 @@ class Pack(object):
 	global SRC_DIR
 	global ARCH_NAME
 	global MODE
+	global flash_size
 
         try:
             if ftype == "tiny-nor" or ftype == "tiny-nor-debug":
@@ -1594,7 +1598,7 @@ class Pack(object):
 
             MODE_APPEND = "_64" if MODE == "64" else ""
 
-            UBINIZE_CFG_NAME = ARCH_NAME + "-ubinize" + MODE_APPEND + ".cfg"
+            UBINIZE_CFG_NAME = ARCH_NAME + "-ubinize" + MODE_APPEND + flash_size +".cfg"
 
             f1 = open(SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + UBINIZE_CFG_NAME, 'r')
             UBINIZE_CFG_NAME = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/tmp-" + UBINIZE_CFG_NAME
@@ -1604,7 +1608,7 @@ class Pack(object):
             f1.close()
             f2.close()
 
-            part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition.xml"
+            part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition"+ flash_size +".xml"
             parts = ET.parse(part_file).findall('.//partitions/partition')
             for index in range(len(parts)):
                     section = parts[index]
@@ -1632,7 +1636,7 @@ class Pack(object):
                 if ret != 0:
                      error("ubi image copy operation failed")
 
-            part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition.xml"
+            part_file = SRC_DIR + "/" + ARCH_NAME + "/flash_partition/" + ftype + "-partition"+ flash_size +".xml"
             part_xml = ET.parse(part_file)
 	    if (part_xml.find(".//partitions/partition[name='0:MIBIB']")):
 		partition = part_xml.find(".//partitions/partition[name='0:MIBIB']")
@@ -1725,6 +1729,8 @@ class ArgParser(object):
 	global memory_size
         global atf
         global skip_4k_nand
+	global flash_size
+	flash_size = ""
 
         """Start the parsing process, and populate members with parsed value.
 
@@ -1734,7 +1740,7 @@ class ArgParser(object):
 	cdir = os.path.abspath(os.path.dirname(""))
         if len(sys.argv) > 1:
             try:
-                opts, args = getopt(sys.argv[1:], "", ["arch=", "fltype=", "srcPath=", "inImage=", "outImage=", "image_type=", "memory=", "skip_4k_nand", "atf"])
+                opts, args = getopt(sys.argv[1:], "", ["arch=", "fltype=", "srcPath=", "inImage=", "outImage=", "image_type=", "memory=", "flash_size=", "skip_4k_nand", "atf"])
             except GetoptError, e:
 		raise UsageError(e.msg)
 
@@ -1759,6 +1765,9 @@ class ArgParser(object):
 
                 elif option == "--memory":
                     memory_size = value
+
+                elif option == "--flash_size":
+                    flash_size = "-" + value
 
                 elif option =="--atf":
                     atf = "true"
@@ -1804,7 +1813,7 @@ class ArgParser(object):
         print "pack: %s" % msg
         print
         print "Usage:"
-	print "python pack_hk.py [options] [Value] ..."
+	print "python pack_v2.py [options] [Value] ..."
 	print
         print "options:"
         print "  --arch \tARCH_TYPE [" + '/'.join(supported_arch) + "]"
@@ -1820,6 +1829,7 @@ class ArgParser(object):
         print "  --memory \tMemory size for low memory profile"
         print " \t\tIf it is not specified CDTs with default memory size are taken for single-image packing.\n"
         print " \t\tIf specified, CDTs created with specified memory size will be used for single-image.\n"
+        print "  --flash_size \tFlash size"
         print
         print "  --atf \t\tReplace tz with atf for QSEE partition"
         print "  --skip_4k_nand \tskip generating 4k nand images"
@@ -1857,6 +1867,7 @@ def main():
         global def_ver_list
         global possible_fw_vers
         global wifi_fws_avail
+	global flash_size
 
         wifi_fws_avail = dict()
         ver_check = True
@@ -1888,7 +1899,7 @@ def main():
 
     if skip_4k_nand != "true":
 	# Add nand-4k flash type, if nand flash type is specified
-	if "nand" in parser.flash_type.split(","):
+	if "nand" in parser.flash_type.split(",") and flash_size == "":
             if root.find(".//data[@type='NAND_PARAMETER']/entry") != None:
 		parser.flash_type = parser.flash_type + ",nand-4k"
 
@@ -1906,9 +1917,9 @@ def main():
 
         MODE_APPEND = "_64" if MODE == "64" else ""
         if image_type == "hlos":
-            suffix = "-apps.img"
+            suffix = "-apps"+ flash_size + ".img"
         else:
-            suffix = "-single.img"
+            suffix = "-single" + flash_size + ".img"
 
         parser.out_fname = flash_type + "-" + ARCH_NAME + MODE_APPEND + suffix
 
