@@ -24,9 +24,7 @@
 		nand = "/nand-controller@79B0000";
 		mmc = "/sdhci@7804000";
 		usb0 = "/xhci@8a00000";
-		pci0 = "/pci@20000000";
 		pci1 = "/pci@18000000";
-		pci2 = "/pci@10000000";
 		i2c0 = "/i2c@78B6000";
 	};
 
@@ -150,19 +148,6 @@
 		};
 	};
 
-	pci0: pci@20000000 {
-		status = "ok";
-		perst_gpio = <38>;
-		lane = <1>;
-		pci_gpio {
-			pci_rst {
-				gpio = <38>;
-				pull = <GPIO_PULL_UP>;
-				oe = <GPIO_OE_ENABLE>;
-			};
-		};
-	};
-
 	pci1: pci@18000000 {
 		status = "ok";
 		perst_gpio = <47>;
@@ -170,19 +155,6 @@
 		pci_gpio {
 			pci_rst {
 				gpio = <47>;
-				pull = <GPIO_PULL_UP>;
-				oe = <GPIO_OE_ENABLE>;
-			};
-		};
-	};
-
-	pci2: pci@10000000 {
-		status = "ok";
-		perst_gpio = <44>;
-		lane = <1>;
-		pci_gpio {
-			pci_rst {
-				gpio = <44>;
 				pull = <GPIO_PULL_UP>;
 				oe = <GPIO_OE_ENABLE>;
 			};
