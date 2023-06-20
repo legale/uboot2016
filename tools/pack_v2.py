@@ -906,7 +906,7 @@ class Pack(object):
         if flinfo.type == "emmc":
             script.append("flupdate set mmc")
 
-        if flinfo.type != "emmc":
+        if flinfo.type != "emmc" and image_type != "hlos":
             self.__gen_script_mibib(script, flinfo, parts, parts_length, "mibib_reload")
 
         for index in range(parts_length):
