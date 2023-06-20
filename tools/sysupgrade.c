@@ -74,7 +74,7 @@ struct image_section sections[] = {
 		.type			= "rootfs",
 		.max_version		= MAX_HLOS_VERSION,
 		.tmp_file		= TMP_FILE_DIR,
-		.pre_op			= compute_sha384,
+		.pre_op			= compute_sha_hash,
 		.file			= TMP_FILE_DIR,
 		.version_file		= HLOS_VERSION_FILE,
 		.is_present		= NOT_PRESENT,
@@ -906,7 +906,7 @@ int extract_ubi_volume(char *vol_name, char *if_name, char *of_name)
 
 		curr_vol_id = be32_to_cpu(ubi_vol->vol_id);
 		if (curr_vol_id == ret_vol_id) {
-			if (ret_vol_id == 2) {
+			if (!strncmp(vol_name, "ubi_rootfs", strlen("ubi_rootfs"))) {
 				struct ubi_ec_hdr *ubi_ec_next  = (struct ubi_ec_hdr *)((uint8_t *)ubi_ec + data_offset + data_size);
 				int magic = be32_to_cpu(ubi_ec_next->magic);
 				if(magic != UBI_EC_HDR_MAGIC) {
@@ -1052,23 +1052,29 @@ int extract_rootfs_binary(char *filename)
 
 /**
  * The digest functions output the message digest of a supplied file and
- * write sha384 to /tmp/sha384_keyXXXXXX file
+ * write sha-hash key to /tmp/sha_keyXXXXXX file
  */
-int compute_sha384(struct image_section *section)
+int compute_sha_hash(struct image_section *section)
 {
-	char sha384_hash[] = "/tmp/sha384_keyXXXXXX";
+	char sha_hash[] = "/tmp/sha_keyXXXXXX";
 	char command[300];
 	int retval;
 
+#ifdef USE_SHA384
 	snprintf(command, sizeof(command),
-		"openssl dgst -sha384 -binary -out %s %s", sha384_hash, section->tmp_file);
+		"openssl dgst -sha384 -binary -out %s %s", sha_hash, section->tmp_file);
+#endif
+#ifdef USE_SHA256
+	snprintf(command, sizeof(command),
+		"openssl dgst -sha256 -binary -out %s %s", sha_hash, section->tmp_file);
+#endif
 	retval = system(command);
 	if (retval != 0) {
-		printf("Error generating sha384 hash\n");
+		printf("Error generating sha-hash, command : %s\n",command);
 		return 0;
 	}
 
-	printf("sha384_hash file is created: %s \n",sha384_hash);
+	printf("sha_hash file is created: %s \n",sha_hash);
 	return 1;
 }
 /**
@@ -1780,7 +1786,7 @@ int sec_image_auth(void)
 				continue;
 
 			len = snprintf(buf, SIG_SIZE, "%s %s %s", sections[i].img_code,
-						"/tmp/metadata.bin", "/tmp/sha384_keyXXXXXX");
+						"/tmp/metadata.bin", "/tmp/sha_keyXXXXXX");
 		}
 
 		if (len < 0 || len > SIG_SIZE) {

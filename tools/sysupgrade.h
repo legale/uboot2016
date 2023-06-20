@@ -131,5 +131,5 @@ int check_nand_preamble(uint8_t *);
 int find_mtd_part_size(char *);
 int create_file(char *, char *, int );
 int parse_elf_image_phdr(struct image_section *);
-int compute_sha384(struct image_section *);
+int compute_sha_hash(struct image_section *);
 char *check_image_exist(char *);
