@@ -1950,7 +1950,8 @@ int ipq9574_edma_init(void *edma_board_cfg)
 	int ret = -1;
 	ipq9574_edma_board_cfg_t ledma_cfg, *edma_cfg;
 	int phy_id;
-	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
+	uint16_t phy_chip_id1 = 0, phy_chip_id2 = 0;
+	uint32_t phy_chip_id = 0;
 #ifdef CONFIG_IPQ9574_QCA8075_PHY
 	static int sw_init_done = 0;
 #endif

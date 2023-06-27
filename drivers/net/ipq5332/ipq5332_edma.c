@@ -1834,7 +1834,8 @@ int ipq5332_edma_init(void *edma_board_cfg)
 	ipq5332_edma_board_cfg_t ledma_cfg, *edma_cfg;
 	phy_info_t *phy_info;
 	int phy_id;
-	uint32_t phy_chip_id, phy_chip_id1, phy_chip_id2;
+	uint16_t phy_chip_id1 = 0, phy_chip_id2 = 0;
+	uint32_t phy_chip_id = 0;
 	int clk[4] = {0};
 	int qca8084_swt_enb = 0;
 	int qca8084_chip_detect = 0;
