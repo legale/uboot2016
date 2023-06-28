@@ -32,6 +32,7 @@
 
 #define DLOAD_MAGIC_COOKIE	0x10
 #define DLOAD_DISABLED		0x40
+#define CONFIG_NAME_MAX_LEN	128
 
 #define LINUX6_1_NAND_DTS "/soc@0/nand@79b0000/"
 #define LINUX6_1_MMC_DTS "/soc@0/mmc@7804000/"
@@ -1399,53 +1400,77 @@ unsigned int get_dts_machid(unsigned int machid)
 
 void ipq_uboot_fdt_fixup(void)
 {
-	int ret, len;
-	char *config = NULL;
+	int ret, len = 0, config_nos = 0;
+	char config[CONFIG_NAME_MAX_LEN];
+	char *config_list[6] = { NULL };
 
 	switch (gd->bd->bi_arch_number)
 	{
 		case MACH_TYPE_IPQ9574_EMULATION:
-			config = "config@emulation-fbc";
+			config_list[config_nos++] = "config@emulation-fbc";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C5:
-			config = "config@al02-c5";
+			config_list[config_nos++] = "config@al02-c5";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C6:
-			config = "config@al02-c6", "config@rdp449", "config-rdp449";
+			config_list[config_nos++] = "config@al02-c6";
+			config_list[config_nos++] = "config@rdp449";
+			config_list[config_nos++] = "config-rdp449";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C11:
-			config = "config@al02-c11", "config@rdp467", "config-rdp467";
+			config_list[config_nos++] = "config@al02-c11";
+			config_list[config_nos++] = "config@rdp467";
+			config_list[config_nos++] = "config-rdp467";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C12:
-                        config = "config@al02-c12", "config@rdp455", "config-rdp455";
-                        break;
+			config_list[config_nos++] = "config@al02-c12";
+			config_list[config_nos++] = "config@rdp455";
+			config_list[config_nos++] = "config-rdp455";
+			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C14:
-                        config = "config@al02-c14";
-                        break;
+			config_list[config_nos++] = "config@al02-c14";
+			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C15:
-			config = "config@al02-c15", "config@rdp457", "config-rdp457";
+			config_list[config_nos++] = "config@al02-c15";
+			config_list[config_nos++] = "config@rdp457";
+			config_list[config_nos++] = "config-rdp457";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C16:
-			config = "config@al02-c16", "config@rdp456", "config-rdp456";
+			config_list[config_nos++] = "config@al02-c16";
+			config_list[config_nos++] = "config@rdp456";
+			config_list[config_nos++] = "config-rdp456";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL03_C2:
-			config = "config@al03-c2", "config@rdp458", "config-rdp458";
+			config_list[config_nos++] = "config@al03-c2";
+			config_list[config_nos++] = "config@rdp458";
+			config_list[config_nos++] = "config-rdp458";
 			break;
 	}
 
-	if (config != NULL)
+	if (config_nos)
 	{
-		len = fdt_totalsize(gd->fdt_blob) + strlen(config) + 1;
+		while (config_nos--) {
+			strlcpy(&config[len], config_list[config_nos],
+					CONFIG_NAME_MAX_LEN - len);
+			len += strnlen(config_list[config_nos],
+					CONFIG_NAME_MAX_LEN) + 1;
+			if (len > CONFIG_NAME_MAX_LEN) {
+				printf("skipping uboot fdt fixup err: "
+						"config name len-overflow\n");
+				return;
+			}
+		}
 
 		/*
 		 * Open in place with a new length.
 		*/
-		ret = fdt_open_into(gd->fdt_blob, (void *)gd->fdt_blob, len);
+		ret = fdt_open_into(gd->fdt_blob, (void *)gd->fdt_blob,
+				fdt_totalsize(gd->fdt_blob) + len);
 		if (ret)
 			 printf("uboot-fdt-fixup: Cannot expand FDT: %s\n", fdt_strerror(ret));
 
 		ret = fdt_setprop((void *)gd->fdt_blob, 0, "config_name",
-				config, (strlen(config)+1));
+				config, len);
 		if (ret)
 			printf("uboot-fdt-fixup: unable to set config_name(%d)\n", ret);
 	}
