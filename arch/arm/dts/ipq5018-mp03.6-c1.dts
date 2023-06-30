@@ -158,7 +158,7 @@
 	};
 
 	sdx-gpio {
-		ap2mdm = <25>;
+		ap2mdm = <26>;
 	};
 
 
