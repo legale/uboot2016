@@ -712,10 +712,10 @@ static void usb_init_hsphy(void __iomem *phybase, int ssphy)
 	writel(XCFG_COARSE_TUNE_NUM | XCFG_FINE_TUNE_NUM,
 		phybase + USB2PHY_USB_PHY_M31_XCFGI_11);
 
-	/* Adjust HSTX slew rate to 565 ps*/
+	/* Adjust HSTX slew rate to 400 ps*/
 	/* Adjust PLL lock Time counter for release clock to 35uA */
 	/* Adjust Manual control ODT value to 38.02 Ohm */
-	writel(HSTX_SLEW_RATE_565PS | PLL_CHARGING_PUMP_CURRENT_35UA |
+	writel(HSTX_SLEW_RATE_400PS | PLL_CHARGING_PUMP_CURRENT_35UA |
 		ODT_VALUE_38_02_OHM, phybase + USB2PHY_USB_PHY_M31_XCFGI_4);
 
 	/*
@@ -724,10 +724,17 @@ static void usb_init_hsphy(void __iomem *phybase, int ssphy)
 	*/
 	writel(USB2_0_TX_ENABLE, phybase + USB2PHY_USB_PHY_M31_XCFGI_1);
 
-	/* Adjust Manual control ODT value to 45.02 Ohm */
 	/* Adjust HSTX Pre-emphasis level to 0.55mA */
-	writel(ODT_VALUE_45_02_OHM | HSTX_PRE_EMPHASIS_LEVEL_0_55MA,
+	writel(HSTX_PRE_EMPHASIS_LEVEL_0_55MA,
 		phybase + USB2PHY_USB_PHY_M31_XCFGI_5);
+
+	/*
+	* Adjust HSTX Current of current-mode driver,
+	* default 18.5mA * 22.5ohm = 416mV
+	* 17.1mA * 22.5ohm = 385mV
+	*/
+	writel(HSTX_CURRENT_17_1MA_385MV,
+		phybase + USB2PHY_USB_PHY_M31_XCFGI_9);
 
 	udelay(10);
 
