@@ -387,10 +387,10 @@ int board_fix_fdt(void *rw_fdt_blob)
 #ifdef CONFIG_FLASH_PROTECT
 void board_flash_protect(void)
 {
+#ifdef CONFIG_QCA_MMC
 	int num_part;
 	int i;
 	int ret;
-#ifdef CONFIG_QCA_MMC
 	block_dev_desc_t *mmc_dev;
 	disk_partition_t info;
 

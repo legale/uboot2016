@@ -172,7 +172,8 @@ void ipq_fdt_fixup_version(void *blob)
 	}
 #endif /* RPM_VERSION */
 }
-#ifdef CONFIG_IPQ_TINY
+
+#if defined (CONFIG_IPQ_TINY) && !defined(CONFIG_NAND_FLASH)
 #define		OFFSET_NOT_SPECIFIED	(~0llu)
 struct reg_cell {
 	unsigned int r0;
@@ -1063,7 +1064,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 	int len = sizeof(parts_str), ret;
 	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
 	int activepart = 0;
-#ifdef CONFIG_IPQ_TINY
+#if defined (CONFIG_IPQ_TINY) && !defined(CONFIG_NAND_FLASH)
 	struct flash_node_info nodes[] = {
 		{ "n25q128a11", MTD_DEV_TYPE_NAND,
 				CONFIG_IPQ_SPI_NOR_INFO_IDX }
@@ -1134,7 +1135,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 		set_mtdids();
 		debug("MTDIDS: %s\n", getenv("mtdids"));
-#ifdef CONFIG_IPQ_TINY
+#if defined (CONFIG_IPQ_TINY) && !defined(CONFIG_NAND_FLASH)
 		ipq_nor_fdt_fixup(blob, nodes);
 #else
 		ipq_fdt_fixup_mtdparts(blob, nodes);

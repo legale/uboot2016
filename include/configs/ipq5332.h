@@ -26,7 +26,9 @@
 #define CONFIG_SYS_NO_FLASH
 #define CONFIG_IPQ_NO_RELOC
 
+#ifndef CONFIG_IPQ_TINY
 #define CONFIG_SYS_NONCACHED_MEMORY     (1 << 20)
+#endif /* CONFIG_IPQ_TINY */
 
 #define CONFIG_SYS_VSNPRINTF
 
@@ -100,7 +102,11 @@
 #define GPIO_IN_OUT_ADDR(x)			(TLMM_BASE + 0x4 + (x)*0x1000)
 
 #define CONFIG_SYS_SDRAM_BASE			0x40000000
+#ifdef CONFIG_IPQ_TINY
+#define CONFIG_SYS_TEXT_BASE			0x4A450000
+#else
 #define CONFIG_SYS_TEXT_BASE			0x4A400000
+#endif
 #define CONFIG_SYS_SDRAM_SIZE			0x10000000
 #define CONFIG_MAX_RAM_BANK_SIZE		CONFIG_SYS_SDRAM_SIZE
 #define CONFIG_SYS_LOAD_ADDR			(CONFIG_SYS_SDRAM_BASE + (64 << 20))
@@ -158,7 +164,11 @@ extern loff_t board_env_size;
 #define CONFIG_ENV_OFFSET			board_env_offset
 #define CONFIG_ENV_SIZE				CONFIG_ENV_SIZE_MAX
 #define CONFIG_ENV_RANGE			board_env_range
+#ifdef CONFIG_IPQ_TINY
+#define CONFIG_SYS_MALLOC_LEN			(832 << 10)
+#else
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE_MAX + (768 << 10))
+#endif
 
 #define CONFIG_IPQ_NO_MACS			2
 
@@ -206,14 +216,6 @@ extern loff_t board_env_size;
 
 #define NUM_ALT_PARTITION			16
 
-#ifdef CONFIG_IPQ_TINY
-
-/* undef gzip lib */
-#undef CONFIG_GZIP
-#undef CONFIG_ZLIB
-
-#else
-
 #define CONFIG_CMD_BOOTZ
 
 /* Mii command support */
@@ -222,8 +224,6 @@ extern loff_t board_env_size;
 /* compress crash dump support */
 #define CONFIG_CMD_ZIP
 #define CONFIG_GZIP_COMPRESSED
-
-#endif
 
 /*
 * Ethernet Configs
