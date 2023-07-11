@@ -822,6 +822,8 @@ unsigned int get_dts_machid(unsigned int machid)
 {
 	switch (machid)
 	{
+		case MACH_TYPE_IPQ5332_AP_MI01_3_C2:
+			return MACH_TYPE_IPQ5332_AP_MI01_3;
 		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
 			return MACH_TYPE_IPQ5332_AP_MI04_1;
 		default:
@@ -836,6 +838,9 @@ void ipq_uboot_fdt_fixup(void)
 
 	switch (gd->bd->bi_arch_number)
 	{
+		case MACH_TYPE_IPQ5332_AP_MI01_3_C2:
+			config = "config@mi01.3-c2";
+			break;
 		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
 			config = "config@mi04.1-c2";
 			break;
