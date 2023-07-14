@@ -1477,6 +1477,16 @@ void ipq_uboot_fdt_fixup(void)
 	return;
 }
 
+void fdt_fixup_for_atf(void *blob)
+{
+	if (fdt_path_offset(blob, "/soc/dma@704000") >= 0) {
+		parse_fdt_fixup("/soc/dma@704000%qcom,controlled-remotely%0",
+				blob);
+		parse_fdt_fixup("/soc/dma@704000%qti,config-pipe-trust-reg%2",
+				blob);
+	}
+}
+
 int do_dpr(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	int ret;
