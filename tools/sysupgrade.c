@@ -24,7 +24,10 @@
 #define AUTHENTICATE_FILE	"/sys/devices/system/qfprom/qfprom0/authenticate"
 #define SEC_AUTHENTICATE_FILE  "/sys/sec_upgrade/sec_auth"
 #define TEMP_KERNEL_PATH	"/tmp/tmp_kernel.bin"
-#define TEMP_ROOTFS_PATH	"/tmp/rootfs.bin"
+#define TEMP_ROOTFS_PATH	"/tmp/rootfs_tmp.bin"
+#define TEMP_METADATA_PATH	"/tmp/metadata.bin"
+#define TEMP_SHA_KEY_PATH	"/tmp/sha_keyXXXXXX"
+#define ROOTFS_OFFSET		65536
 #define MAX_SBL_VERSION	11
 #define MAX_HLOS_VERSION	32
 #define MAX_TZ_VERSION		14
@@ -818,6 +821,7 @@ int extract_kernel_binary(struct image_section *section, char *volname)
 {
 	char *ifname, *ofname;
 
+	strlcpy(section->file, TEMP_KERNEL_PATH, sizeof(TEMP_KERNEL_PATH));
 	ifname = section->tmp_file;
 	ofname = section->file;
 
@@ -903,7 +907,6 @@ int extract_ubi_volume(char *vol_name, char *if_name, char *of_name)
 			close(fd);
 			return 0;
 		}
-
 		curr_vol_id = be32_to_cpu(ubi_vol->vol_id);
 		if (curr_vol_id == ret_vol_id) {
 			if (!strncmp(vol_name, "ubi_rootfs", strlen("ubi_rootfs"))) {
@@ -915,7 +918,7 @@ int extract_ubi_volume(char *vol_name, char *if_name, char *of_name)
 					int byte = 0;
 					while (byte < max_limit) {
 						if ((*(tmp+byte) == 0xde) && (*(tmp+byte+1) == 0xad) && (*(tmp+byte+2) == 0xc0) && (*(tmp+byte+3) == 0xde)) {
-							data_size = byte + 4;
+							data_size = byte;
 						}
 						byte = byte + 1;
 					}
@@ -939,6 +942,9 @@ int extract_ubi_volume(char *vol_name, char *if_name, char *of_name)
 	}
 	close(ofd);
 	close(fd);
+	if (!strncmp(vol_name, "ubi_rootfs", strlen("ubi_rootfs"))) {
+		extract_rootfs_binary(of_name);
+	}
 	printf("%s extracted from ubi image\n", vol_name);
 	return 1;
 }
@@ -983,7 +989,7 @@ char * check_image_exist(char *imgname) {
 
 int extract_rootfs_binary(char *filename)
 {
-	int ifd, ofd;
+	int ifd;
 	uint8_t *fp;
 	struct stat sb;
 
@@ -991,7 +997,7 @@ int extract_rootfs_binary(char *filename)
 		return 0;
 	}
 
-	ifd = open(filename, O_RDONLY);
+	ifd = open(filename, O_RDWR);
 	if (ifd < 0) {
 		perror(filename);
 		return 0;
@@ -1011,42 +1017,24 @@ int extract_rootfs_binary(char *filename)
 		return 0;
 	}
 
-	ofd = open(TEMP_ROOTFS_PATH, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
-	if (ofd < 0) {
-		perror("fopen");
-		close(ifd);
-		return 0;
-	}
-
 	int offset = 0,dead_off;
 	while ( offset < sb.st_size)
 	{
 		if ((fp[offset] == 0xde) && (fp[offset+1] == 0xad) && (fp[offset+2] == 0xc0) && (fp[offset+3] == 0xde)) {
 			dead_off=offset;
+			break;
 		}
-		offset = offset + 4096;
-	}
-
-	if((write(ofd, fp, dead_off+4)) == -1) {
-		printf("Write error\n");
-		close(ifd);
-		close(ofd);
-		return 0;
+		offset += ROOTFS_OFFSET;
 	}
 
 	if (munmap(fp, sb.st_size) == -1) {
 		perror("munmap");
 		close(ifd);
-		close(ofd);
 		return 0;
 	}
 
 	close(ifd);
-	close(ofd);
-
-	if (rename(TEMP_ROOTFS_PATH, filename) != 0) {
-		printf("Error renaming file\n");
-	}
+	truncate(filename, dead_off);
 	return 1;
 }
 
@@ -1056,7 +1044,7 @@ int extract_rootfs_binary(char *filename)
  */
 int compute_sha_hash(struct image_section *section)
 {
-	char sha_hash[] = "/tmp/sha_keyXXXXXX";
+	char sha_hash[] = TEMP_SHA_KEY_PATH;
 	char command[300];
 	int retval;
 
@@ -1415,8 +1403,8 @@ int parse_elf_image_phdr(struct image_section *section)
 				printf("rootfs metada is not available\n");
 				return 1;
 			}
-			create_file("/tmp/metadata.bin", (char *)(fp + phdr->p_offset + phdr->p_filesz), size);
-			printf("rootfs meta data file: %s created with size:%x\n","/tmp/metadata.bin", size);
+			create_file(TEMP_METADATA_PATH, (char *)(fp + phdr->p_offset + phdr->p_filesz), size);
+			printf("rootfs meta data file: %s created with size:%x\n",TEMP_METADATA_PATH, size);
 
 			close(fd);
 			return 1;
@@ -1779,14 +1767,13 @@ int sec_image_auth(void)
 		}
 
 		len = snprintf(buf, SIG_SIZE, "%s %s", sections[i].img_code, sections[i].file);
-
 		if (!strncmp(sections[i].type, "rootfs", strlen("rootfs"))) {
 			struct stat sb;
-			if (stat("/tmp/metadata.bin", &sb) == -1)
+			if (stat(TEMP_METADATA_PATH, &sb) == -1)
 				continue;
 
 			len = snprintf(buf, SIG_SIZE, "%s %s %s", sections[i].img_code,
-						"/tmp/metadata.bin", "/tmp/sha_keyXXXXXX");
+						TEMP_METADATA_PATH, TEMP_SHA_KEY_PATH);
 		}
 
 		if (len < 0 || len > SIG_SIZE) {
@@ -1805,6 +1792,7 @@ int sec_image_auth(void)
 	}
 	close(fd);
 	free(buf);
+	remove_file(TEMP_KERNEL_PATH,TEMP_ROOTFS_PATH, TEMP_METADATA_PATH, TEMP_SHA_KEY_PATH);
 	return 0;
 }
 
