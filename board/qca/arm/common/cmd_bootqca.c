@@ -38,6 +38,9 @@
 #define PRIMARY_PARTITION	1
 #define SECONDARY_PARTITION	2
 
+#define FIT_KEY_PROP		"key"
+#define MAX_ARG_SIZE		512
+
 extern int qca_scm_part_info(void *cmd_buf, size_t cmd_len);
 
 unsigned long __stack_chk_guard = 0x000a0dff;
@@ -87,6 +90,49 @@ void __stack_chk_fail(void)
 {
 	printf("stack-protector: U-boot stack is corrupted.\n");
 	bad_mode ();
+}
+
+static int update_bootargs(void *addr)
+{
+	char *key, *temp, *check, *strings = getenv("bootargs");
+	char cmd_line[MAX_ARG_SIZE] = { 0 };
+	int len, size, size2, ret = CMD_RET_SUCCESS;
+
+	key = (char *)fdt_getprop(addr, 0, FIT_KEY_PROP, &len);
+	check = strstr(strings, "dm-mod.create");
+
+	if ((key != NULL) && len && (check != NULL)) {
+		if ((strlen(strings) +
+			strlen(getenv("fsbootargs")) +
+			len) > MAX_ARG_SIZE) {
+			ret = CMD_RET_FAILURE;
+		} else {
+			size = (check - strings) + strlen("dm-mod.create") + 2;
+			memcpy(cmd_line, strings, size);
+			temp = strchr(strings + size, '"');
+			size2 = temp - (strings + size);
+			memcpy(cmd_line + size,  strings + size, size2);
+			size += size2;
+			snprintf(cmd_line + size, sizeof(cmd_line),
+					" %s%s %s rootwait",
+					key, temp, getenv("fsbootargs"));
+		}
+	} else {
+		memcpy(cmd_line, strings, strlen(strings));
+		len = snprintf(cmd_line + strlen(strings), sizeof(cmd_line),
+			" %s rootwait", getenv("fsbootargs"));
+		if (len >= MAX_ARG_SIZE)
+			ret = CMD_RET_FAILURE;
+	}
+
+	if (ret == CMD_RET_FAILURE) {
+		printf("Env size exceed ...\n");
+	} else {
+		setenv("bootargs", NULL);
+		setenv("bootargs", cmd_line);
+	}
+
+	return ret;
 }
 /*
  * Set the root device and bootargs for mounting root filesystem.
@@ -197,7 +243,7 @@ static int set_fs_bootargs(int *fs_on_nand)
 		return -EINVAL;
 	}
 
-	return run_command("setenv bootargs ${bootargs} ${fsbootargs} rootwait", 0);
+	return 0;
 }
 
 int config_select(unsigned int addr, char *rcmd, int rcmd_size)
@@ -212,18 +258,20 @@ int config_select(unsigned int addr, char *rcmd, int rcmd_size)
 #ifdef CONFIG_ARCH_IPQ806x
 	int soc_version = 0;
 #endif
-	int i, strings_count;
+	int i, strings_count, ret;
 	const char *config = getenv("config_name");
 
 	if (config) {
 		printf("Manual device tree config selected!\n");
 		strlcpy(dtb_config_name, config, sizeof(dtb_config_name));
 		if (fit_conf_get_node((void *)addr, dtb_config_name) >= 0) {
+			ret = update_bootargs((void *)addr);
+			if (ret)
+				goto fail;
 			snprintf(rcmd, rcmd_size, "bootm 0x%x#%s\n",
 				 addr, dtb_config_name);
 			return 0;
 		}
-
 	} else {
 		strings_count = fdt_count_strings(gd->fdt_blob, 0, "config_name");
 
@@ -250,6 +298,9 @@ int config_select(unsigned int addr, char *rcmd, int rcmd_size)
 			}
 #endif
 			if (fit_conf_get_node((void *)addr, dtb_config_name) >= 0) {
+				ret = update_bootargs((void *)addr);
+				if (ret)
+					goto fail;
 				snprintf(rcmd, rcmd_size, "bootm 0x%x#%s\n",
 					 addr, dtb_config_name);
 				return 0;
@@ -257,8 +308,8 @@ int config_select(unsigned int addr, char *rcmd, int rcmd_size)
 		}
 	}
 
-
 	printf("Config not available\n");
+fail:
 	return -1;
 }
 
