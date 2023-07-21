@@ -909,21 +909,6 @@ int extract_ubi_volume(char *vol_name, char *if_name, char *of_name)
 		}
 		curr_vol_id = be32_to_cpu(ubi_vol->vol_id);
 		if (curr_vol_id == ret_vol_id) {
-			if (!strncmp(vol_name, "ubi_rootfs", strlen("ubi_rootfs"))) {
-				struct ubi_ec_hdr *ubi_ec_next  = (struct ubi_ec_hdr *)((uint8_t *)ubi_ec + data_offset + data_size);
-				int magic = be32_to_cpu(ubi_ec_next->magic);
-				if(magic != UBI_EC_HDR_MAGIC) {
-					uint8_t *tmp = (uint8_t *)ubi_ec + data_offset;
-					int max_limit = data_size;
-					int byte = 0;
-					while (byte < max_limit) {
-						if ((*(tmp+byte) == 0xde) && (*(tmp+byte+1) == 0xad) && (*(tmp+byte+2) == 0xc0) && (*(tmp+byte+3) == 0xde)) {
-							data_size = byte;
-						}
-						byte = byte + 1;
-					}
-				}
-			}
 			if (write(ofd, (void *)((uint8_t *)ubi_ec + data_offset), data_size) == -1) {
 				printf("Write error\n");
 				close(fd);
@@ -1018,7 +1003,7 @@ int extract_rootfs_binary(char *filename)
 	}
 
 	int offset = 0,dead_off;
-	while ( offset < sb.st_size)
+	while ( offset <= sb.st_size)
 	{
 		if ((fp[offset] == 0xde) && (fp[offset+1] == 0xad) && (fp[offset+2] == 0xc0) && (fp[offset+3] == 0xde)) {
 			dead_off=offset;
