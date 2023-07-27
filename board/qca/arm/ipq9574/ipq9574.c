@@ -1393,6 +1393,8 @@ unsigned int get_dts_machid(unsigned int machid)
                         return MACH_TYPE_IPQ9574_AP_AL02_C13;
 		case MACH_TYPE_IPQ9574_AP_AL03_C2:
 			return MACH_TYPE_IPQ9574_AP_AL03_C1;
+		case MACH_TYPE_IPQ9574_RDP467:
+			return MACH_TYPE_IPQ9574_AP_AL02_C13;
 		default:
 			return machid;
 	}
@@ -1419,8 +1421,8 @@ void ipq_uboot_fdt_fixup(void)
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C11:
 			config_list[config_nos++] = "config@al02-c11";
-			config_list[config_nos++] = "config@rdp467";
-			config_list[config_nos++] = "config-rdp467";
+			config_list[config_nos++] = "config@rdp455";
+			config_list[config_nos++] = "config-rdp455";
 			break;
 		case MACH_TYPE_IPQ9574_AP_AL02_C12:
 			config_list[config_nos++] = "config@al02-c12";
@@ -1444,6 +1446,11 @@ void ipq_uboot_fdt_fixup(void)
 			config_list[config_nos++] = "config@al03-c2";
 			config_list[config_nos++] = "config@rdp458";
 			config_list[config_nos++] = "config-rdp458";
+			break;
+		case MACH_TYPE_IPQ9574_RDP467:
+			config_list[config_nos++] = "config@rdp467";
+			config_list[config_nos++] = "config@rdp467";
+			config_list[config_nos++] = "config-rdp467";
 			break;
 	}
 
