@@ -3070,8 +3070,9 @@ qpic_nand_read_page(struct mtd_info *mtd, uint32_t page,
 	qpic_nand_wait_for_data(DATA_PRODUCER_PIPE_INDEX);
 
 #if !defined(CONFIG_SYS_DCACHE_OFF)
-	flush_dcache_range((unsigned long)flash_sts,
-			   (unsigned long)flash_sts + sizeof(flash_sts));
+	flush_dcache_range((unsigned long)stats,
+			   (unsigned long)stats +
+				(QPIC_NAND_MAX_CWS_IN_PAGE * sizeof(*stats)));
 	flush_dcache_range((unsigned long)buffer_sts,
 			   (unsigned long)buffer_sts + sizeof(buffer_sts));
 	flush_dcache_range((unsigned long)buffer_st,
