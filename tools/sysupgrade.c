@@ -337,6 +337,21 @@ int is_tz_authentication_enabled(void)
 	return 1;
 }
 
+int is_rootfs_auth_enabled(void)
+{
+	char command[36];
+	int retval;
+
+	snprintf(command, sizeof(command),"fw_printenv | grep -q rootfs_auth");
+
+	retval = system(command);
+	if (retval != 0) {
+		return 0;
+	}
+
+	return 1;
+}
+
 /**
  * get_local_image_version() check the version file & if it exists, read the
  * value & save it into global variable local_version
@@ -1002,7 +1017,7 @@ int extract_rootfs_binary(char *filename)
 		return 0;
 	}
 
-	int offset = 0,dead_off;
+	int offset = 0,dead_off = sb.st_size;
 	while ( offset <= sb.st_size)
 	{
 		if ((fp[offset] == 0xde) && (fp[offset+1] == 0xad) && (fp[offset+2] == 0xc0) && (fp[offset+3] == 0xde)) {
@@ -1345,6 +1360,10 @@ int parse_elf_image_phdr(struct image_section *section)
         uint8_t *fp;
 	int i;
 
+	if (!is_rootfs_auth_enabled()) {
+		return 1;
+	}
+
         int fd = open(section->file, O_RDONLY);
 
         if (fd < 0) {
@@ -1384,10 +1403,6 @@ int parse_elf_image_phdr(struct image_section *section)
 			phdr->p_paddr, phdr->p_offset, phdr->p_filesz, phdr->p_type);
 
 			int size = sb.st_size - (phdr->p_offset + phdr->p_filesz );
-			if (size < 0x1000) {
-				printf("rootfs metada is not available\n");
-				return 1;
-			}
 			create_file(TEMP_METADATA_PATH, (char *)(fp + phdr->p_offset + phdr->p_filesz), size);
 			printf("rootfs meta data file: %s created with size:%x\n",TEMP_METADATA_PATH, size);
 
@@ -1785,8 +1800,11 @@ int do_board_upgrade_check(char *img)
 {
 	if (is_tz_authentication_enabled()) {
 		/* If image is having signed rootfs image, then extract kernel and rootfs binary for parsing metadata. */
-		extract_rootfs_binary(check_image_exist("rootfs-"));
-		extract_ubi_volume("ubi_rootfs", check_image_exist("ubi-"), TEMP_ROOTFS_PATH);
+		if (is_rootfs_auth_enabled()) {
+			printf("roofs image authentication is enabled ...\n");
+			extract_rootfs_binary(check_image_exist("rootfs-"));
+			extract_ubi_volume("ubi_rootfs", check_image_exist("ubi-"), TEMP_ROOTFS_PATH);
+		}
 		printf("TZ authentication enabled ...\n");
 		if (!load_sections()) {
 			printf("Error: Failed to load sections from image: %s\n", img);
