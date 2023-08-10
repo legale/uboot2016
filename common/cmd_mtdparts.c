@@ -411,8 +411,7 @@ static int part_validate(struct mtdids *id, struct part_info *part)
 	}
 
 	if (part->offset + part->size > id->size) {
-		printf("%s: partitioning exceeds flash size\n", id->mtd_id);
-		return 1;
+		printf("%s: partitioning (%s) exceeds flash size\n", id->mtd_id, part->name);
 	}
 
 	/*

@@ -817,6 +817,9 @@ int fdt_node_set_part_info(void *blob, int parent_offset,
 
 		part = list_entry(pentry, struct part_info, link);
 
+		if (part->offset + part->size > dev->id->size)
+			continue;
+
 		debug("%2d: %-20s0x%08llx\t0x%08llx\t%d\n",
 			part_num, part->name, part->size,
 			part->offset, part->mask_flags);
