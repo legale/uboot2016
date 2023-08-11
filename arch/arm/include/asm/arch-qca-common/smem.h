@@ -68,6 +68,7 @@ int smem_getpart_from_offset(uint32_t offset, uint32_t *start, uint32_t *size);
 int getpart_offset_size(char *part_name, uint32_t *offset, uint32_t *size);
 unsigned int smem_get_board_machtype(void);
 uint32_t get_nand_block_size(uint8_t dev_id);
+uint64_t get_nand_flash_size(uint8_t dev_id);
 unsigned int get_which_flash_param(char *part_name);
 int smem_get_build_version(char *version_name, int buf_size, int index);
 int ipq_smem_get_boot_version(char *version_name, int buf_size);
