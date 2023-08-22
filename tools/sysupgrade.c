@@ -1801,7 +1801,7 @@ int do_board_upgrade_check(char *img)
 	if (is_tz_authentication_enabled()) {
 		/* If image is having signed rootfs image, then extract kernel and rootfs binary for parsing metadata. */
 		if (is_rootfs_auth_enabled()) {
-			printf("roofs image authentication is enabled ...\n");
+			printf("rootfs image authentication is enabled ...\n");
 			extract_rootfs_binary(check_image_exist("rootfs-"));
 			extract_ubi_volume("ubi_rootfs", check_image_exist("ubi-"), TEMP_ROOTFS_PATH);
 		}
