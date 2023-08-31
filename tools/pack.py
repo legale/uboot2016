@@ -625,6 +625,133 @@ class Pack(object):
         except KeyError, e:
             return None
 
+    def __gen_flash_script_bootconfig(self, entries, partition, flinfo, script, part_section):
+        global ARCH_NAME
+        fw_imgs = []
+        skip_size_check = ""
+
+        if flinfo.type != "emmc":
+            fw_objs = part_section.findall('img_name')
+            if (len(fw_objs) <= 1):
+                return 0
+
+            for i in fw_objs:
+                fw_imgs.append(i.text)
+        else:
+            if 'bootconfig_type_max' in part_section.attrib:
+                max_files = int(part_section.attrib['bootconfig_type_max'])
+            else:
+                return 0;
+
+            for fw_type in range(1, max_files+1):
+                if 'filename_img' + str(fw_type) in part_section.attrib:
+                    filename = part_section.attrib['filename_img' + str(fw_type)]
+                    if filename == "":
+                        continue
+                    fw_imgs.append(filename)
+
+        i = 0
+        for filename in fw_imgs:
+            machid_list = []
+            i = i + 1
+
+            for section in entries:
+                file_type = section.find('.//bootconfig_type')
+                if file_type == None:
+                    continue
+
+                file_type = str(section.find(".//bootconfig_type").text)
+                if str(file_type) != str(i):
+                    continue
+
+                machid = int(section.find(".//machid").text, 0)
+                machid = "%x" % machid
+                machid_list.append(machid)
+
+            img_size = self.__get_img_size(filename)
+            part_info = self.__get_part_info(partition)
+
+            section_label = partition.split(":")
+            if len(section_label) != 1:
+                section_conf = section_label[1]
+            else:
+                section_conf = section_label[0]
+            section_conf = section_conf.lower()
+
+            if self.flinfo.type == 'nand':
+                size = roundup(img_size, flinfo.pagesize)
+                tr = ' | tr \"\\000\" \"\\377\"'
+
+            if self.flinfo.type == 'emmc':
+                size = roundup(img_size, flinfo.blocksize)
+                tr = ''
+
+            if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
+                pad_size = size - img_size
+                filename_abs = os.path.join(self.images_dname, filename)
+                filename_abs_pad = filename_abs + ".padded"
+                cmd = 'cat %s > %s' % (filename_abs, filename_abs_pad)
+                ret = subprocess.call(cmd, shell=True)
+                if ret != 0:
+                    error("failed to copy image")
+                cmd = 'dd if=/dev/zero count=1 bs=%s %s >> %s' % (pad_size, tr, filename_abs_pad)
+                cmd = '(' + cmd + ') 1>/dev/null 2>/dev/null'
+                ret = subprocess.call(cmd, shell=True)
+                if ret != 0:
+                    error("failed to create padded image from script")
+
+            if self.flinfo.type != "emmc":
+                if part_info == None:
+                    if self.flinfo.type == 'norplusnand':
+                        if count > 2:
+                            error("More than 2 NAND images for NOR+NAND is not allowed")
+                elif img_size > part_info.length:
+                    print "img size is larger than part. len in '%s'" % section_conf
+                    return 0
+            else:
+                if (skip_size_check == "" or wifi_fw_type < skip_size_check):
+                    if part_info != None:
+                        if (img_size > 0):
+                            if img_size > (part_info.length * self.flinfo.blocksize):
+                                print "img size is larger than part. len in '%s'" % section_conf
+                                return 0
+                else:
+                    print "EMMC: size check skipped for '%s'" % filename
+
+            if part_info == None and self.flinfo.type != 'norplusnand':
+                print "Flash type is norplusemmc"
+                return 1
+
+            script.start_if_or("machid", machid_list)
+            script.start_activity("Flashing %s:" % ( filename[:-4] ))
+
+            if img_size > 0:
+                filename_pad = filename + ".padded"
+                if ((self.flinfo.type == 'nand' or self.flinfo.type == 'emmc') and (size != img_size)):
+                    script.imxtract(filename[:-4] + "-" + sha1(filename_pad))
+                else:
+                    script.imxtract(filename[:-4] + "-" + sha1(filename))
+
+            part_size = Pack.norplusnand_rootfs_img_size
+            if part_info == None:
+                if self.flinfo.type == 'norplusnand':
+                    offset = count * Pack.norplusnand_rootfs_img_size
+                    script.nand_write(offset, part_size, img_size, spi_nand)
+                    count = count + 1
+            else:
+                if part_info.which_flash == 0:
+                    offset = part_info.offset
+                    script.erase(offset, part_info.length)
+                    script.write(offset, img_size)
+                else:
+                    offset = part_info.offset
+                    script.nand_write(offset, part_info.length, img_size, spi_nand)
+
+            script.finish_activity()
+            script.end_if()
+
+        return 1
+
     def __gen_flash_script_cdt(self, entries, partition, flinfo, script):
         global ARCH_NAME
         for section in entries:
@@ -1317,6 +1444,8 @@ class Pack(object):
                             if (multi_wifi_fw == "true" or tiny_16m == "true") and 'wififw_type_min' in section.attrib:
                                 wifi_fw_type_min = section.attrib['wififw_type_min']
                                 wifi_fw_type_max = section.attrib['wififw_type_max']
+                            elif 'bootconfig_type_max' in section.attrib:
+                                partition = section.attrib['label']
                             else:
                                 try:
                                     if image_type == "all" or section.attrib['image_type'] == image_type:
@@ -1346,6 +1475,14 @@ class Pack(object):
                             print "Skipping partition '%s'" % section.attrib['label']
                             pass
                         diff_files = "" # Clear for next iteration
+
+            if "0:BOOTCONFIG" in partition:
+                try:
+                    ret = self.__gen_flash_script_bootconfig(entries, partition, flinfo, script, section)
+                    if ret == 1:
+                        continue
+                except KeyError, e:
+                    continue
 
             # Get machID
             if partition != "0:CDT" and partition != "0:CDT_1" and partition != "0:DDRCONFIG":
@@ -1497,6 +1634,53 @@ class Pack(object):
                                 return 0
                     wifi_fw_type = ""
                 continue
+
+        return 1
+
+    def __gen_script_bootconfig(self, images, flinfo, partition, section):
+        global ARCH_NAME
+        fw_imgs = []
+
+        if flinfo.type != "emmc":
+            fw_objs = section.findall('img_name')
+            if (len(fw_objs) <= 1):
+                return 0
+
+            for i in fw_objs:
+                fw_imgs.append(i.text)
+        else:
+            if 'bootconfig_type_max' in section.attrib:
+                max_files = int(section.attrib['bootconfig_type_max'])
+            else:
+                return 0;
+
+            for fw_type in range(1, max_files+1):
+                if 'filename_img' + str(fw_type) in section.attrib:
+                    filename = section.attrib['filename_img' + str(fw_type)]
+                    if filename == "":
+                        continue
+                    fw_imgs.append(filename)
+
+        for filename in fw_imgs:
+            part_info = self.__get_part_info(partition)
+            if part_info == None and self.flinfo.type != 'norplusnand':
+                continue
+
+            if self.flinfo.type == 'nand':
+                img_size = self.__get_img_size(filename)
+                size = roundup(img_size, flinfo.pagesize)
+                if ( size != img_size ):
+                    filename = filename + ".padded"
+            if self.flinfo.type == 'emmc':
+                img_size = self.__get_img_size(filename)
+                size = roundup(img_size, flinfo.blocksize)
+                if ( size != img_size ):
+                    filename = filename + ".padded"
+            image_info = ImageInfo(filename[:-4] + "-" + sha1(filename),
+                                   filename, "firmware")
+            if filename.lower() != "none":
+                if image_info not in images:
+                    images.append(image_info)
 
         return 1
 
@@ -1771,6 +1955,8 @@ class Pack(object):
                                 wifi_fw_type_min = section.attrib['wififw_type_min']
                                 wifi_fw_type_max = section.attrib['wififw_type_max']
                                 partition = section.attrib['label']
+                            elif "bootconfig_type_max" in section.attrib:
+                                partition = section.attrib['label']
                             else:
                                 try:
                                     if image_type == "all" or section.attrib['image_type'] == image_type:
@@ -1812,6 +1998,15 @@ class Pack(object):
                 section_conf = section_label[0]
 
             section_conf = section_conf.lower()
+
+            if section_conf == "bootconfig" or section_conf == "bootconfig1":
+                try:
+                    if image_type == "all" or section[8].attrib['image_type'] == image_type:
+                        ret = self.__gen_script_bootconfig(images, flinfo, partition, section)
+                        if ret == 1:
+                            continue
+                except KeyError, e:
+                    continue
 
             if section_conf == "cdt" or section_conf == "cdt_1" or section_conf == "ddrconfig":
                 try:
