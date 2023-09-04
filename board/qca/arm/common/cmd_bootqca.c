@@ -38,8 +38,7 @@
 #define PRIMARY_PARTITION	1
 #define SECONDARY_PARTITION	2
 
-#define FIT_KEY_PROP		"key"
-#define MAX_ARG_SIZE		512
+#define FIT_BOOTARGS_PROP	"append-bootargs"
 
 extern int qca_scm_part_info(void *cmd_buf, size_t cmd_len);
 
@@ -94,34 +93,29 @@ void __stack_chk_fail(void)
 
 static int update_bootargs(void *addr)
 {
-	char *key, *temp, *check, *strings = getenv("bootargs");
-	char cmd_line[MAX_ARG_SIZE] = { 0 };
-	int len, size, size2, ret = CMD_RET_SUCCESS;
+	char *fit_bootargs, *strings = getenv("bootargs");
+	int len, ret = CMD_RET_SUCCESS;
+	char * cmd_line = malloc(CONFIG_SYS_CBSIZE);
+	if (!cmd_line) {
+		printf("bootargs malloc failed \n");
+		return CMD_RET_FAILURE;
+	}
 
-	key = (char *)fdt_getprop(addr, 0, FIT_KEY_PROP, &len);
-	check = strstr(strings, "dm-mod.create");
-
-	if ((key != NULL) && len && (check != NULL)) {
-		if ((strlen(strings) +
-			strlen(getenv("fsbootargs")) +
-			len) > MAX_ARG_SIZE) {
+	memset(cmd_line, 0, CONFIG_SYS_CBSIZE);
+	fit_bootargs = (char *)fdt_getprop(addr, 0, FIT_BOOTARGS_PROP, &len);
+	if ((fit_bootargs != NULL) && len) {
+		if ((strlen(strings) + len) > CONFIG_SYS_CBSIZE) {
 			ret = CMD_RET_FAILURE;
 		} else {
-			size = (check - strings) + strlen("dm-mod.create") + 2;
-			memcpy(cmd_line, strings, size);
-			temp = strchr(strings + size, '"');
-			size2 = temp - (strings + size);
-			memcpy(cmd_line + size,  strings + size, size2);
-			size += size2;
-			snprintf(cmd_line + size, sizeof(cmd_line),
-					" %s%s %s rootwait",
-					key, temp, getenv("fsbootargs"));
+			memcpy(cmd_line, strings, strlen(strings));
+			snprintf(cmd_line + strlen(strings), CONFIG_SYS_CBSIZE,
+					" %s rootwait", fit_bootargs);
 		}
 	} else {
 		memcpy(cmd_line, strings, strlen(strings));
-		len = snprintf(cmd_line + strlen(strings), sizeof(cmd_line),
+		len = snprintf(cmd_line + strlen(strings), CONFIG_SYS_CBSIZE,
 			" %s rootwait", getenv("fsbootargs"));
-		if (len >= MAX_ARG_SIZE)
+		if (len >= CONFIG_SYS_CBSIZE)
 			ret = CMD_RET_FAILURE;
 	}
 
@@ -132,6 +126,7 @@ static int update_bootargs(void *addr)
 		setenv("bootargs", cmd_line);
 	}
 
+	free(cmd_line);
 	return ret;
 }
 /*
