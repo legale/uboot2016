@@ -827,6 +827,10 @@ unsigned int get_dts_machid(unsigned int machid)
 			return MACH_TYPE_IPQ5332_AP_MI01_3;
 		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
 			return MACH_TYPE_IPQ5332_AP_MI04_1;
+		case MACH_TYPE_IPQ5332_AP_RDP_479:
+			return MACH_TYPE_IPQ5332_AP_MI01_3;
+		case MACH_TYPE_IPQ5332_AP_RDP_481:
+			return MACH_TYPE_IPQ5332_AP_MI01_3;
 		default:
 			return machid;
 	}
@@ -849,6 +853,16 @@ void ipq_uboot_fdt_fixup(void)
 			config_list[config_nos++] = "config@mi04.1-c2";
 			config_list[config_nos++] = "config@rdp478";
 			config_list[config_nos++] = "config-rdp478";
+			break;
+		case MACH_TYPE_IPQ5332_AP_RDP_479:
+			config_list[config_nos++] = "config@ap-rdp479";
+			config_list[config_nos++] = "config@rdp479";
+			config_list[config_nos++] = "config-rdp479";
+			break;
+		case MACH_TYPE_IPQ5332_AP_RDP_481:
+			config_list[config_nos++] = "config@ap-rdp481";
+			config_list[config_nos++] = "config@rdp481";
+			config_list[config_nos++] = "config-rdp481";
 			break;
 	}
 
