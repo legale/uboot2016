@@ -542,10 +542,6 @@ void noc_clock_init(void)
 
 	reg_val = readl(GCC_NSSNOC_SNOC_1_CBCR);
 	writel(reg_val | GCC_CBCR_CLK_ENABLE, GCC_NSSNOC_SNOC_1_CBCR);
-
-	reg_val = readl(GCC_MEM_NOC_SNOC_AXI_CBCR);
-	writel(reg_val | GCC_CBCR_CLK_ENABLE, GCC_MEM_NOC_SNOC_AXI_CBCR);
-
 }
 
 void uniphy_clock_enable(enum uniphy_clk_type clk_type, bool enable)
