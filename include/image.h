@@ -78,6 +78,21 @@ struct lmb;
 #undef IMAGE_ENABLE_SHA256
 #endif
 
+#ifdef CONFIG_FIT_DISABLE_SHA1
+#undef CONFIG_SHA1
+#undef IMAGE_ENABLE_SHA1
+#endif
+
+#ifdef CONFIG_FIT_DISABLE_MD5
+#undef CONFIG_MD5
+#undef IMAGE_ENABLE_MD5
+#endif
+
+#ifdef CONFIG_FIT_DISABLE_CRC32
+#undef CONFIG_CRC32
+#undef IMAGE_ENABLE_CRC32
+#endif
+
 #ifndef IMAGE_ENABLE_CRC32
 #define IMAGE_ENABLE_CRC32	0
 #endif
