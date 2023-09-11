@@ -1119,6 +1119,7 @@ struct image_region *fit_region_make_list(const void *fit,
 		struct fdt_region *fdt_regions, int count,
 		struct image_region *region);
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 static inline int fit_image_check_target_arch(const void *fdt, int node)
 {
 #ifndef USE_HOSTCC
@@ -1128,6 +1129,7 @@ static inline int fit_image_check_target_arch(const void *fdt, int node)
 	return 0;
 #endif
 }
+#endif
 
 #ifdef CONFIG_FIT_VERBOSE
 #define fit_unsupported(msg)	printf("! %s:%d " \

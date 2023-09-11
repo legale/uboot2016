@@ -492,6 +492,7 @@ static int do_mem_cp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	return 0;
 }
 
+#ifndef CONFIG_CMD_DISABLE_BASE
 static int do_mem_base(cmd_tbl_t *cmdtp, int flag, int argc,
 		       char * const argv[])
 {
@@ -505,6 +506,14 @@ static int do_mem_base(cmd_tbl_t *cmdtp, int flag, int argc,
 	printf("Base Address: 0x%08lx\n", base_address);
 	return 0;
 }
+
+U_BOOT_CMD(
+	base,	2,	1,	do_mem_base,
+	"print or set address offset",
+	"\n    - print address offset for memory commands\n"
+	"base off\n    - set address offset for memory commands to 'off'"
+);
+#endif
 
 static int do_mem_loop(cmd_tbl_t *cmdtp, int flag, int argc,
 		       char * const argv[])
@@ -1341,13 +1350,6 @@ static int do_mem_info(cmd_tbl_t *cmdtp, int flag, int argc,
 	return 0;
 }
 #endif
-
-U_BOOT_CMD(
-	base,	2,	1,	do_mem_base,
-	"print or set address offset",
-	"\n    - print address offset for memory commands\n"
-	"base off\n    - set address offset for memory commands to 'off'"
-);
 
 U_BOOT_CMD(
 	loop,	3,	1,	do_mem_loop,
