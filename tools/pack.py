@@ -1444,7 +1444,7 @@ class Pack(object):
                             if (multi_wifi_fw == "true" or tiny_16m == "true") and 'wififw_type_min' in section.attrib:
                                 wifi_fw_type_min = section.attrib['wififw_type_min']
                                 wifi_fw_type_max = section.attrib['wififw_type_max']
-                            elif 'bootconfig_type_max' in section.attrib:
+                            elif 'bootconfig_type_max' in section.attrib and image_type == "all":
                                 partition = section.attrib['label']
                             else:
                                 try:
@@ -1955,7 +1955,7 @@ class Pack(object):
                                 wifi_fw_type_min = section.attrib['wififw_type_min']
                                 wifi_fw_type_max = section.attrib['wififw_type_max']
                                 partition = section.attrib['label']
-                            elif "bootconfig_type_max" in section.attrib:
+                            elif "bootconfig_type_max" in section.attrib and image_type == "all":
                                 partition = section.attrib['label']
                             else:
                                 try:
@@ -2001,11 +2001,10 @@ class Pack(object):
 
             if section_conf == "bootconfig" or section_conf == "bootconfig1":
                 try:
-                    if image_type == "all" or section[8].attrib['image_type'] == image_type:
-                        ret = self.__gen_script_bootconfig(images, flinfo, partition, section)
-                        if ret == 1:
-                            continue
-                except KeyError, e:
+                    ret = self.__gen_script_bootconfig(images, flinfo, partition, section)
+                    if ret == 1:
+                        continue
+                except KeyError as e:
                     continue
 
             if section_conf == "cdt" or section_conf == "cdt_1" or section_conf == "ddrconfig":
