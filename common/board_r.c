@@ -466,7 +466,7 @@ static int initr_dataflash(void)
  */
 static int should_load_env(void)
 {
-#ifdef CONFIG_OF_CONTROL
+#if defined(CONFIG_OF_CONTROL) && !defined(CONFIG_REDUCE_FOOTPRINT)
 	return fdtdec_get_config_int(gd->fdt_blob, "load-environment", 1);
 #elif defined CONFIG_DELAY_ENVIRONMENT
 	return 0;
