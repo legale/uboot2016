@@ -299,7 +299,9 @@ obj-y += cli.o
 obj-y += cli_readline.o
 obj-y += command.o
 obj-y += s_record.o
+ifndef CONFIG_REDUCE_FOOTPRINT
 obj-y += xyzModem.o
+endif
 obj-y += cmd_disk.o
 
 CFLAGS_env_embedded.o := -Wa,--no-warn -DENV_CRC=$(shell tools/envcrc 2>/dev/null)
