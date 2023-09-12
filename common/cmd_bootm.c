@@ -138,6 +138,7 @@ int do_bootm(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		BOOTM_STATE_OS_GO, &images, 1);
 }
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 int bootm_maybe_autostart(cmd_tbl_t *cmdtp, const char *cmd)
 {
 	const char *ep = getenv("autostart");
@@ -152,6 +153,7 @@ int bootm_maybe_autostart(cmd_tbl_t *cmdtp, const char *cmd)
 
 	return 0;
 }
+#endif
 
 #ifdef CONFIG_SYS_LONGHELP
 static char bootm_help_text[] =

@@ -250,7 +250,9 @@ static int netboot_common(enum proto_t proto, cmd_tbl_t *cmdtp, int argc,
 
 	bootstage_mark(BOOTSTAGE_ID_NET_LOADED);
 
+#ifndef CONFIG_REDUCE_FOOTPRINT
 	rcode = bootm_maybe_autostart(cmdtp, argv[0]);
+#endif
 
 	if (rcode == CMD_RET_SUCCESS)
 		bootstage_mark(BOOTSTAGE_ID_NET_DONE);
