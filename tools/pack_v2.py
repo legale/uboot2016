@@ -1602,7 +1602,7 @@ class Pack(object):
 
         try:
             if ftype == "tiny-nor" or ftype == "tiny-nor-debug":
-                part_info = root.find(".//data[@type='" + "NOR_PARAMETER']")
+                part_info = root.find(".//data[@type='" + "TINY_NOR_PARAMETER']")
             elif ftype in ["nand", "nand-4k"]:
                 if root.find(".//data[@type='NAND_PARAMETER']/entry") != None:
                     if ftype == "nand":
