@@ -350,6 +350,7 @@ static int parse_elf_image_phdr(image_info *img_info, unsigned int addr)
 }
 #endif
 
+#ifndef CONFIG_DISABLE_SIGNED_BOOT
 static int copy_rootfs(unsigned int request, uint32_t size)
 {
 	char runcmd[256];
@@ -756,6 +757,7 @@ static int do_boot_signedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const a
 #endif
 	return CMD_RET_SUCCESS;
 }
+#endif
 
 static int do_boot_unsignedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
@@ -921,7 +923,9 @@ static int do_boot_unsignedimg(cmd_tbl_t *cmdtp, int flag, int argc, char *const
 static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	int ret;
+#ifndef CONFIG_DISABLE_SIGNED_BOOT
 	char buf = 0;
+#endif
 	/*
 	 * set fdt_high parameter so that u-boot will not load
 	 * dtb above CONFIG_IPQ40XX_FDT_HIGH region.
@@ -931,18 +935,22 @@ static int do_bootipq(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_FAILURE;
 	}
 
-	ret = qca_scm_call(SCM_SVC_FUSE, QFPROM_IS_AUTHENTICATE_CMD, &buf, sizeof(char));
-
 #if defined(CONFIG_IPQ9574_EDMA) || defined(CONFIG_IPQ5332_EDMA)
 	aquantia_phy_reset_init_done();
 #endif
+
+#ifndef CONFIG_DISABLE_SIGNED_BOOT
+	ret = qca_scm_call(SCM_SVC_FUSE, QFPROM_IS_AUTHENTICATE_CMD, &buf, sizeof(char));
+
 	/*
 	|| if atf is enable in env ,do_boot_signedimg is skip.
 	|| Note: This features currently support in ipq50XX.
 	*/
 	if (ret == 0 && buf == 1 && !is_atf_enabled()) {
 		ret = do_boot_signedimg(cmdtp, flag, argc, argv);
-	} else if (ret == 0 || ret == -EOPNOTSUPP) {
+	} else if (ret == 0 || ret == -EOPNOTSUPP)
+#endif
+	{
 		ret = do_boot_unsignedimg(cmdtp, flag, argc, argv);
 	}
 
