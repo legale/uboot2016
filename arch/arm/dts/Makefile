@@ -105,9 +105,13 @@ dtb-$(CONFIG_ARCH_IPQ5332) += ipq5332-emulation.dtb \
 				ipq5332-db-mi02.1.dtb \
 				ipq5332-db-mi03.1.dtb
 else
+ifneq ($(CONFIG_IPQ_TINY_SPI_NOR),y)
 dtb-$(CONFIG_ARCH_IPQ5332) += ipq5332-mi01.3.dtb \
 				ipq5332-mi04.1.dtb \
 				ipq5332-db-mi02.1.dtb
+else
+dtb-$(CONFIG_ARCH_IPQ5332) += ipq5332-mi04.1.dtb
+endif
 endif
 
 dtb-$(CONFIG_ARCH_IPQ6018) += ipq6018-cp01-c1.dtb \
