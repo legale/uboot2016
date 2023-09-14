@@ -2055,6 +2055,7 @@ void fdt_fixup_bt_debug(void *blob)
 	parse_fdt_fixup("/soc/serial@78b0000/%status%?ok", blob);
 	parse_fdt_fixup("/soc/usb3@8A00000/%delete%device-power-gpio", blob);
 }
+#endif
 
 #ifdef CONFIG_IPQ_TINY
 void fdt_fixup_art_format(void *blob)
@@ -2064,7 +2065,6 @@ void fdt_fixup_art_format(void *blob)
 	fdt_add_subnode(blob, nodeoffset, "compressed_art");
 
 }
-#endif
 #endif
 
 #ifndef CONFIG_CMD_DISABLE_EXECTZT

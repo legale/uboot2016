@@ -131,6 +131,19 @@ void fdt_fixup_flash(void *blob)
 }
 #endif
 
+#ifdef CONFIG_IPQ_TINY_SPI_NOR
+void fdt_fixup_art_format(void *blob)
+{
+	int nodeoffset;
+	int ret;
+
+	nodeoffset = fdt_path_offset(blob, "/");
+	ret = fdt_setprop(blob, nodeoffset, "compressed_art", NULL, 0);
+	if (ret != 0)
+		printf("fdt-fixup: unable to set property 'compressed_art'\n");
+}
+#endif
+
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
 	int ret;

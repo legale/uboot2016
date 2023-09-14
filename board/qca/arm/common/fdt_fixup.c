@@ -876,11 +876,6 @@ __weak void fdt_fixup_for_atf(void *blob)
 	return;
 }
 
-__weak void fdt_fixup_art_format(void *blob)
-{
-	return;
-}
-
 #ifdef CONFIG_IPQ_BT_SUPPORT
 __weak void fdt_fixup_bt_running(void *blob)
 {
@@ -962,6 +957,11 @@ __weak void fdt_fixup_auto_restart(void *blob)
 	return;
 }
 #endif
+
+__weak void fdt_fixup_art_format(void *blob)
+{
+	return;
+}
 
 __weak void ipq_fdt_fixup_socinfo(void *blob)
 {
@@ -1196,13 +1196,13 @@ int ft_board_setup(void *blob, bd_t *bd)
 	fdt_fixup_bt_running(blob);
 #endif
 	fdt_fixup_sdx65_gpio(blob);
+#endif
 
 	/*
 	|| This features fixup compressed_art in
 	|| dts if its 16M profile build.
 	*/
 	fdt_fixup_art_format(blob);
-#endif
 
 #ifdef CONFIG_QCA_MMC
 	board_mmc_deinit();
