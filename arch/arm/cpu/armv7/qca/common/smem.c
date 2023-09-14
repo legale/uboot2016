@@ -553,14 +553,6 @@ uint32_t get_nand_block_size(uint8_t dev_id)
 
 	return mtd->erasesize;
 }
-uint64_t get_nand_flash_size(uint8_t dev_id)
-{
-	struct mtd_info *mtd;
-
-	mtd = &nand_info[dev_id];
-
-	return mtd->size;
-}
 #endif
 /*
  * get flash block size based on partition name.
@@ -1175,10 +1167,6 @@ int do_smeminfo(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	qca_smem_flash_info_t *sfi = &qca_smem_flash_info;
 	int i;
 	uint32_t bsize;
-#ifdef CONFIG_CMD_NAND
-	uint64_t fsize;
-	fsize = get_nand_flash_size(is_spi_nand_available());
-#endif
 #ifdef IPQ_UBI_VOL_WRITE_SUPPORT
 	ubi_set_rootfs_part();
 #endif
@@ -1230,11 +1218,6 @@ int do_smeminfo(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			psize = ((loff_t)p->size) * bsize;
 		}
 
-#ifdef CONFIG_CMD_NAND
-		/* skip printing the partition that exceeds flash size */
-		if (((loff_t)p->start) * bsize + psize > fsize)
-			continue;
-#endif
 		printf("%3d: " smem_ptn_name_fmt " 0x%08x %#16llx %#16llx\n",
 		       i, p->name, p->attr, ((loff_t)p->start) * bsize, psize);
 #ifdef IPQ_UBI_VOL_WRITE_SUPPORT
