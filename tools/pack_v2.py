@@ -1483,7 +1483,8 @@ class Pack(object):
         image_data = "".join(image_data)
         its_data = its_tmpl.substitute(desc=desc, images=image_data)
 
-        its_data = bytes(its_data, 'utf-8')
+        if sys.version_info.major >= 3:
+            its_data = bytes(its_data, 'utf-8')
         its_fp.write(its_data)
         its_fp.close()
 
