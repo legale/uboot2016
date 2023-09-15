@@ -442,6 +442,7 @@ int apps_iscrashed(void)
 	return 0;
 }
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_auto_restart(void *blob)
 {
 	const char *paniconwcssfatal;
@@ -458,6 +459,7 @@ void fdt_fixup_auto_restart(void *blob)
 	}
 	return;
 }
+#endif
 
 #ifdef CONFIG_IPQ_BT_SUPPORT
 int bt_running;
@@ -2000,6 +2002,7 @@ void board_update_caldata()
 	qca_scm_call_write(0x2, 0x23,(u32 *)IRON2G_RFA_RFA_OTP_OTP_XO_0, reg_val);
 }
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_qpic(void *blob)
 {
 	int node_off, ret;
@@ -2062,6 +2065,7 @@ void fdt_fixup_art_format(void *blob)
 
 }
 #endif
+#endif
 
 #ifndef CONFIG_CMD_DISABLE_EXECTZT
 void run_tzt(void *address)
@@ -2070,6 +2074,7 @@ void run_tzt(void *address)
 }
 #endif
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_set_dload_warm_reset(void *blob)
 {
 	int nodeoff, ret;
@@ -2092,6 +2097,7 @@ void fdt_fixup_set_dload_warm_reset(void *blob)
 	if (ret)
 		printf("fixup_set_dload: 'dload_warm_reset' not set");
 }
+#endif
 
 #ifdef CONFIG_SMP_CMD_SUPPORT
 int is_secondary_core_off(unsigned int cpuid)
@@ -2166,6 +2172,7 @@ void sdi_disable(void)
 	qca_scm_sdi();
 }
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_for_atf(void *blob)
 {
 	if (fdt_path_offset(blob, "/soc/dma@704000") >= 0) {
@@ -2175,3 +2182,4 @@ void fdt_fixup_for_atf(void *blob)
 				blob);
 	}
 }
+#endif

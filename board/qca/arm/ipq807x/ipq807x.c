@@ -418,6 +418,7 @@ void reset_cpu(unsigned long a)
 }
 
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 int sdx65_attached(void);
 
 int get_ap2mdm_gpio(void)
@@ -455,6 +456,7 @@ void indicate_sdx_device(void)
 	}
 
 }
+#endif
 
 void reset_board(void)
 {
@@ -1007,6 +1009,7 @@ void board_pci_deinit()
 }
 #endif
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 int sdx65_attached(void)
 {
 	const char *sdx65_env = getenv("x65_attached");
@@ -1071,6 +1074,7 @@ void fdt_fixup_sdx65_gpio(void *blob)
 	else if (fdt_path_offset(blob, "/soc/pinctrl@1000000/pcie_sdx_pinmux/mdm2ap_e911_status") >= 0)
 		parse_fdt_fixup("/soc/pinctrl@1000000/pcie_sdx_pinmux/mdm2ap_e911_status/%pins%?gpio22", blob);
 }
+#endif
 
 #ifdef CONFIG_USB_XHCI_IPQ
 void board_usb_deinit(int id)
@@ -1418,6 +1422,7 @@ void ipq_uboot_fdt_fixup(void)
 	return;
 }
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void ipq_fdt_fixup_usb_device_mode(void *blob)
 {
 	int nodeoff, ret, node;
@@ -1483,10 +1488,12 @@ void fdt_fixup_auto_restart(void *blob)
 	}
 	return;
 }
+#endif
 
 #define TCSR_CPR	0x0193d008 /* TCSR_TZ_WONCE_2 */
 #define BM(lsb, msb)            ((BIT(msb) - BIT(lsb)) + BIT(msb))
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_cpr(void *blob)
 {
 	int node, subnode, phandle;
@@ -1701,6 +1708,7 @@ void fdt_fixup_set_qce_fixed_key(void *blob)
 		printf("qce_crypto: 'qce,use_fixed_hw_key' property no set");
 
 }
+#endif
 
 void set_flash_secondary_type(qca_smem_flash_info_t *smem)
 {

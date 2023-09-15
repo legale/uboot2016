@@ -1169,6 +1169,7 @@ void reset_board(void)
 	while(1);
 }
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_auto_restart(void *blob)
 {
 	const char *paniconwcssfatal;
@@ -1185,6 +1186,7 @@ void fdt_fixup_auto_restart(void *blob)
 	}
 	return;
 }
+#endif
 
 int is_secondary_core_off(unsigned int cpuid)
 {
@@ -1269,10 +1271,12 @@ void ipq_uboot_fdt_fixup(void)
 	return;
 }
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_set_qca_cold_reboot_enable(void *blob)
 {
 	parse_fdt_fixup("/soc/qca,scm_restart_reason%qca,coldreboot-enabled%1", blob);
 }
+#endif
 
 void fdt_fixup_for_atf(void *blob)
 {

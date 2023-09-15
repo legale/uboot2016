@@ -109,6 +109,7 @@ struct dumpinfo_t dumpinfo_n[] = {
 };
 int dump_entries_n = ARRAY_SIZE(dumpinfo_n);
 
+#ifdef CONFIG_IPQ_FDT_FIXUP
 void fdt_fixup_flash(void *blob)
 {
 	uint32_t flash_type = SMEM_BOOT_NO_FLASH;
@@ -128,6 +129,7 @@ void fdt_fixup_flash(void *blob)
 	}
 	return;
 }
+#endif
 
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
