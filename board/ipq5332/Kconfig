@@ -15,6 +15,9 @@ config SYS_CONFIG_NAME
 config NAND_FLASH
 	bool "Enable NAND Framework"
 
+config REDUCE_FOOTPRINT
+	bool "Remove/reconfigure code to reduce footprint"
+
 config QPIC_SERIAL
 	bool "Enable QPIC serial NAND"
 

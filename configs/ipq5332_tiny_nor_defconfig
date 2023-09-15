@@ -21,6 +21,7 @@ CONFIG_SYS_PROMPT="IPQ5332# "
 # Tiny support
 #
 CONFIG_IPQ_TINY=y
+CONFIG_REDUCE_FOOTPRINT=y
 
 #
 # Info commands
