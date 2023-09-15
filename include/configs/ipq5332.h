@@ -260,11 +260,17 @@ extern loff_t board_env_size;
 #define CONFIG_QCA_SPI
 #define CONFIG_SPI_FLASH
 #define CONFIG_CMD_SF
+
+#ifndef CONFIG_IPQ_TINY_SPI_NOR
 #define CONFIG_SPI_FLASH_STMICRO
 #define CONFIG_SPI_FLASH_WINBOND
 #define CONFIG_SPI_FLASH_MACRONIX
 #define CONFIG_SPI_FLASH_GIGADEVICE
 #define CONFIG_SPI_FLASH_SPANSION
+#else /* Needed for manufacturer specific driver support, if any */
+#define CONFIG_SPI_FLASH_GIGADEVICE
+#endif
+
 #define CONFIG_SF_DEFAULT_BUS			0
 #define CONFIG_SF_DEFAULT_CS			0
 #define CONFIG_SF_DEFAULT_MODE			SPI_MODE_0
