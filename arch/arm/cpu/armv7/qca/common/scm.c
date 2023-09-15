@@ -351,6 +351,7 @@ bool is_scm_armv8(void)
         return (scm_version == SCM_ARMV8_32);
 }
 
+#ifndef CONFIG_DISABLE_KERNEL64
 void __attribute__ ((noreturn)) jump_kernel64(void *kernel_entry,
 				void *fdt_addr)
 {
@@ -377,8 +378,9 @@ void __attribute__ ((noreturn)) jump_kernel64(void *kernel_entry,
 	printf("Can't boot kernel: %d\n", ret);
 	hang();
 }
+#endif
 
-
+#ifndef CONFIG_CMD_DISABLE_EXECTZT
 void __attribute__ ((noreturn)) execute_tzt(void *entry_addr)
 {
         struct qca_scm_desc desc = {0};
@@ -398,7 +400,7 @@ void __attribute__ ((noreturn)) execute_tzt(void *entry_addr)
         printf("Can't boot TZT: %d\n", ret);
         hang();
 }
-
+#endif
 
 /* We need to invalidate the buffer written by TZ before we use in u-boot
  * In some calls TZ writes to desc.args[0].
