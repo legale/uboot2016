@@ -234,7 +234,7 @@ static int bootm_find_os(cmd_tbl_t *cmdtp, int flag, int argc,
 int bootm_find_images(int flag, int argc, char * const argv[])
 {
 	int ret;
-
+#ifndef CONFIG_DISABLE_RAMDISK
 	/* find ramdisk */
 	ret = boot_get_ramdisk(argc, argv, &images, IH_INITRD_ARCH,
 			       &images.rd_start, &images.rd_end);
@@ -242,6 +242,7 @@ int bootm_find_images(int flag, int argc, char * const argv[])
 		puts("Ramdisk image is corrupt or invalid\n");
 		return 1;
 	}
+#endif
 
 #if defined(CONFIG_OF_LIBFDT)
 	/* find flattened device tree */
