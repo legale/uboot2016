@@ -1180,6 +1180,7 @@ int check_flash_exceed(struct smem_ptn *p, uint32_t offset, uint32_t psize) {
 		fsize = get_spi_flash_size();
 		break;
 #ifdef CONFIG_CMD_NAND
+	case SMEM_BOOT_NAND_FLASH:
 	case SMEM_BOOT_QSPI_NAND_FLASH:
 		fsize = nand_info[CONFIG_QPIC_NAND_NAND_INFO_IDX].size;
 		break;
