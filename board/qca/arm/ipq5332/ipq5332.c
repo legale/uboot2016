@@ -823,6 +823,8 @@ unsigned int get_dts_machid(unsigned int machid)
 {
 	switch (machid)
 	{
+		case MACH_TYPE_IPQ5332_AP_MI01_2_C2:
+			return MACH_TYPE_IPQ5332_AP_MI01_2;
 		case MACH_TYPE_IPQ5332_AP_MI01_3_C2:
 			return MACH_TYPE_IPQ5332_AP_MI01_3;
 		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
@@ -844,6 +846,11 @@ void ipq_uboot_fdt_fixup(void)
 
 	switch (gd->bd->bi_arch_number)
 	{
+		case MACH_TYPE_IPQ5332_AP_MI01_2_C2:
+			config_list[config_nos++] = "config@mi01.2-c2";
+			config_list[config_nos++] = "config@rdp484";
+			config_list[config_nos++] = "config-rdp484";
+			break;
 		case MACH_TYPE_IPQ5332_AP_MI01_3_C2:
 			config_list[config_nos++] = "config@mi01.3-c2";
 			config_list[config_nos++] = "config@rdp477";
