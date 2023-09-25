@@ -1414,29 +1414,29 @@ class Pack(object):
                         filename = img.text;
 
             else:
-                # wififw images specific for RDP based on machid
-                if section_conf == "wififw":
-                    if ver_check:
-                        for k, v in wifi_fws_avail.items():
-                            self.__gen_script_append_images(k, soc_version, 1, images, flinfo, root, section_conf, partition)
-                    else:
-                        for wifi_fw_type in wifi_fw_list:
-                            fw_name = wifi_fw_type
-                            if fw_name == "":
-                                continue
-                            if not os.path.exists(os.path.join(self.images_dname, fw_name)):
-                                return 0
-                            self.__gen_script_append_images(fw_name, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
-                        wifi_fw_type = ""
-                        fw_name = ""
-
-                    continue
-
                 if section != None and filename != "" and section.get('filename_mem' + memory_size) != None:
                     filename = section.get('filename_mem' + memory_size)
 
                 if section != None and atf == "true" and section.get('filename_atf') != None:
                     filename = section.get('filename_atf')
+
+            # wififw images specific for RDP based on machid
+            if self.flash_type in [ "emmc" , "tiny-nor", "tiny-nor-debug", "nor" ] and section_conf == "wififw":
+                if ver_check:
+                    for k, v in wifi_fws_avail.items():
+                        self.__gen_script_append_images(k, soc_version, 1, images, flinfo, root, section_conf, partition)
+                else:
+                    for wifi_fw_type in wifi_fw_list:
+                        fw_name = wifi_fw_type
+                        if fw_name == "":
+                            continue
+                        if not os.path.exists(os.path.join(self.images_dname, fw_name)):
+                            return 0
+                        self.__gen_script_append_images(fw_name, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
+                    wifi_fw_type = ""
+                    fw_name = ""
+
+                continue
 
             if filename != "":
                 self.__gen_script_append_images(filename, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
