@@ -630,12 +630,12 @@ class Pack(object):
         if ver_check == True:
             combs = self.__find_wifi_fw_ver_combinations(filename)
             for k, v in combs.items():
-                if flinfo.type != "emmc":
+                if self.flash_type in ["nand", "nand-4k", "norplusnand", "norplusnand-4k"]:
                     self.__gen_flash_script_for_ubi_wififw(k, script, v)
                 else:
                     self.__gen_flash_script_for_non_ubi_wififw(partition, k, flinfo, script, v)
         else:
-            if flinfo.type != "emmc":
+            if self.flash_type in ["nand", "nand-4k", "norplusnand", "norplusnand-4k"]:
                 self.__gen_flash_script_for_ubi_wififw(filename, script, None)
             else:
                 self.__gen_flash_script_for_non_ubi_wififw(partition, filename, flinfo, script, None)
