@@ -1046,7 +1046,12 @@ class Pack(object):
                     if no_fw_mach_ids and filename != "":
                         self.__gen_flash_script_update_for_wififw(partition, filename, flinfo, script, no_fw_mach_ids)
 
-                    if image_type == "all" or section.attrib['image_type'] == image_type:
+                    if flinfo.type == "emmc":
+                        section_img_type = section.attrib['image_type']
+                    else:
+                        section_img_type = section[8].attrib['image_type']
+
+                    if image_type == "all" or section_img_type == image_type:
                         for wifi_fw_type in wifi_fw_list:
                             fw_name = wifi_fw_type
                             if fw_name == "":
