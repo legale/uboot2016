@@ -630,12 +630,12 @@ class Pack(object):
         if ver_check == True:
             combs = self.__find_wifi_fw_ver_combinations(filename)
             for k, v in combs.items():
-                if flinfo.type != "emmc":
+                if self.flash_type in ["nand", "nand-4k", "norplusnand", "norplusnand-4k"]:
                     self.__gen_flash_script_for_ubi_wififw(k, script, v)
                 else:
                     self.__gen_flash_script_for_non_ubi_wififw(partition, k, flinfo, script, v)
         else:
-            if flinfo.type != "emmc":
+            if self.flash_type in ["nand", "nand-4k", "norplusnand", "norplusnand-4k"]:
                 self.__gen_flash_script_for_ubi_wififw(filename, script, None)
             else:
                 self.__gen_flash_script_for_non_ubi_wififw(partition, filename, flinfo, script, None)
@@ -1046,7 +1046,12 @@ class Pack(object):
                     if no_fw_mach_ids and filename != "":
                         self.__gen_flash_script_update_for_wififw(partition, filename, flinfo, script, no_fw_mach_ids)
 
-                    if image_type == "all" or section.attrib['image_type'] == image_type:
+                    if flinfo.type == "emmc":
+                        section_img_type = section.attrib['image_type']
+                    else:
+                        section_img_type = section[8].attrib['image_type']
+
+                    if image_type == "all" or section_img_type == image_type:
                         for wifi_fw_type in wifi_fw_list:
                             fw_name = wifi_fw_type
                             if fw_name == "":
@@ -1414,29 +1419,29 @@ class Pack(object):
                         filename = img.text;
 
             else:
-                # wififw images specific for RDP based on machid
-                if section_conf == "wififw":
-                    if ver_check:
-                        for k, v in wifi_fws_avail.items():
-                            self.__gen_script_append_images(k, soc_version, 1, images, flinfo, root, section_conf, partition)
-                    else:
-                        for wifi_fw_type in wifi_fw_list:
-                            fw_name = wifi_fw_type
-                            if fw_name == "":
-                                continue
-                            if not os.path.exists(os.path.join(self.images_dname, fw_name)):
-                                return 0
-                            self.__gen_script_append_images(fw_name, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
-                        wifi_fw_type = ""
-                        fw_name = ""
-
-                    continue
-
                 if section != None and filename != "" and section.get('filename_mem' + memory_size) != None:
                     filename = section.get('filename_mem' + memory_size)
 
                 if section != None and atf == "true" and section.get('filename_atf') != None:
                     filename = section.get('filename_atf')
+
+            # wififw images specific for RDP based on machid
+            if self.flash_type in [ "emmc" , "tiny-nor", "tiny-nor-debug", "nor" ] and section_conf == "wififw":
+                if ver_check:
+                    for k, v in wifi_fws_avail.items():
+                        self.__gen_script_append_images(k, soc_version, 1, images, flinfo, root, section_conf, partition)
+                else:
+                    for wifi_fw_type in wifi_fw_list:
+                        fw_name = wifi_fw_type
+                        if fw_name == "":
+                            continue
+                        if not os.path.exists(os.path.join(self.images_dname, fw_name)):
+                            return 0
+                        self.__gen_script_append_images(fw_name, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)
+                    wifi_fw_type = ""
+                    fw_name = ""
+
+                continue
 
             if filename != "":
                 self.__gen_script_append_images(filename, soc_version, wifi_fw_type, images, flinfo, root, section_conf, partition)

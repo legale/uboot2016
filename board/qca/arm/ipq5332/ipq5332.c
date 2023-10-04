@@ -131,6 +131,19 @@ void fdt_fixup_flash(void *blob)
 }
 #endif
 
+#ifdef CONFIG_IPQ_TINY_SPI_NOR
+void fdt_fixup_art_format(void *blob)
+{
+	int nodeoffset;
+	int ret;
+
+	nodeoffset = fdt_path_offset(blob, "/");
+	ret = fdt_setprop(blob, nodeoffset, "compressed_art", NULL, 0);
+	if (ret != 0)
+		printf("fdt-fixup: unable to set property 'compressed_art'\n");
+}
+#endif
+
 void qca_serial_init(struct ipq_serial_platdata *plat)
 {
 	int ret;
@@ -825,14 +838,14 @@ unsigned int get_dts_machid(unsigned int machid)
 {
 	switch (machid)
 	{
+		case MACH_TYPE_IPQ5332_AP_MI01_2_C2:
+			return MACH_TYPE_IPQ5332_AP_MI01_2;
 		case MACH_TYPE_IPQ5332_AP_MI01_3_C2:
+		case MACH_TYPE_IPQ5332_AP_MI01_12:
+		case MACH_TYPE_IPQ5332_AP_MI01_14:
 			return MACH_TYPE_IPQ5332_AP_MI01_3;
 		case MACH_TYPE_IPQ5332_AP_MI04_1_C2:
 			return MACH_TYPE_IPQ5332_AP_MI04_1;
-		case MACH_TYPE_IPQ5332_AP_RDP_479:
-			return MACH_TYPE_IPQ5332_AP_MI01_3;
-		case MACH_TYPE_IPQ5332_AP_RDP_481:
-			return MACH_TYPE_IPQ5332_AP_MI01_3;
 		default:
 			return machid;
 	}
@@ -846,6 +859,11 @@ void ipq_uboot_fdt_fixup(void)
 
 	switch (gd->bd->bi_arch_number)
 	{
+		case MACH_TYPE_IPQ5332_AP_MI01_2_C2:
+			config_list[config_nos++] = "config@mi01.2-c2";
+			config_list[config_nos++] = "config@rdp484";
+			config_list[config_nos++] = "config-rdp484";
+			break;
 		case MACH_TYPE_IPQ5332_AP_MI01_3_C2:
 			config_list[config_nos++] = "config@mi01.3-c2";
 			config_list[config_nos++] = "config@rdp477";
@@ -857,13 +875,13 @@ void ipq_uboot_fdt_fixup(void)
 			config_list[config_nos++] = "config-rdp478";
 			config_list[config_nos++] = "config@1";
 			break;
-		case MACH_TYPE_IPQ5332_AP_RDP_479:
-			config_list[config_nos++] = "config@ap-rdp479";
+		case MACH_TYPE_IPQ5332_AP_MI01_12:
+			config_list[config_nos++] = "config@mi01.12";
 			config_list[config_nos++] = "config@rdp479";
 			config_list[config_nos++] = "config-rdp479";
 			break;
-		case MACH_TYPE_IPQ5332_AP_RDP_481:
-			config_list[config_nos++] = "config@ap-rdp481";
+		case MACH_TYPE_IPQ5332_AP_MI01_14:
+			config_list[config_nos++] = "config@mi01.14";
 			config_list[config_nos++] = "config@rdp481";
 			config_list[config_nos++] = "config-rdp481";
 			break;

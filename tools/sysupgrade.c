@@ -794,7 +794,7 @@ int get_ubi_volume_id(char *vol_name)
 		fgets(ubi_vol_name, sizeof(ubi_vol_name), fp);
 		if (strstr(ubi_vol_name, vol_name)) {
 			printf("%s volume id = %d\n", vol_name, i);
-			close(fp);
+			fclose(fp);
 			return i;
 		}
 	}
@@ -811,10 +811,11 @@ int get_ubi_volume_id(char *vol_name)
  * to get the ELF header of rootfs metadata.
  */
 
-void extract_binary(struct image_section *section)
+int extract_binary(struct image_section *section)
 {
 	extract_kernel_binary(section, "kernel");
 	parse_elf_image_phdr(section);
+	return 1;
 }
 
 /**
@@ -1013,7 +1014,7 @@ int extract_rootfs_binary(char *filename)
 	fp = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, ifd, 0);
 	if (fp == MAP_FAILED) {
 		perror("mmap");
-		close(fp);
+		close(ifd);
 		return 0;
 	}
 
@@ -1049,13 +1050,16 @@ int compute_sha_hash(struct image_section *section)
 	int retval;
 
 #ifdef USE_SHA384
-	snprintf(command, sizeof(command),
+	retval = snprintf(command, sizeof(command),
 		"openssl dgst -sha384 -binary -out %s %s", sha_hash, section->tmp_file);
 #endif
 #ifdef USE_SHA256
-	snprintf(command, sizeof(command),
+	retval = snprintf(command, sizeof(command),
 		"openssl dgst -sha256 -binary -out %s %s", sha_hash, section->tmp_file);
 #endif
+	if (retval < 0) {
+		return retval;
+	}
 	retval = system(command);
 	if (retval != 0) {
 		printf("Error generating sha-hash, command : %s\n",command);

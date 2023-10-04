@@ -517,8 +517,7 @@ int smem_bootconfig_info(void)
 			&qca_smem_bootconfig_info, sizeof(qca_smem_bootconfig_info_t));
 	if ((ret != 0) ||
 		((qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START) &&
-		(qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE)) ||
-		(qca_smem_bootconfig_info.magic_end != _SMEM_DUAL_BOOTINFO_MAGIC_END))
+		(qca_smem_bootconfig_info.magic_start != _SMEM_DUAL_BOOTINFO_MAGIC_START_TRYMODE)))
 		return -ENOMSG;
 
 	return 0;
