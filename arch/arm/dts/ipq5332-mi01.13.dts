@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,8 +16,8 @@
 /dts-v1/;
 #include "ipq5332-soc.dtsi"
 / {
-	machid = <0x8060001>;
-	config_name = "config@mi01.2", "config@rdp441", "config-rdp441";
+	machid = <0x8060402>;
+	config_name = "config@mi01.13", "config@rdp480", "config-rdp480";
 
 	aliases {
 		console = "/serial@78AF000";
@@ -27,6 +27,7 @@
 		i2c0 = "/i2c@78B6000";
 		pci0 = "/pci@20000000";
 		pci1 = "/pci@18000000";
+                pci2 = "/pci@10000000";
 	};
 
 	serial@78AF000 {
@@ -198,13 +199,26 @@
 	pci1: pci@18000000 {
 		status = "ok";
 		perst_gpio = <47>;
-		lane = <2>;
+		lane = <1>;
 		pci_gpio {
 			pci_rst {
 				gpio = <47>;
 				pull = <GPIO_PULL_UP>;
 				oe = <GPIO_OE_ENABLE>;
 				drvstr = <GPIO_8MA>;
+			};
+		};
+	};
+
+	pci2: pci@10000000 {
+		status = "ok";
+		perst_gpio = <44>;
+		lane = <1>;
+		pci_gpio {
+			pci_rst {
+				gpio = <44>;
+				pull = <GPIO_PULL_UP>;
+				oe = <GPIO_OE_ENABLE>;
 			};
 		};
 	};
@@ -217,6 +231,21 @@
 		qca8084_switch_enable = <1>;
 		sfp_gpio = <24>;
 		sfp_gpio_cnt = <1>;
+
+		mdio_gpio {
+			mdc1 {
+				gpio = <27>;
+				func = <1>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_2MA>;
+			};
+			mdio {
+				gpio = <28>;
+				func = <1>;
+				pull = <GPIO_PULL_UP>;
+				drvstr = <GPIO_2MA>;
+			};
+		};
 
 		port_phyinfo {
 			port@0 {
