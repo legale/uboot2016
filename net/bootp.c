@@ -922,7 +922,7 @@ static void dhcp_send_request_packet(struct bootp_hdr *bp_offer)
 	struct in_addr zero_ip;
 	struct in_addr bcast_ip;
 
-	debug("dhcp_send_request_packet: Sending DHCPREQUEST\n");
+	debug_cond(DEBUG_DEV_PKT, "dhcp_send_request_packet: Sending DHCPREQUEST\n");
 	pkt = net_tx_packet;
 	memset((void *)pkt, 0, PKTSIZE);
 
@@ -985,14 +985,14 @@ static void dhcp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 {
 	struct bootp_hdr *bp = (struct bootp_hdr *)pkt;
 
-	debug("DHCPHandler: got packet: (src=%d, dst=%d, len=%d) state: %d\n",
+	debug_cond(DEBUG_DEV_PKT, "DHCPHandler: got packet: (src=%d, dst=%d, len=%d) state: %d\n",
 	      src, dest, len, dhcp_state);
 
 	/* Filter out pkts we don't want */
 	if (check_reply_packet(pkt, dest, src, len))
 		return;
 
-	debug("DHCPHandler: got DHCP packet: (src=%d, dst=%d, len=%d) state: "
+	debug_cond(DEBUG_DEV_PKT, "DHCPHandler: got DHCP packet: (src=%d, dst=%d, len=%d) state: "
 	      "%d\n", src, dest, len, dhcp_state);
 
 	switch (dhcp_state) {
@@ -1003,7 +1003,7 @@ static void dhcp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 		 * response.  If filename is in format we recognize, assume it
 		 * is a valid OFFER from a server we want.
 		 */
-		debug("DHCP: state=SELECTING bp_file: \"%s\"\n", bp->bp_file);
+		debug_cond(DEBUG_DEV_PKT, "DHCP: state=SELECTING bp_file: \"%s\"\n", bp->bp_file);
 #ifdef CONFIG_SYS_BOOTFILE_PREFIX
 		if (strncmp(bp->bp_file,
 			    CONFIG_SYS_BOOTFILE_PREFIX,
@@ -1011,7 +1011,7 @@ static void dhcp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 #endif	/* CONFIG_SYS_BOOTFILE_PREFIX */
 			dhcp_packet_process_options(bp);
 
-			debug("TRANSITIONING TO REQUESTING STATE\n");
+			debug_cond(DEBUG_DEV_PKT, "TRANSITIONING TO REQUESTING STATE\n");
 			dhcp_state = REQUESTING;
 
 			net_set_timeout_handler(5000, bootp_timeout_handler);
@@ -1023,7 +1023,7 @@ static void dhcp_handler(uchar *pkt, unsigned dest, struct in_addr sip,
 		return;
 		break;
 	case REQUESTING:
-		debug("DHCP State: REQUESTING\n");
+		debug_cond(DEBUG_DEV_PKT, "DHCP State: REQUESTING\n");
 
 		if (dhcp_message_type((u8 *)bp->bp_vend) == DHCP_ACK) {
 			dhcp_packet_process_options(bp);

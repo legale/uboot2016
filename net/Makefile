@@ -6,6 +6,8 @@
 #
 
 #ccflags-y += -DDEBUG
+$(warning CONFIG_CMD_WGET is $(CONFIG_CMD_WGET))
+$(warning CONFIG_PROT_TCP is $(CONFIG_PROT_TCP))
 
 obj-y += checksum.o
 obj-$(CONFIG_CMD_NET)  += arp.o
@@ -13,6 +15,8 @@ obj-$(CONFIG_CMD_NET)  += bootp.o
 obj-$(CONFIG_CMD_CDP)  += cdp.o
 obj-$(CONFIG_CMD_DNS)  += dns.o
 obj-$(CONFIG_CMD_NET)  += eth.o
+obj-$(CONFIG_PROT_TCP) += tcp.o
+obj-$(CONFIG_CMD_WGET) += wget.o
 obj-$(CONFIG_CMD_LINK_LOCAL) += link_local.o
 obj-$(CONFIG_CMD_NET)  += net.o
 obj-$(CONFIG_CMD_NFS)  += nfs.o
@@ -20,3 +24,4 @@ obj-$(CONFIG_CMD_PING) += ping.o
 obj-$(CONFIG_CMD_RARP) += rarp.o
 obj-$(CONFIG_CMD_SNTP) += sntp.o
 obj-$(CONFIG_CMD_NET)  += tftp.o
+

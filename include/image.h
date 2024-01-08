@@ -45,6 +45,11 @@ struct lmb;
 
 #endif /* USE_HOSTCC */
 
+extern ulong image_load_addr;		/* Default Load Address */
+extern ulong image_save_addr;		/* Default Save Address */
+extern ulong image_save_size;		/* Default Save Size */
+extern ulong image_load_offset;	/* Default Load Address Offset */
+
 #if defined(CONFIG_FIT)
 #include <hash.h>
 #include <libfdt.h>

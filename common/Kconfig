@@ -461,6 +461,13 @@ config CMD_LINK_LOCAL
 	help
 	  Acquire a network IP address using the link-local protocol
 
+config CMD_WGET
+	bool "wget"
+	select PROT_TCP
+	help
+	  wget is a simple command to download kernel, or other files,
+	  from a http server over TCP.
+
 endmenu
 
 menu "Misc commands"

@@ -1,4 +1,20 @@
 /*
+ * Add the pseudo keyword 'fallthrough' so case statement blocks
+ * must end with any of these keywords:
+ *   break;
+ *   fallthrough;
+ *   goto <label>;
+ *   return [expression];
+ *
+ *  gcc: https://gcc.gnu.org/onlinedocs/gcc/Statement-Attributes.html#Statement-Attributes
+ */
+#if __has_attribute(__fallthrough__)
+# define fallthrough                    __attribute__((__fallthrough__))
+#else
+# define fallthrough                    do {} while (0)  /* fallthrough */
+#endif
+
+/*
  *	LiMon Monitor (LiMon) - Network.
  *
  *	Copyright 1994 - 2000 Neil Russell.
@@ -31,6 +47,7 @@
 #define DEBUG_DEV_PKT 0		/* Packets or info directed to the device */
 #define DEBUG_NET_PKT 0		/* Packets on info on the network at large */
 #define DEBUG_INT_STATE 0	/* Internal network state changes */
+#define DEBUG_NET_PKT_TRACE 0	/* Trace all packet data */
 
 /*
  *	The number of receive packet buffers, and the required packet buffer
@@ -329,6 +346,7 @@ struct vlan_ethernet_hdr {
 #define PROT_VLAN	0x8100		/* IEEE 802.1q protocol		*/
 
 #define IPPROTO_ICMP	 1	/* Internet Control Message Protocol	*/
+#define IPPROTO_TCP	6	/* Transmission Control Protocol	*/
 #define IPPROTO_UDP	17	/* User Datagram Protocol		*/
 
 /*
@@ -521,7 +539,7 @@ extern int		net_restart_wrap;	/* Tried all network devices */
 extern int 		tftp_our_port;
 enum proto_t {
 	BOOTP, RARP, ARP, TFTPGET, DHCP, PING, DNS, NFS, CDP, NETCONS, SNTP,
-	TFTPSRV, TFTPPUT, LINKLOCAL
+	TFTPSRV, TFTPPUT, LINKLOCAL, WGET
 };
 
 extern char	net_boot_file_name[1024];/* Boot File name */
@@ -579,7 +597,8 @@ int net_set_ether(uchar *xet, const uchar *dest_ethaddr, uint prot);
 int net_update_ether(struct ethernet_hdr *et, uchar *addr, uint prot);
 
 /* Set IP header */
-void net_set_ip_header(uchar *pkt, struct in_addr dest, struct in_addr source);
+void net_set_ip_header(uchar *pkt, struct in_addr dest, struct in_addr source,
+		       u16 pkt_len, u8 proto);
 void net_set_udp_header(uchar *pkt, struct in_addr dest, int dport,
 				int sport, int len);
 
@@ -643,16 +662,36 @@ static inline void net_send_packet(uchar *pkt, int len)
 	(void) eth_send(pkt, len);
 }
 
-/*
- * Transmit "net_tx_packet" as UDP packet, performing ARP request if needed
- *  (ether will be populated)
+/**
+ * net_send_ip_packet() - Transmit "net_tx_packet" as UDP or TCP packet,
+ *                        send ARP request if needed (ether will be populated)
+ * @ether: Raw packet buffer
+ * @dest: IP address to send the datagram to
+ * @dport: Destination UDP port
+ * @sport: Source UDP port
+ * @payload_len: Length of data after the UDP header
+ * @action: TCP action to be performed
+ * @tcp_seq_num: TCP sequence number of this transmission
+ * @tcp_ack_num: TCP stream acknolegement number
  *
- * @param ether Raw packet buffer
- * @param dest IP address to send the datagram to
- * @param dport Destination UDP port
- * @param sport Source UDP port
- * @param payload_len Length of data after the UDP header
+ * Return: 0 on success, other value on failure
  */
+int net_send_ip_packet(uchar *ether, struct in_addr dest, int dport, int sport,
+		       int payload_len, int proto, u8 action, u32 tcp_seq_num,
+		       u32 tcp_ack_num);
+/**
+ * net_send_tcp_packet() - Transmit TCP packet.
+ * @payload_len: length of payload
+ * @dport: Destination TCP port
+ * @sport: Source TCP port
+ * @action: TCP action to be performed
+ * @tcp_seq_num: TCP sequence number of this transmission
+ * @tcp_ack_num: TCP stream acknolegement number
+ *
+ * Return: 0 on success, other value on failure
+ */
+int net_send_tcp_packet(int payload_len, int dport, int sport, u8 action,
+			u32 tcp_seq_num, u32 tcp_ack_num);
 int net_send_udp_packet(uchar *ether, struct in_addr dest, int dport,
 			int sport, int payload_len);
 

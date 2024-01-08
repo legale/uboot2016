@@ -449,3 +449,16 @@ U_BOOT_CMD(
 );
 
 #endif  /* CONFIG_CMD_LINK_LOCAL */
+
+#if defined(CONFIG_CMD_WGET)
+static int do_wget(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	return netboot_common(WGET, cmdtp, argc, argv);
+}
+
+U_BOOT_CMD(
+	wget,   3,      1,      do_wget,
+	"boot image via network using HTTP protocol",
+	"[loadAddress] [[hostIPaddr:]path and image name]"
+);
+#endif  /* CONFIG_CMD_WGET */

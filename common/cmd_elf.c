@@ -108,6 +108,7 @@ static unsigned long do_bootelf_exec(ulong (*entry)(int, char * const[]),
 				     int argc, char * const argv[])
 {
 	unsigned long ret;
+	printf("do_bootelf_exec\n");
 
 	/*
 	 * QNX images require the data cache is disabled.
@@ -146,8 +147,7 @@ int valid_elf_image(unsigned long addr)
 	}
 
 	if (ehdr->e_type != ET_EXEC) {
-		printf("## Not a 32-bit elf image at address 0x%08lx\n", addr);
-		return 0;
+		printf("## elh header e_type: %u\n", ehdr->e_type);
 	}
 
 	return 1;
@@ -182,10 +182,13 @@ int do_bootelf(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	if (!valid_elf_image(addr))
 		return 1;
 
-	if (sload && sload[1] == 'p')
+	if (sload && sload[1] == 'p'){
+		printf("load_elf_image_phdr");
 		addr = load_elf_image_phdr(addr);
-	else
+	} else {
+		printf("load_elf_image_shdr");
 		addr = load_elf_image_shdr(addr);
+	}
 
 	if (ep && !strcmp(ep, "no"))
 		return rcode;

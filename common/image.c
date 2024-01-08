@@ -68,6 +68,12 @@ static const image_header_t *image_get_ramdisk(ulong rd_addr, uint8_t arch,
 #define CONFIG_SYS_BARGSIZE 512
 #endif
 
+ulong image_load_addr;		/* Default Load Address */
+ulong image_save_addr;		/* Default Save Address */
+ulong image_save_size;		/* Default Save Size */
+ulong image_load_offset;	/* Default Load Address Offset */
+
+
 static const table_entry_t uimage_arch[] = {
 	{	IH_ARCH_INVALID,	NULL,		"Invalid ARCH",	},
 	{	IH_ARCH_ALPHA,		"alpha",	"Alpha",	},

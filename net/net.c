@@ -94,6 +94,8 @@
 #endif
 #include <watchdog.h>
 #include <linux/compiler.h>
+#include <net/tcp.h>
+#include <net/wget.h>
 #include "arp.h"
 #include "bootp.h"
 #include "cdp.h"
@@ -509,6 +511,9 @@ restart:
 			link_local_start();
 			break;
 #endif
+    case WGET:
+      wget_start();
+      break;
 		default:
 			break;
 		}
@@ -777,6 +782,22 @@ void net_set_timeout_handler(ulong iv, thand_f *f)
 int net_send_udp_packet(uchar *ether, struct in_addr dest, int dport, int sport,
 		int payload_len)
 {
+	return net_send_ip_packet(ether, dest, dport, sport, payload_len,
+				  IPPROTO_UDP, 0, 0, 0);
+}
+
+int net_send_tcp_packet(int payload_len, int dport, int sport, u8 action,
+			u32 tcp_seq_num, u32 tcp_ack_num)
+{
+	return net_send_ip_packet(net_server_ethaddr, net_server_ip, dport,
+				  sport, payload_len, IPPROTO_TCP, action,
+				  tcp_seq_num, tcp_ack_num);
+}
+
+int net_send_ip_packet(uchar *ether, struct in_addr dest, int dport, int sport,
+		       int payload_len, int proto, u8 action, u32 tcp_seq_num,
+		       u32 tcp_ack_num)
+{
 	uchar *pkt;
 	int eth_hdr_size;
 	int pkt_hdr_size;
@@ -797,9 +818,24 @@ int net_send_udp_packet(uchar *ether, struct in_addr dest, int dport, int sport,
 	pkt = (uchar *)net_tx_packet;
 
 	eth_hdr_size = net_set_ether(pkt, ether, PROT_IP);
-	pkt += eth_hdr_size;
-	net_set_udp_header(pkt, dest, dport, sport, payload_len);
-	pkt_hdr_size = eth_hdr_size + IP_UDP_HDR_SIZE;
+
+	switch (proto) {
+	case IPPROTO_UDP:
+		net_set_udp_header(pkt + eth_hdr_size, dest, dport, sport,
+				   payload_len);
+		pkt_hdr_size = eth_hdr_size + IP_UDP_HDR_SIZE;
+		break;
+#if defined(CONFIG_PROT_TCP)
+	case IPPROTO_TCP:
+		pkt_hdr_size = eth_hdr_size
+			+ tcp_set_tcp_header(pkt + eth_hdr_size, dport, sport,
+					     payload_len, action, tcp_seq_num,
+					     tcp_ack_num);
+		break;
+#endif
+	default:
+		return -EINVAL;
+	}
 
 	/* if MAC address was not discovered yet, do an ARP request */
 	if (memcmp(ether, net_null_ethaddr, 6) == 0) {
@@ -824,6 +860,7 @@ int net_send_udp_packet(uchar *ether, struct in_addr dest, int dport, int sport,
 		return 0;	/* transmitted */
 	}
 }
+
 
 #ifdef CONFIG_IP_DEFRAG
 /*
@@ -1046,6 +1083,9 @@ void net_process_received_packet(uchar *in_packet, int len)
 
 	debug_cond(DEBUG_NET_PKT, "packet received\n");
 
+#if defined(CONFIG_CMD_PCAP)
+	pcap_post(in_packet, len, false);
+#endif
 	net_rx_packet = in_packet;
 	net_rx_packet_len = len;
 	et = (struct ethernet_hdr *)in_packet;
@@ -1054,7 +1094,7 @@ void net_process_received_packet(uchar *in_packet, int len)
 	if (len < ETHER_HDR_SIZE)
 		return;
 
-#ifdef CONFIG_API
+#if defined(CONFIG_API) || defined(CONFIG_EFI_LOADER)
 	if (push_packet) {
 		(*push_packet)(in_packet, len);
 		return;
@@ -1143,12 +1183,17 @@ void net_process_received_packet(uchar *in_packet, int len)
 		rarp_receive(ip, len);
 		break;
 #endif
+#if IS_ENABLED(CONFIG_IPV6)
+	case PROT_IP6:
+		net_ip6_handler(et, (struct ip6_hdr *)ip, len);
+		break;
+#endif
 	case PROT_IP:
 		debug_cond(DEBUG_NET_PKT, "Got IP\n");
 		/* Before we start poking the header, make sure it is there */
-		if (len < IP_UDP_HDR_SIZE) {
+		if (len < IP_HDR_SIZE) {
 			debug("len bad %d < %lu\n", len,
-			      (ulong)IP_UDP_HDR_SIZE);
+			      (ulong)IP_HDR_SIZE);
 			return;
 		}
 		/* Check the packet length */
@@ -1157,6 +1202,10 @@ void net_process_received_packet(uchar *in_packet, int len)
 			return;
 		}
 		len = ntohs(ip->ip_len);
+		if (len < IP_HDR_SIZE) {
+			debug("bad ip->ip_len %d < %d\n", len, (int)IP_HDR_SIZE);
+			return;
+		}
 		debug_cond(DEBUG_NET_PKT, "len=%d, v=%02x\n",
 			   len, ip->ip_hl_v & 0xff);
 
@@ -1164,7 +1213,7 @@ void net_process_received_packet(uchar *in_packet, int len)
 		if ((ip->ip_hl_v & 0xf0) != 0x40)
 			return;
 		/* Can't deal with IP options (headers != 20 bytes) */
-		if ((ip->ip_hl_v & 0x0f) > 0x05)
+		if ((ip->ip_hl_v & 0x0f) != 0x05)
 			return;
 		/* Check the Checksum of the header */
 		if (!ip_checksum_ok((uchar *)ip, IP_HDR_SIZE)) {
@@ -1175,9 +1224,6 @@ void net_process_received_packet(uchar *in_packet, int len)
 		dst_ip = net_read_ip(&ip->ip_dst);
 		if (net_ip.s_addr && dst_ip.s_addr != net_ip.s_addr &&
 		    dst_ip.s_addr != 0xFFFFFFFF) {
-#ifdef CONFIG_MCAST_TFTP
-			if (net_mcast_addr != dst_ip)
-#endif
 				return;
 		}
 		/* Read source IP address for later use */
@@ -1214,18 +1260,29 @@ void net_process_received_packet(uchar *in_packet, int len)
 		if (ip->ip_p == IPPROTO_ICMP) {
 			receive_icmp(ip, len, src_ip, et);
 			return;
+#if defined(CONFIG_PROT_TCP)
+		} else if (ip->ip_p == IPPROTO_TCP) {
+			debug_cond(DEBUG_DEV_PKT,
+				   "TCP PH (to=%pI4, from=%pI4, len=%d)\n",
+				   &dst_ip, &src_ip, len);
+
+			rxhand_tcp_f((union tcp_build_pkt *)ip, len);
+			return;
+#endif
 		} else if (ip->ip_p != IPPROTO_UDP) {	/* Only UDP packets */
 			return;
 		}
+
+		if (ntohs(ip->udp_len) < UDP_HDR_SIZE || ntohs(ip->udp_len) > len - IP_HDR_SIZE)
+			return;
 
 		debug_cond(DEBUG_DEV_PKT,
 			   "received UDP (to=%pI4, from=%pI4, len=%d)\n",
 			   &dst_ip, &src_ip, len);
 
-#ifdef CONFIG_UDP_CHECKSUM
-		if (ip->udp_xsum != 0) {
+		if (IS_ENABLED(CONFIG_UDP_CHECKSUM) && ip->udp_xsum != 0) {
 			ulong   xsum;
-			ushort *sumptr;
+			u8 *sumptr;
 			ushort  sumlen;
 
 			xsum  = ip->ip_p;
@@ -1236,22 +1293,16 @@ void net_process_received_packet(uchar *in_packet, int len)
 			xsum += (ntohl(ip->ip_dst.s_addr) >>  0) & 0x0000ffff;
 
 			sumlen = ntohs(ip->udp_len);
-			sumptr = (ushort *)&(ip->udp_src);
+			sumptr = (u8 *)&ip->udp_src;
 
 			while (sumlen > 1) {
-				ushort sumdata;
-
-				sumdata = *sumptr++;
-				xsum += ntohs(sumdata);
+				/* inlined ntohs() to avoid alignment errors */
+				xsum += (sumptr[0] << 8) + sumptr[1];
+				sumptr += 2;
 				sumlen -= 2;
 			}
-			if (sumlen > 0) {
-				ushort sumdata;
-
-				sumdata = *(unsigned char *)sumptr;
-				sumdata = (sumdata << 8) & 0xff00;
-				xsum += sumdata;
-			}
+			if (sumlen > 0)
+				xsum += (sumptr[0] << 8) + sumptr[0];
 			while ((xsum >> 16) != 0) {
 				xsum = (xsum & 0x0000ffff) +
 				       ((xsum >> 16) & 0x0000ffff);
@@ -1262,9 +1313,8 @@ void net_process_received_packet(uchar *in_packet, int len)
 				return;
 			}
 		}
-#endif
 
-#if defined(CONFIG_NETCONSOLE) && !(CONFIG_SPL_BUILD)
+#if defined(CONFIG_NETCONSOLE) && !defined(CONFIG_SPL_BUILD)
 		nc_input_packet((uchar *)ip + IP_UDP_HDR_SIZE,
 				src_ip,
 				ntohs(ip->udp_dst),
@@ -1280,6 +1330,16 @@ void net_process_received_packet(uchar *in_packet, int len)
 				      ntohs(ip->udp_src),
 				      ntohs(ip->udp_len) - UDP_HDR_SIZE);
 		break;
+#ifdef CONFIG_CMD_WOL
+	case PROT_WOL:
+		wol_receive(ip, len);
+		break;
+#endif
+#ifdef CONFIG_PHY_NCSI
+	case PROT_NCSI:
+		ncsi_receive(et, ip, len);
+		break;
+#endif
 	}
 }
 
@@ -1432,7 +1492,8 @@ int net_update_ether(struct ethernet_hdr *et, uchar *addr, uint prot)
 	}
 }
 
-void net_set_ip_header(uchar *pkt, struct in_addr dest, struct in_addr source)
+void net_set_ip_header(uchar *pkt, struct in_addr dest, struct in_addr source,
+		       u16 pkt_len, u8 proto)
 {
 	struct ip_udp_hdr *ip = (struct ip_udp_hdr *)pkt;
 
@@ -1442,7 +1503,8 @@ void net_set_ip_header(uchar *pkt, struct in_addr dest, struct in_addr source)
 	/* IP_HDR_SIZE / 4 (not including UDP) */
 	ip->ip_hl_v  = 0x45;
 	ip->ip_tos   = 0;
-	ip->ip_len   = htons(IP_HDR_SIZE);
+	ip->ip_len   = htons(pkt_len);
+	ip->ip_p     = proto;
 	ip->ip_id    = htons(net_ip_id++);
 	ip->ip_off   = htons(IP_FLAGS_DFRAG);	/* Don't fragment */
 	ip->ip_ttl   = 255;
@@ -1451,7 +1513,10 @@ void net_set_ip_header(uchar *pkt, struct in_addr dest, struct in_addr source)
 	net_copy_ip((void *)&ip->ip_src, &source);
 	/* already in network byte order */
 	net_copy_ip((void *)&ip->ip_dst, &dest);
+
+	ip->ip_sum   = compute_ip_checksum(ip, IP_HDR_SIZE);
 }
+
 
 void net_set_udp_header(uchar *pkt, struct in_addr dest, int dport, int sport,
 			int len)
@@ -1466,10 +1531,7 @@ void net_set_udp_header(uchar *pkt, struct in_addr dest, int dport, int sport,
 	if (len & 1)
 		pkt[IP_UDP_HDR_SIZE + len] = 0;
 
-	net_set_ip_header(pkt, dest, net_ip);
-	ip->ip_len   = htons(IP_UDP_HDR_SIZE + len);
-	ip->ip_p     = IPPROTO_UDP;
-	ip->ip_sum   = compute_ip_checksum(ip, IP_HDR_SIZE);
+	net_set_ip_header(pkt, dest, net_ip, IP_UDP_HDR_SIZE + len, IPPROTO_UDP);
 
 	ip->udp_src  = htons(sport);
 	ip->udp_dst  = htons(dport);
@@ -1491,6 +1553,7 @@ void copy_filename(char *dst, const char *src, int size)
 
 #if	defined(CONFIG_CMD_NFS)		|| \
 	defined(CONFIG_CMD_SNTP)	|| \
+	defined(CONFIG_CMD_WGET)	|| \
 	defined(CONFIG_CMD_DNS)
 /*
  * make port a little random (1024-17407)
