@@ -1142,3 +1142,12 @@ const char *eth_get_name(void)
 {
 	return eth_get_dev() ? eth_get_dev()->name : "unknown";
 }
+
+static int do_eth_initialize(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[]){
+	return eth_initialize();	
+}
+
+
+U_BOOT_CMD(eth_init, 1, 0, do_eth_initialize,
+	   "eth_init",
+	   "initialize eth network interfaces\n");
